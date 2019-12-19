@@ -292,8 +292,11 @@ void recive_msg(){
       KP = Buf.tel.value[0];
       KI = Buf.tel.value[1];
       KD = Buf.tel.value[2];
-      //Output = Buf.tel.value[3];
-
+      if(Buf.tel.value[3]>0.5){
+        myPID.SetTunings(KP, KI, KD,P_ON_E);
+      }else{
+        myPID.SetTunings(KP, KI, KD,P_ON_M);
+      }
     case 'N':
       strncpy(Buf.buf,last_send_buf , 18);
       send_tel();
@@ -385,10 +388,9 @@ void treiberBig(struct StepMotorBig &StepM){
       digitalWrite(StepM.pinPUL,LOW);
       StepM.time_next_step += StepM.time_pstep;
       StepM.act_step--;
-    }else if(time_now >= StepM.time_next_step+3000000){
+    }else{
       //turn motor off
       digitalWrite(StepM.pinENA,HIGH);
-      digitalWrite(StepM.pinDIR,LOW);
     }
   }
 }
@@ -405,7 +407,7 @@ void treiberMedi(struct StepMotorMedi &StepM){
       StepMedi(StepM,-1);
       StepM.time_next_step += StepM.time_pstep;
       StepM.act_step--;
-    }else if(time_now >= StepM.time_next_step+3000000){
+    }else if(time_now >= StepM.time_next_step+1500000){
       //turn motor off
       digitalWrite(StepM.pin1, LOW);
       digitalWrite(StepM.pin2, LOW);
