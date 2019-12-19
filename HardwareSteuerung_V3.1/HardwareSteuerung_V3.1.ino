@@ -385,7 +385,7 @@ void treiberBig(struct StepMotorBig &StepM){
       digitalWrite(StepM.pinPUL,LOW);
       StepM.time_next_step += StepM.time_pstep;
       StepM.act_step--;
-    }else{
+    }else if(time_now >= StepM.time_next_step+3000000){
       //turn motor off
       digitalWrite(StepM.pinENA,HIGH);
       digitalWrite(StepM.pinDIR,LOW);
@@ -405,7 +405,7 @@ void treiberMedi(struct StepMotorMedi &StepM){
       StepMedi(StepM,-1);
       StepM.time_next_step += StepM.time_pstep;
       StepM.act_step--;
-    }else{
+    }else if(time_now >= StepM.time_next_step+3000000){
       //turn motor off
       digitalWrite(StepM.pin1, LOW);
       digitalWrite(StepM.pin2, LOW);
