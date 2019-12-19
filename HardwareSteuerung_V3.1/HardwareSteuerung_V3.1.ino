@@ -422,21 +422,23 @@ void treiberBig(struct StepMotorBig &StepM){
       //one stapp forward
       digitalWrite(StepM.pinENA,LOW);
       digitalWrite(StepM.pinDIR,HIGH);
-      digitalWrite(StepM.pinPUL,HIGH);
       digitalWrite(StepM.pinPUL,LOW);
+      digitalWrite(StepM.pinPUL,HIGH);
       StepM.time_next_step += StepM.time_pstep;
       StepM.act_step++;
     }else if(StepM.soll_step<StepM.act_step){
       //one stepp back
       digitalWrite(StepM.pinENA,LOW);
       digitalWrite(StepM.pinDIR,LOW);
-      digitalWrite(StepM.pinPUL,HIGH);
       digitalWrite(StepM.pinPUL,LOW);
+      digitalWrite(StepM.pinPUL,HIGH);
       StepM.time_next_step += StepM.time_pstep;
       StepM.act_step--;
     }else{
       //turn motor off
       digitalWrite(StepM.pinENA,HIGH);
+      digitalWrite(StepM.pinPUL,HIGH);
+      digitalWrite(StepM.pinDIR,LOW);
     }
   }
 }
