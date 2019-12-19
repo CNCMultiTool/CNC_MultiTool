@@ -19,7 +19,7 @@ struct StepMotorMedi {
   int pin2;
   int pin3;
   int pin4;
-  int pinNeg;
+  int pinNull;
   int pinPos;
   double steps_pmm;//steps pro mm
 
@@ -38,8 +38,9 @@ struct StepMotorBig {
   int pinENA;
   int pinDIR;
   int pinPUL;
-  int pinNeg;
-  int pinPos;
+  int pinNull;
+  int pinPositiv;
+  float SwitchID;
   int steps_pmm;//steps pro mm (constant für x y z)
 
   //processing
@@ -112,6 +113,9 @@ void setup() {
   Xachse.pinENA = 37;
   Xachse.pinDIR = 39;
   Xachse.pinPUL = 41;
+  Xachse.pinPositiv = 50;
+  Xachse.pinNull = 52;
+  Xachse.SwitchID = 0;
 
   Yachse.soll_posi = 0;
   Yachse.act_posi = 0;
@@ -123,6 +127,9 @@ void setup() {
   Yachse.pinENA = 43;
   Yachse.pinDIR = 45;
   Yachse.pinPUL = 47;
+  Yachse.pinPositiv = 46;
+  Yachse.pinNull = 48;
+  Yachse.SwitchID = 0;
 
   Zachse.soll_posi = 0;
   Zachse.act_posi = 0;
@@ -134,6 +141,9 @@ void setup() {
   Zachse.pinENA = 49;
   Zachse.pinDIR = 51;
   Zachse.pinPUL = 53;
+  Zachse.pinPositiv = 42;
+  Zachse.pinNull = 44;
+  Zachse.SwitchID = 0;
   
   Wachse.soll_posi = 0;
   Wachse.act_posi = 0;
@@ -151,14 +161,20 @@ void setup() {
   pinMode(Xachse.pinENA,OUTPUT);
   pinMode(Xachse.pinDIR,OUTPUT);
   pinMode(Xachse.pinPUL,OUTPUT);
+  pinMode(Xachse.pinNull,INPUT_PULLUP);
+  pinMode(Xachse.pinPositiv,INPUT_PULLUP);
 
   pinMode(Yachse.pinENA,OUTPUT);
   pinMode(Yachse.pinDIR,OUTPUT);
   pinMode(Yachse.pinPUL,OUTPUT);
+  pinMode(Yachse.pinNull,INPUT_PULLUP);
+  pinMode(Yachse.pinPositiv,INPUT_PULLUP);
 
   pinMode(Zachse.pinENA,OUTPUT);
   pinMode(Zachse.pinDIR,OUTPUT);
   pinMode(Zachse.pinPUL,OUTPUT);
+  pinMode(Zachse.pinNull,INPUT_PULLUP);
+  pinMode(Zachse.pinPositiv,INPUT_PULLUP);
   
   pinMode(Wachse.pin1,OUTPUT);
   pinMode(Wachse.pin2,OUTPUT);
@@ -176,15 +192,18 @@ void setup() {
 
 void loop() {
   time_now = micros();
-  if(digitalRead(23)==LOW){
-    digitalWrite(temprelai,HIGH);
-    digitalWrite(temprelai,LOW);
-    act_equal_soll();
-  }
+  //if(digitalRead(23)==LOW){
+  //  digitalWrite(temprelai,HIGH);
+  //  digitalWrite(temprelai,LOW);
+  //  act_equal_soll();
+  //}
+
+  checkEndswitches();
+  
   if(msg_available){
     recive_msg();
   }
-
+  
   TempControle();
 
   //motors drive
@@ -217,6 +236,33 @@ void loop() {
     //sendsollstep();
     //sendactstep();
   }
+}
+
+float checkEndswitches(){
+  float newXSwitchID = checkEndswitche(Xachse);
+  float newYSwitchID = checkEndswitche(Yachse);
+  float newZSwitchID = checkEndswitche(Zachse);
+  if(Xachse.SwitchID != newXSwitchID || Yachse.SwitchID != newYSwitchID || Zachse.SwitchID != newZSwitchID){
+    send_variabelTestTommand('e',newXSwitchID,newYSwitchID,newZSwitchID,0);
+  }
+  Xachse.SwitchID = newXSwitchID;
+  Yachse.SwitchID = newYSwitchID;
+  Zachse.SwitchID = newZSwitchID;
+}
+  
+  
+float checkEndswitche(struct StepMotorBig &StepM){
+  float switchID;
+  if(digitalRead(StepM.pinNull)==HIGH&& StepM.soll_step <= StepM.act_step){
+    StepM.soll_step = StepM.act_step;
+    switchID = -1;
+  }else if(digitalRead(StepM.pinPositiv)==HIGH&& StepM.soll_step >= StepM.act_step){
+    StepM.soll_step = StepM.act_step;
+    switchID = 1;
+  }else{
+    switchID = 0;
+  }
+  return(switchID);
 }
 
 void TempControle(){
@@ -514,6 +560,15 @@ void sendRepeatRequest(){
   Buf.tel.value[1] = 0;
   Buf.tel.value[2] = 0;
   Buf.tel.value[3] = 0;
+  send_tel();
+}
+
+void send_variabelTestTommand(char C, float val1, float val2, float val3, float val4){
+  Buf.tel.comand = C;
+  Buf.tel.value[0] = val1;
+  Buf.tel.value[1] = val2;
+  Buf.tel.value[2] = val3;
+  Buf.tel.value[3] = val4;
   send_tel();
 }
 

@@ -609,19 +609,25 @@ def recive():
             elif command == 'b':
                 log_txt("rec: motorstep X:"+str(round(value1,2))+" Y:"+str(round(value2,2))+" Z:"+str(round(value3,2))+" W:"+str(round(value4,2)))
             elif command == 'e':
-                if value1 < 0.5:
+                if value1 == 0:
                     L_lblX.config(bg="green")
-                else:
+                if value1 < 0:
                     L_lblX.config(bg="red")
-                if value2 < 0.5:
+                if value1 > 0:
+                    L_lblX.config(bg="yellow")
+                if value2 == 0:
                     L_lblY.config(bg="green")
-                else:
+                if value2 < 0:
                     L_lblY.config(bg="red")
-                if value3 < 0.5:
+                if value2 > 0:
+                    L_lblY.config(bg="yellow")
+                if value3 == 0:
                     L_lblZ.config(bg="green")
-                else:
+                if value3 < 0:
                     L_lblZ.config(bg="red")
-                #log_txt("endswitch X:"+str(round(value1,2))+" Y:"+str(round(value2,2))+" Z:"+str(round(value3,2))+" W:"+str(round(value4,2)))
+                if value3 > 0:
+                    L_lblZ.config(bg="yellow")
+                log_txt("endswitch X:"+str(round(value1,2))+" Y:"+str(round(value2,2))+" Z:"+str(round(value3,2))+" W:"+str(round(value4,2)))
             else:
                 log_txt("rec: find no command ("+command+")")
                 pass
