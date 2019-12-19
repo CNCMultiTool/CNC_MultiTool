@@ -578,12 +578,12 @@ def recive():
                 send_command(last_msg[:17])
                 log_txt("ERROR in transmision, send last message again: ."+str(last_msg[:17]))
             elif command == 'y':
-                log_txt("rec: step dif to zero X:"+str(round(value1,2))+" Y:"+str(round(value2,2))+" Z:"+str(round(value3,2))+" W:"+str(round(value4,2)))
+                log_txt("rec: step dif to zero X:"+str(round(value1,3))+" Y:"+str(round(value2,3))+" Z:"+str(round(value3,3))+" W:"+str(round(value4,3)))
             elif command == 'q':
-                #log_txt("rec: settings debug:"+str(round(value1,2))+" T:"+str(round(value2,2))+" soll_T:"+str(round(value3,2))+" W:"+str(round(value4,2)))
-                L_speedtext.set(str(round(value1,2)))
-                L_temptext.set(str(round(value2,2)))
-                L_filamenttext.set(str(round(value3,2)))
+                #log_txt("rec: settings debug:"+str(round(value1,3))+" T:"+str(round(value2,3))+" soll_T:"+str(round(value3,3))+" W:"+str(round(value4,3)))
+                L_speedtext.set(str(round(value1,3)))
+                L_temptext.set(str(round(value2,3)))
+                L_filamenttext.set(str(round(value3,3)))
                 L_PID_agr_text.set(str(round(value4,0)))
                 try:
                     with open("heat_valus.txt", 'a') as f:
@@ -591,23 +591,23 @@ def recive():
                         f.close()
                 except:
                     log_txt("fail to log values")
-                #log_txt("rec: params speed:"+str(round(value1,2))+" fil:"+str(round(value2,2))+" temp:"+str(round(value3,2))+" W:"+str(round(value4,2)))
+                #log_txt("rec: params speed:"+str(round(value1,3))+" fil:"+str(round(value2,3))+" temp:"+str(round(value3,3))+" W:"+str(round(value4,3)))
 
             elif command == 'm':
-                x_text.set("X = "+str(round(value1,2)))
-                y_text.set("Y = "+str(round(value2,2)))
-                z_text.set("Z = "+str(round(value3,2)))
-                w_text.set("W = "+str(round(value4,2)))
-                #log_txt("rec: act pose X:"+str(round(value1,2))+" Y:"+str(round(value2,2))+" Z:"+str(round(value3,2))+" W:"+str(round(value4,2)))
+                x_text.set("X = "+str(round(value1,3)))
+                y_text.set("Y = "+str(round(value2,3)))
+                z_text.set("Z = "+str(round(value3,3)))
+                w_text.set("W = "+str(round(value4,3)))
+                #log_txt("rec: act pose X:"+str(round(value1,3))+" Y:"+str(round(value2,3))+" Z:"+str(round(value3,3))+" W:"+str(round(value4,3)))
                 readytosend = True
             elif command == 'j':
-                log_txt("rec: soll pose X:"+str(round(value1,2))+" Y:"+str(round(value2,2))+" Z:"+str(round(value3,2))+" W:"+str(round(value4,2)))
+                log_txt("rec: soll pose X:"+str(round(value1,3))+" Y:"+str(round(value2,3))+" Z:"+str(round(value3,3))+" W:"+str(round(value4,3)))
             elif command == 'k':
-                log_txt("rec: soll step X:"+str(round(value1,2))+" Y:"+str(round(value2,2))+" Z:"+str(round(value3,2))+" W:"+str(round(value4,2)))
+                log_txt("rec: soll step X:"+str(round(value1,3))+" Y:"+str(round(value2,3))+" Z:"+str(round(value3,3))+" W:"+str(round(value4,3)))
             elif command == 'w':
-                log_txt("rec: time p step X:"+str(round(value1,2))+" Y:"+str(round(value2,2))+" Z:"+str(round(value3,2))+" W:"+str(round(value4,2)))
+                log_txt("rec: time p step X:"+str(round(value1,3))+" Y:"+str(round(value2,3))+" Z:"+str(round(value3,3))+" W:"+str(round(value4,3)))
             elif command == 'b':
-                log_txt("rec: motorstep X:"+str(round(value1,2))+" Y:"+str(round(value2,2))+" Z:"+str(round(value3,2))+" W:"+str(round(value4,2)))
+                log_txt("rec: motorstep X:"+str(round(value1,3))+" Y:"+str(round(value2,3))+" Z:"+str(round(value3,3))+" W:"+str(round(value4,3)))
             elif command == 'e':
                 if value1 == 0:
                     L_lblX.config(bg="green")
@@ -627,7 +627,7 @@ def recive():
                     L_lblZ.config(bg="red")
                 if value3 > 0:
                     L_lblZ.config(bg="yellow")
-                log_txt("endswitch X:"+str(round(value1,2))+" Y:"+str(round(value2,2))+" Z:"+str(round(value3,2))+" W:"+str(round(value4,2)))
+                log_txt("endswitch X:"+str(round(value1,3))+" Y:"+str(round(value2,3))+" Z:"+str(round(value3,3))+" W:"+str(round(value4,3)))
             else:
                 log_txt("rec: find no command ("+command+")")
                 pass
