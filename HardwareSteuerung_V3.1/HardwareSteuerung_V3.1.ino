@@ -181,7 +181,7 @@ void setup() {
   pinMode(Wachse.pin3,OUTPUT);
   pinMode(Wachse.pin4,OUTPUT);
 
-  pinMode(23,INPUT_PULLUP);
+  pinMode(23,INPUT);
   pinMode(temprelai,OUTPUT);
 
   myPID.SetOutputLimits(0, WindowSize);
@@ -192,10 +192,8 @@ void setup() {
 
 void loop() {
   time_now = micros();
-  //if(digitalRead(23)==LOW){
+  //if(digitalRead(23)==HIGH){
   //  digitalWrite(temprelai,HIGH);
-  //  digitalWrite(temprelai,LOW);
-  //  act_equal_soll();
   //}
 
   checkEndswitches();
@@ -204,7 +202,7 @@ void loop() {
     recive_msg();
   }
   
-  TempControle();
+  //TempControle();
 
   //motors drive
   treiberBig(Xachse);
@@ -235,6 +233,7 @@ void loop() {
     //sendsollpos();
     //sendsollstep();
     //sendactstep();
+    
   }
 }
 
@@ -318,14 +317,8 @@ void recive_msg(){
       break;
     case 's': //set speed
       Speed = Buf.tel.value[0];
-      sendsetting();
-      break;
-    case 't': //set temperatur
-      soll_T = Buf.tel.value[0];
-      sendsetting();
-      break;
-    case 'f'://set feed rate of filament
-      Wachse.steps_pmm = Buf.tel.value[0];
+      soll_T = Buf.tel.value[1];
+      Wachse.steps_pmm = Buf.tel.value[2];
       sendsetting();
       break;
     case 'c'://send setting
