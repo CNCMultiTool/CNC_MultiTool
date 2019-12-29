@@ -196,13 +196,13 @@ void loop() {
   //  digitalWrite(temprelai,HIGH);
   //}
 
-  checkEndswitches();
+  
   
   if(msg_available){
     recive_msg();
   }
-  
-  //TempControle();
+  checkEndswitches();
+  TempControle();
 
   //motors drive
   treiberBig(Xachse);
@@ -497,10 +497,10 @@ void StepMedi(struct StepMotorMedi &StepM,int direct){
 //Serial Send Funktions///////////////////////////////////////////////////////////////////
 void sendsetting(){
   Buf.tel.comand = 'q';
-  Buf.tel.value[0] = Output;//Speed;//curent speed  (now-heatStartTime)/1000;
+  Buf.tel.value[0] = Speed;//Speed;//curent speed  (now-heatStartTime)/1000;
   Buf.tel.value[1] = T;//temperatur
-  Buf.tel.value[2] = soll_T;//Output;
-  Buf.tel.value[3] = Wachse.steps_pmm;
+  Buf.tel.value[2] = Wachse.steps_pmm;//Output;
+  Buf.tel.value[3] = Output;
   send_tel();
 }
 
