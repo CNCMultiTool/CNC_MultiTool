@@ -19,6 +19,10 @@ CNC_automation::CNC_automation()
     connect(&m_MainWindow,SIGNAL(G_Code_Start(QString))                     ,this,SLOT(G_Code_Start(QString)));
     connect(&m_MainWindow,SIGNAL(G_Code_Pause())                            ,this,SLOT(G_Code_Pause()));
     connect(&m_MainWindow,SIGNAL(G_Code_Stop())                             ,this,SLOT(G_Code_Stop()));
+    connect(&m_MainWindow,SIGNAL(move_home())                               ,this,SLOT(move_home()));
+    connect(&m_MainWindow,SIGNAL(calib_size())                              ,this,SLOT(calib_size()));
+    connect(&m_MainWindow,SIGNAL(repeat_test())                             ,this,SLOT(repeat_test()));
+    connect(&m_MainWindow,SIGNAL(Z_calib())                                 ,this,SLOT(Z_calib()));
 
     connect(&m_Serial,SIGNAL(serial_show(bool))                             ,this,SLOT(serial_show(bool)));
     connect(&m_Serial,SIGNAL(process_recived(char,float,float,float,float)) ,this,SLOT(process_recived(char,float,float,float,float)));
@@ -174,4 +178,24 @@ void CNC_automation::process_recived(char command,float value1,float value2,floa
     default:
         break;
     }
+}
+
+void CNC_automation::move_home()
+{
+    m_AutoFunctions.move_home();
+}
+
+void CNC_automation::calib_size()
+{
+    m_AutoFunctions.calib_size();
+}
+
+void CNC_automation::repeat_test()
+{
+    m_AutoFunctions.repeat_test();
+}
+
+void CNC_automation::Z_calib()
+{
+    m_AutoFunctions.Z_calib();
 }

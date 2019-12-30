@@ -239,3 +239,23 @@ void MainWindow::on_pushButton_startGCode_pressed()
 {
     emit G_Code_Start(ui->lineEdit_fileGCode->text());
 }
+
+void MainWindow::on_pushButton_home_pressed()
+{
+    emit move_home();
+}
+
+void MainWindow::on_pushButton_sizecalib_pressed()
+{
+    emit calib_size();
+}
+
+void MainWindow::on_pushButton_repeattest_pressed()
+{
+    emit repeat_test();
+}
+
+void MainWindow::on_pushButton_Zcalib_pressed()
+{
+    emit Z_calib();
+}

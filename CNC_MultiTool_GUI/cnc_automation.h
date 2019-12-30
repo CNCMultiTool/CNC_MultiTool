@@ -61,6 +61,11 @@ public slots:
     void G_Code_Pause();
     void G_Code_Stop();
 
+    void move_home();
+    void calib_size();
+    void repeat_test();
+    void Z_calib();
+
 signals:
     void reached_position();
 };

@@ -46,23 +46,53 @@ void AutoFunctions::G_Code_Start(QString fileName)
     run();
 }
 
+void AutoFunctions::move_home()
+{
+    m_programm = 2;
+    run();
+}
+
+void AutoFunctions::calib_size()
+{
+    m_programm = 3;
+    run();
+}
+
+void AutoFunctions::repeat_test()
+{
+    m_programm = 4;
+    run();
+}
+
+void AutoFunctions::Z_calib()
+{
+    m_programm = 5;
+    run();
+}
+
 void AutoFunctions::run()
 {
     switch(m_programm)
     {
         case 1:
-            g_code_processor();
+            g_code_process();
             break;
         case 2:
-            move_home();
+            move_home_process();
             break;
         case 3:
-            calib_size();
+            calib_size_process();
+            break;
+        case 4:
+            repeat_test_process();
+            break;
+        case 5:
+            Z_calib_process();
             break;
     }
 }
 
-void AutoFunctions::g_code_processor()
+void AutoFunctions::g_code_process()
 {
     QFile inputFile(m_fileName);
     inputFile.open(QIODevice::ReadOnly);
@@ -175,7 +205,7 @@ void AutoFunctions::getValue(const QString indent,const QString line,float *targ
     }
 }
 
-void AutoFunctions::move_home()
+void AutoFunctions::move_home_process()
 {
     emit send_settings(50,-1,-1);
     if(m_act_Z_end<0.5)
@@ -184,19 +214,26 @@ void AutoFunctions::move_home()
         moveAndWait(-9999,-9999,9999,m_act_W);
 }
 
-void AutoFunctions::calib_size()
+void AutoFunctions::calib_size_process()
 {
-    emit Log("move home");
+    emit Log("calib_size");
     move_home();
-    emit Log("set position");
     emit send_setPosition(0,0,0,0);
-    emit Log("move full size");
     moveAndWait(9999,9999,0,0);
-    emit Log("result size");
     m_size_X = m_act_X;
     m_size_Y = m_act_Y;
-    emit Log("result size");
     move_home();
     emit Log("Sizecalib X size: "+QString::number(m_size_X)+" Y size: "+QString::number(m_size_Y));
     emit Log("calib error X size: "+QString::number(m_act_X)+" Y size: "+QString::number(m_act_Y));
 }
+
+void AutoFunctions::repeat_test_process()
+{
+    emit Log("repeat test");
+}
+
+void AutoFunctions::Z_calib_process()
+{
+    emit Log("Z calib");
+}
+

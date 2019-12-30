@@ -64,6 +64,14 @@ private slots:
 
     void on_pushButton_startGCode_pressed();
 
+    void on_pushButton_Zcalib_pressed();
+
+    void on_pushButton_home_pressed();
+
+    void on_pushButton_sizecalib_pressed();
+
+    void on_pushButton_repeattest_pressed();
+
 signals:
     void send_move(float X,float Y,float Z,float W);
     void send_settings(float speed,float temperatur,float filament);
@@ -74,6 +82,12 @@ signals:
     void G_Code_Start(QString fileName);
     void G_Code_Pause();
     void G_Code_Stop();
+
+    void move_home();
+    void calib_size();
+    void repeat_test();
+    void Z_calib();
+
 
 private:
     Ui::MainWindow *ui;

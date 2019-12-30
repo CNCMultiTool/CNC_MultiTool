@@ -17,6 +17,8 @@ public:
     void G_Code_Stop();
     void move_home();
     void calib_size();
+    void repeat_test();
+    void Z_calib();
 
     QEventLoop m_loop;
     float m_act_X;
@@ -49,7 +51,11 @@ private:
     void moveAndWait(float X,float Y,float Z,float W);
     QString m_fileName;
 
-    void g_code_processor();
+    void g_code_process();
+    void move_home_process();
+    void calib_size_process();
+    void repeat_test_process();
+    void Z_calib_process();
     int m_programm;
 
 signals:
