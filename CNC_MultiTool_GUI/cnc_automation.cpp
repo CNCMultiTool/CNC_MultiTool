@@ -6,9 +6,33 @@ CNC_automation::CNC_automation()
     m_Y = 0;
     m_Z = 0;
     m_W = 0;
-    m_F = 0;
-    m_S = 0;
-    m_validCommand = false;
+
+    m_MainWindow.setWindowTitle("Hildegart QT");
+    m_MainWindow.show();
+
+    connect(&m_MainWindow,SIGNAL(send_move(float,float,float,float))        ,this,SLOT(send_move(float,float,float,float)));
+    connect(&m_MainWindow,SIGNAL(send_settings(float ,float ,float))        ,this,SLOT(send_settings(float ,float ,float)));
+    connect(&m_MainWindow,SIGNAL(send_stop())                               ,this,SLOT(send_stop()));
+    connect(&m_MainWindow,SIGNAL(send_getPosition())                        ,this,SLOT(send_getPosition()));
+    connect(&m_MainWindow,SIGNAL(send_setPosition(float,float,float,float)) ,this,SLOT(send_setPosition(float,float,float,float)));
+    connect(&m_MainWindow,SIGNAL(serial_open_close(QString))                ,this,SLOT(serial_open_close(QString)));
+    connect(&m_MainWindow,SIGNAL(G_Code_Start(QString))                     ,this,SLOT(G_Code_Start(QString)));
+    connect(&m_MainWindow,SIGNAL(G_Code_Pause())                            ,this,SLOT(G_Code_Pause()));
+    connect(&m_MainWindow,SIGNAL(G_Code_Stop())                             ,this,SLOT(G_Code_Stop()));
+
+    connect(&m_Serial,SIGNAL(serial_show(bool))                             ,this,SLOT(serial_show(bool)));
+    connect(&m_Serial,SIGNAL(process_recived(char,float,float,float,float)) ,this,SLOT(process_recived(char,float,float,float,float)));
+    connect(&m_Serial,SIGNAL(Log(QString))                                  ,this,SLOT(Log(QString)));
+    connect(&m_Serial,SIGNAL(errorLog(QString))                             ,this,SLOT(errorLog(QString)));
+
+    connect(&m_AutoFunctions,SIGNAL(Log(QString))                           ,this,SLOT(Log(QString)));
+    connect(&m_AutoFunctions,SIGNAL(errorLog(QString))                      ,this,SLOT(errorLog(QString)));
+    connect(&m_AutoFunctions,SIGNAL(send_move(float,float,float,float))        ,this,SLOT(send_move(float,float,float,float)));
+    connect(&m_AutoFunctions,SIGNAL(send_settings(float ,float ,float))        ,this,SLOT(send_settings(float ,float ,float)));
+    connect(&m_AutoFunctions,SIGNAL(send_stop())                               ,this,SLOT(send_stop()));
+    connect(&m_AutoFunctions,SIGNAL(send_getPosition())                        ,this,SLOT(send_getPosition()));
+    connect(&m_AutoFunctions,SIGNAL(send_setPosition(float,float,float,float)) ,this,SLOT(send_setPosition(float,float,float,float)));
+    connect(this,SIGNAL(reached_position()), &m_AutoFunctions.m_loop, SLOT(quit()));
 }
 
 CNC_automation::~CNC_automation()
@@ -16,104 +40,108 @@ CNC_automation::~CNC_automation()
 
 }
 
-
-void CNC_automation::GCode_Parser(QString fileName)
+void CNC_automation::Log(const QString &s)
 {
-    m_FileName = fileName;
-    emit Log("start G-Code parsing");
-    QFile inputFile(m_FileName);
-    inputFile.open(QIODevice::ReadOnly);
-    QTextStream in(&inputFile);
-    in.setCodec("UTF-8");
-
-
-    QString newLine;
-    QRegExp rx;
-
-    while(true)
-    {
-        newLine = in.readLine();
-        if(newLine.isNull())
-        {
-            emit Log("end of file");
-            return;
-        }
-        rx.setPattern(";");
-        if(rx.indexIn(newLine)==0)
-        {
-            emit Log("Comment: "+newLine);
-            continue;
-        }
-        getValue("X",newLine,&m_X);
-        getValue("Y",newLine,&m_Y);
-        getValue("Z",newLine,&m_Z);
-        getValue("E",newLine,&m_W);
-        getValue("S",newLine,&m_S);
-        getValue("F",newLine,&m_F);
-
-        if(isCommand("G0",newLine))
-            m_validCommand = true;
-        if(isCommand("G1",newLine))
-            m_validCommand = true;
-        if(isCommand("G21",newLine))
-            m_validCommand = true;
-        if(isCommand("G28",newLine))
-            m_validCommand = true;
-        if(isCommand("G90",newLine))
-            m_validCommand = true;
-        if(isCommand("G91",newLine))
-            m_validCommand = true;
-        if(isCommand("G92",newLine))
-            m_validCommand = true;
-        if(isCommand("M104",newLine))
-            m_validCommand = true;
-        if(isCommand("M107",newLine))
-            m_validCommand = true;
-        if(isCommand("M109",newLine))
-            m_validCommand = true;
-
-        if(!m_validCommand)
-        {
-            emit errorLog("Line not Known:"+newLine);
-        }
-
-
-    }
+    m_MainWindow.Log(s);
 }
 
-bool CNC_automation::isCommand(const QString indent,const QString line)
+void CNC_automation::errorLog(const QString &s)
 {
-    QRegExp rx;
-    rx.setPattern(indent);
-    if(rx.indexIn(line)!=-1)
-    {
-        emit Log(indent+" X"+QString::number(m_X)+" Y"+QString::number(m_Y)+" Z"+QString::number(m_Z)+" W"+QString::number(m_W)+" S"+QString::number(m_S)+" F"+QString::number(m_F));
-        return(true);
-    }
-    return(false);
+    m_MainWindow.errorLog(s);
 }
 
-void CNC_automation::getValue(const QString indent,const QString line,float *target)
+void CNC_automation::G_Code_Start(QString fileName)
 {
-    QRegExp rx;
-    QString resultStr;
-    //set the pattern for an indent and the folloing number
-    rx.setPattern(indent+"-?\\d*.\\d*");
-    //if indent and number there
-    if(rx.indexIn(line)!=-1)
-    {
-        //remove first letter and convert to float
-        resultStr = rx.cap(0);
-        resultStr.remove(0, 1);
-        *target = resultStr.toFloat();
-    }
+    Log("start g-code: "+fileName);
+    m_AutoFunctions.G_Code_Start(fileName);
 }
 
-QString CNC_automation::loadTextFile()
+void CNC_automation::G_Code_Pause()
 {
-    QFile inputFile(m_FileName);
-    inputFile.open(QIODevice::ReadOnly);
-    QTextStream in(&inputFile);
-    in.setCodec("UTF-8");
-    return in.readAll();
+    m_AutoFunctions.G_Code_Pause();
+}
+
+void CNC_automation::G_Code_Stop()
+{
+    m_AutoFunctions.G_Code_Stop();
+}
+
+void CNC_automation::serial_show(bool isOpen)
+{
+    m_MainWindow.show_serial(isOpen);
+}
+
+void CNC_automation::send(char command,float value1,float value2,float value3,float value4)
+{
+    m_Serial.send(command,value1,value2,value3,value4);
+}
+
+void CNC_automation::send_move(float X,float Y,float Z,float W)
+{
+    m_Serial.send('m',X,Y,Z,W);
+}
+
+void CNC_automation::send_settings(float speed,float temperatur,float filament)
+{
+    m_Serial.send('s',speed,temperatur,filament,0);
+}
+void CNC_automation::send_stop()
+{
+    m_Serial.send('b',0,0,0,0);
+}
+
+void CNC_automation::send_getPosition()
+{
+    m_Serial.send('p',0,0,0,0);
+}
+
+void CNC_automation::send_setPosition(float X,float Y,float Z,float W)
+{
+    m_Serial.send('n',X,Y,Z,W);
+}
+
+void CNC_automation::serial_open_close(QString portName)
+{
+    m_Serial.open_close(portName);
+}
+
+void CNC_automation::process_recived(char command,float value1,float value2,float value3,float value4)
+{
+    switch(command)
+    {
+    case 'm'://set the actual position
+        m_MainWindow.show_position(value1,value2,value3,value4);
+        emit reached_position();
+        m_X = value1;
+        m_Y = value2;
+        m_Z = value3;
+        m_W = value4;
+        //Log("recive act Pos X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
+        break;
+    case 'q'://set the actual position
+        m_MainWindow.show_settings(value1,value2,value3);
+        m_speed = value1;
+        m_filament = value2;
+        m_temperatur = value3;
+        //Log("recive Settings Speed:"+QString::number(value1)+" Temperatur:"+QString::number(value2)+" Filament:"+QString::number(value3));
+        break;
+    case 'w':
+        Log("recive StepTimes X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
+        break;
+    case 'j':
+        Log("recive SollPosi X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
+        break;
+    case 'k':
+        Log("recive SollStep X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
+        break;
+    case 'b':
+        Log("recive actStep X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
+        break;
+    case 'e':
+        m_MainWindow.show_endswitch(value1,value2,value3);
+        //Log("recive endswitch X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
+        break;
+    default:
+        break;
+    }
 }

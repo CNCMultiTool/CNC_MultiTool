@@ -20,7 +20,10 @@ class Serial : public QThread
 public:
     explicit Serial();
     ~Serial();
-    bool open(const QString &portName);
+    void open_close(const QString &portName);
+    //void send(char command,float value1,float value2,float value3,float value4);
+
+public slots:
     void send(char command,float value1,float value2,float value3,float value4);
 
 private:
@@ -33,11 +36,14 @@ private:
     tTelegram m_recive_telegram;
     tTelegram m_send_telegram;
 
+    QByteArray m_SendData;
+    bool m_dataReadyToSend;
 
 signals:
     void Log(const QString &s);
     void errorLog(const QString &s);
-    void ProcesCommand(const char command,float value1,float value2,float value3,float value4);
+    void process_recived(char command,float value1,float value2,float value3,float value4);
+    void serial_show(bool isOpen);
 
 };
 

@@ -5,6 +5,7 @@ Serial::Serial()
 {
     const QMutexLocker locker(&m_mutex);
     m_quit = true;
+    m_dataReadyToSend = false;
 }
 
 Serial::~Serial()
@@ -16,14 +17,14 @@ Serial::~Serial()
     wait();
 }
 
-bool Serial::open(const QString &portName)
+void Serial::open_close(const QString &portName)
 {
     m_portName = portName;
+    //if open then close
     if(m_quit == false)
     {
         m_quit = true;
-        emit Log("close Serial");
-        return(false);
+        return;
     }
 
     m_quit = false;
@@ -31,14 +32,12 @@ bool Serial::open(const QString &portName)
         start();
     else
         m_cond.wakeOne();
-    emit Log("open Serial");
-    return(true);
 }
 
 void Serial::run()
 {
     QSerialPort serial;
-    m_serial = &serial;
+    //m_serial = &serial;
     serial.setPortName(m_portName);
     serial.setParity(QSerialPort::Parity::NoParity);
     serial.setDataBits(QSerialPort::Data8);
@@ -62,8 +61,20 @@ void Serial::run()
     unsigned char checkSumm = 0;
     unsigned char newCheckSumm = 0;
 
+    serial_show(true);
+    m_dataReadyToSend = false;
+    emit Log("serial open");
     while(!m_quit)
     {
+        //send data if some available
+        m_mutex.lock();
+        if(m_dataReadyToSend == true)
+        {
+            serial.write(m_SendData);
+            m_dataReadyToSend = false;
+        }
+        m_mutex.unlock();
+
         //read byts from serial
         m_mutex.lock();
         responseData += serial.readAll();
@@ -79,7 +90,7 @@ void Serial::run()
                 break;
             }
         }
-        //if startindex is not in first place clear fauld bytes
+        //if startcodon index is not in first place clear fauld bytes
         if(StartIndex!=0)
         {
             responseData.remove(0,StartIndex);
@@ -103,27 +114,20 @@ void Serial::run()
             {
                 newCheckSumm += responseData[i];
             }
-           if(newCheckSumm!=checkSumm)
-           {
-               emit errorLog("check failt recive:"+QString::number(checkSumm)+" calc:"+QString::number(newCheckSumm));
-           }
-           else
-           {
-               //emit Log("check pass recive:"+QString::number(checkSumm)+" calc:"+QString::number(newCheckSumm));
-               emit ProcesCommand(command,m_recive_telegram.Value[0],m_recive_telegram.Value[1],m_recive_telegram.Value[2],m_recive_telegram.Value[3]);
-           }
-            /*emit Log("recive("+QString(command)+"  "+
-                               QString::number(m_recive_telegram.Value[0])+"  "+
-                               QString::number(m_recive_telegram.Value[1])+"  "+
-                               QString::number(m_recive_telegram.Value[2])+"  "+
-                               QString::number(m_recive_telegram.Value[3])+"  "+
-                               QString::number(checkSumm)+")");*/
+            if(newCheckSumm!=checkSumm)
+            {
+                emit errorLog("check failt recive:"+QString::number(checkSumm)+" calc:"+QString::number(newCheckSumm));
+            }
+            else
+            {
+                emit process_recived(command,m_recive_telegram.Value[0],m_recive_telegram.Value[1],m_recive_telegram.Value[2],m_recive_telegram.Value[3]);
+            }
 
             responseData.remove(0,TelegramSize);
-
         }
     }
-
+    emit Log("serial close");
+    serial_show(false);
     serial.close();
 }
 
@@ -147,17 +151,21 @@ void Serial::send(char command,float value1,float value2,float value3,float valu
     }
     sendData += newCheckSumm;
 
-    m_mutex.lock();
-    m_serial->write(sendData);
-    //m_serial->waitForBytesWritten(10);
-    m_mutex.unlock();
-    m_cond.wakeOne();
+    while(m_dataReadyToSend)
+    {
 
-    emit Log("send("+QString(command)+"  "+
+    }
+
+    m_mutex.lock();
+    m_SendData = sendData;
+    m_dataReadyToSend = true;
+    m_mutex.unlock();
+
+    /*emit Log("send("+QString(command)+"  "+
                        QString::number(m_send_telegram.Value[0])+"  "+
                        QString::number(m_send_telegram.Value[1])+"  "+
                        QString::number(m_send_telegram.Value[2])+"  "+
                        QString::number(m_send_telegram.Value[3])+"  "+
-                       QString::number(newCheckSumm)+")");
+                       QString::number(newCheckSumm)+")");*/
 
 }

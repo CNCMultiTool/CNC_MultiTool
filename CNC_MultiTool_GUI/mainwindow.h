@@ -4,8 +4,9 @@
 #include <QMainWindow>
 #include <QPushButton>
 #include <QFileDialog>
+#include <QTime>
 #include "serial.h"
-#include "cnc_automation.h"
+
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -18,12 +19,14 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
-
-
-private slots:
     void Log(const QString &s);
     void errorLog(const QString &s);
-    void ProcesCommand(const char command,const float value1,const float value2,const float value3,const float value4);
+    void show_position(float X,float Y,float Z,float W);
+    void show_settings(float speed,float temperatur,float filament);
+    void show_endswitch(float X,float Y,float Z);
+    void show_serial(bool isOpen);
+
+private slots:
 
     void sendStopMoving();
 
@@ -61,10 +64,20 @@ private slots:
 
     void on_pushButton_startGCode_pressed();
 
+signals:
+    void send_move(float X,float Y,float Z,float W);
+    void send_settings(float speed,float temperatur,float filament);
+    void send_stop();
+    void send_getPosition();
+    void send_setPosition(float X,float Y,float Z,float W);
+    void serial_open_close(QString portName);
+    void G_Code_Start(QString fileName);
+    void G_Code_Pause();
+    void G_Code_Stop();
+
 private:
     Ui::MainWindow *ui;
-    Serial m_Serial;
-    CNC_automation m_CNC_auto;
+
     void endswitchButtonColor(float value,QPushButton *PosButton,QPushButton *NegButton);
 
 

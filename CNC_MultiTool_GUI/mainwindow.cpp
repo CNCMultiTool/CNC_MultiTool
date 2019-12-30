@@ -10,18 +10,11 @@ MainWindow::MainWindow(QWidget *parent)
     ui->textEditLog->setReadOnly(true);
     ui->textEditLog_error->setReadOnly(true);
 
-    //chek availabal port add add to the comboBox
+    //chek availabal port add to the comboBox
     const auto infos = QSerialPortInfo::availablePorts();
     for (const QSerialPortInfo &info : infos)
         ui->comboBoxComPortName->addItem(info.portName());
     //
-
-    connect(&m_CNC_auto,&CNC_automation::Log,this,&MainWindow::Log);
-    connect(&m_CNC_auto,&CNC_automation::errorLog,this,&MainWindow::errorLog);
-
-    connect(&m_Serial,&Serial::Log,this,&MainWindow::Log);
-    connect(&m_Serial,&Serial::errorLog,this,&MainWindow::errorLog);
-    connect(&m_Serial,&Serial::ProcesCommand,this,&MainWindow::ProcesCommand);
 
     connect(ui->pushButtonMoveXPos,SIGNAL(released()),this,SLOT(sendStopMoving()));
     connect(ui->pushButtonMoveXNeg,SIGNAL(released()),this,SLOT(sendStopMoving()));
@@ -49,45 +42,27 @@ void MainWindow::errorLog(const QString &s)
     ui->textEditLog_error->append(s);
 }
 
-void MainWindow::ProcesCommand(const char command,const float value1,const float value2,const float value3,const float value4)
+void MainWindow::show_position(float X,float Y,float Z,float W)
 {
-    switch(command)
-    {
-    case 'm'://set the actual position
-        ui->label_XPos->setNum(value1);
-        ui->label_YPos->setNum(value2);
-        ui->label_ZPos->setNum(value3);
-        ui->label_WPos->setNum(value4);
-        Log("recive act Pos X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
-        break;
-    case 'q'://set the actual position
-        ui->label_actSpeed->setNum(value1);
-        ui->label_actTemperatur->setNum(value2);
-        ui->label_actFilament->setNum(value3);
-        ui->label_actPower->setNum(value4);
-        Log("recive Settings Speed:"+QString::number(value1)+" Temperatur:"+QString::number(value2)+" Filament:"+QString::number(value3));
-        break;
-    case 'w':
-        Log("recive StepTimes X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
-        break;
-    case 'j':
-        Log("recive SollPosi X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
-        break;
-    case 'k':
-        Log("recive SollStep X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
-        break;
-    case 'b':
-        Log("recive actStep X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
-        break;
-    case 'e':
-        endswitchButtonColor(value1,ui->pushButtonMoveXPos,ui->pushButtonMoveXNeg);
-        endswitchButtonColor(value2,ui->pushButtonMoveYPos,ui->pushButtonMoveYNeg);
-        endswitchButtonColor(value3,ui->pushButtonMoveZPos,ui->pushButtonMoveZNeg);
-        Log("recive endswitch X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
-        break;
-    default:
-        break;
-    }
+    ui->label_XPos->setNum(X);
+    ui->label_YPos->setNum(Y);
+    ui->label_ZPos->setNum(Z);
+    ui->label_WPos->setNum(W);
+}
+
+void MainWindow::show_settings(float speed,float temperatur,float filament)
+{
+    ui->label_actSpeed->setNum(speed);
+    ui->label_actTemperatur->setNum(temperatur);
+    ui->label_actFilament->setNum(filament);
+    //ui->label_actPower->setNum(value4);
+}
+
+void MainWindow::show_endswitch(float X, float Y, float Z)
+{
+    endswitchButtonColor(X,ui->pushButtonMoveXPos,ui->pushButtonMoveXNeg);
+    endswitchButtonColor(Y,ui->pushButtonMoveYPos,ui->pushButtonMoveYNeg);
+    endswitchButtonColor(Z,ui->pushButtonMoveZPos,ui->pushButtonMoveZNeg);
 }
 
 //paints the movebuttons red or green depending of the endswitches
@@ -108,7 +83,12 @@ void MainWindow::endswitchButtonColor(float value,QPushButton *PosButton,QPushBu
 
 void MainWindow::on_pushButtonSerialConnect_clicked()
 {
-    if(m_Serial.open(ui->comboBoxComPortName->currentText()))
+    emit serial_open_close(ui->comboBoxComPortName->currentText());
+}
+
+void MainWindow::show_serial(bool isOpen)
+{
+    if(isOpen)
     {
         ui->comboBoxComPortName->setEnabled(false);
         ui->pushButtonSerialConnect->setStyleSheet("background-color: green");
@@ -118,12 +98,11 @@ void MainWindow::on_pushButtonSerialConnect_clicked()
         ui->comboBoxComPortName->setEnabled(true);
         ui->pushButtonSerialConnect->setStyleSheet("background-color: red");
     }
-
 }
 
 void MainWindow::sendStopMoving()
 {
-    m_Serial.send('b',0,0,0,0);
+    emit send_stop();
 }
 
 void MainWindow::on_pushButtonMoveXPos_pressed()
@@ -131,7 +110,7 @@ void MainWindow::on_pushButtonMoveXPos_pressed()
     float Y =ui->label_YPos->text().toFloat();
     float Z =ui->label_ZPos->text().toFloat();
     float W =ui->label_WPos->text().toFloat();
-    m_Serial.send('m',9999,Y,Z,W);
+    emit send_move(9999,Y,Z,W);
 }
 
 void MainWindow::on_pushButtonMoveXNeg_pressed()
@@ -139,7 +118,7 @@ void MainWindow::on_pushButtonMoveXNeg_pressed()
     float Y =ui->label_YPos->text().toFloat();
     float Z =ui->label_ZPos->text().toFloat();
     float W =ui->label_WPos->text().toFloat();
-    m_Serial.send('m',-9999,Y,Z,W);
+    emit send_move(-9999,Y,Z,W);
 }
 
 void MainWindow::on_pushButtonMoveYPos_pressed()
@@ -147,7 +126,7 @@ void MainWindow::on_pushButtonMoveYPos_pressed()
     float X =ui->label_XPos->text().toFloat();
     float Z =ui->label_ZPos->text().toFloat();
     float W =ui->label_WPos->text().toFloat();
-    m_Serial.send('m',X,9999,Z,W);
+    emit send_move(X,9999,Z,W);
 }
 
 void MainWindow::on_pushButtonMoveYNeg_pressed()
@@ -155,7 +134,7 @@ void MainWindow::on_pushButtonMoveYNeg_pressed()
     float X =ui->label_XPos->text().toFloat();
     float Z =ui->label_ZPos->text().toFloat();
     float W =ui->label_WPos->text().toFloat();
-    m_Serial.send('m',X,-9999,Z,W);
+    emit send_move(X,-9999,Z,W);
 }
 
 void MainWindow::on_pushButtonMoveZPos_pressed()
@@ -163,7 +142,7 @@ void MainWindow::on_pushButtonMoveZPos_pressed()
     float X =ui->label_XPos->text().toFloat();
     float Y =ui->label_YPos->text().toFloat();
     float W =ui->label_WPos->text().toFloat();
-    m_Serial.send('m',X,Y,9999,W);
+    emit send_move(X,Y,9999,W);
 }
 
 void MainWindow::on_pushButtonMoveZNeg_pressed()
@@ -171,7 +150,7 @@ void MainWindow::on_pushButtonMoveZNeg_pressed()
     float X =ui->label_XPos->text().toFloat();
     float Y =ui->label_YPos->text().toFloat();
     float W =ui->label_WPos->text().toFloat();
-    m_Serial.send('m',X,Y,-9999,W);
+    emit send_move(X,Y,-9999,W);
 }
 
 void MainWindow::on_pushButtonMoveWPos_pressed()
@@ -179,7 +158,7 @@ void MainWindow::on_pushButtonMoveWPos_pressed()
     float X =ui->label_XPos->text().toFloat();
     float Y =ui->label_YPos->text().toFloat();
     float Z =ui->label_ZPos->text().toFloat();
-    m_Serial.send('m',X,Y,Z,9999);
+    emit send_move(X,Y,Z,9999);
 }
 
 void MainWindow::on_pushButtonMoveWNeg_pressed()
@@ -187,7 +166,7 @@ void MainWindow::on_pushButtonMoveWNeg_pressed()
     float X =ui->label_XPos->text().toFloat();
     float Y =ui->label_YPos->text().toFloat();
     float Z =ui->label_ZPos->text().toFloat();
-    m_Serial.send('m',X,Y,Z,-9999);
+    emit send_move(X,Y,Z,-9999);
 }
 
 void MainWindow::on_pushButtonCopyToMoveTo_pressed()
@@ -216,7 +195,7 @@ void MainWindow::on_pushButtonCopyToSetPosition_pressed()
 
 void MainWindow::on_pushButtonGetPosition_pressed()
 {
-    m_Serial.send('p',0,0,0,0);
+    emit send_getPosition();
 }
 
 void MainWindow::on_pushButtonMoveTo_pressed()
@@ -225,7 +204,7 @@ void MainWindow::on_pushButtonMoveTo_pressed()
     float Y = ui->doubleSpinBoxMoveY->value();
     float Z = ui->doubleSpinBoxMoveZ->value();
     float W = ui->doubleSpinBoxMoveW->value();
-    m_Serial.send('m',X,Y,Z,W);
+    emit send_move(X,Y,Z,W);
 }
 
 void MainWindow::on_pushButtonSetPosition_pressed()
@@ -234,7 +213,7 @@ void MainWindow::on_pushButtonSetPosition_pressed()
     float Y = ui->doubleSpinBoxSetY->value();
     float Z = ui->doubleSpinBoxSetZ->value();
     float W = ui->doubleSpinBoxSetW->value();
-    m_Serial.send('n',X,Y,Z,W);
+    emit send_setPosition(X,Y,Z,W);
 }
 
 void MainWindow::on_pushButtonSetSettings_pressed()
@@ -242,13 +221,12 @@ void MainWindow::on_pushButtonSetSettings_pressed()
     float Speed = ui->spinBoxSpeed->value();
     float Temperatur = ui->spinBoxTemperatur->value();
     float Filament = ui->spinBoxFilament->value();
-    m_Serial.send('s',Speed,Temperatur,Filament,0);
+    emit send_settings(Speed,Temperatur,Filament);
 }
 
 void MainWindow::on_pushButton_browseGCode_pressed()
 {
     QString directory = QDir::toNativeSeparators(QFileDialog::getOpenFileName(this, tr("Open File"),QDir::currentPath(),tr("G-Code (*.gcode)")));
-    //QString directory = QDir::toNativeSeparators(QFileDialog::getOpenFileName(this, tr("Open File"),QString("C:\Users\yanni\Documents\G-Code"),tr("G-Code (*.gcode)")));
 
     Log(directory);
     if (!directory.isEmpty())
@@ -259,5 +237,5 @@ void MainWindow::on_pushButton_browseGCode_pressed()
 
 void MainWindow::on_pushButton_startGCode_pressed()
 {
-    m_CNC_auto.GCode_Parser(ui->lineEdit_fileGCode->text());
+    emit G_Code_Start(ui->lineEdit_fileGCode->text());
 }
