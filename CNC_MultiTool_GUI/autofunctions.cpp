@@ -9,9 +9,10 @@ AutoFunctions::AutoFunctions()
     m_S = 0;
     m_F = 0;
     m_validCommand = false;
-    m_pose_recived = false;
     m_pause = false;
     m_aboard = false;
+
+    m_Fmax = 50;
 }
 
 AutoFunctions::~AutoFunctions()
@@ -19,29 +20,16 @@ AutoFunctions::~AutoFunctions()
     m_aboard = true;
 }
 
-
-void AutoFunctions::act_pose_recived()
-{
-    m_pose_recived = true;
-}
-
-void AutoFunctions::wait_for_finish()
-{
-    m_pose_recived = false;
-    while(m_pose_recived == false||m_pause == true)
-    {
-
-    }
-}
-
 void AutoFunctions::G_Code_Stop()
 {
     m_aboard = true;
+    emit Log("g-code abbruch "+QString::number(m_aboard));
 }
 
 void AutoFunctions::G_Code_Pause()
 {
     m_pause = !m_pause;
+    emit Log("g-code pause "+QString::number(m_pause));
 }
 
 void AutoFunctions::moveAndWait(float X, float Y, float Z, float W)
@@ -52,13 +40,30 @@ void AutoFunctions::moveAndWait(float X, float Y, float Z, float W)
 
 void AutoFunctions::G_Code_Start(QString fileName)
 {
+    emit Log("pos in autofunction X:"+QString::number(m_act_X)+" Y:"+QString::number(m_act_Y)+" Z:"+QString::number(m_act_Z)+" W:"+QString::number(m_act_W));
     m_fileName = fileName;
+    m_programm = 1;
     run();
 }
 
 void AutoFunctions::run()
 {
-    emit Log("start G-Code parsing");
+    switch(m_programm)
+    {
+        case 1:
+            g_code_processor();
+            break;
+        case 2:
+            move_home();
+            break;
+        case 3:
+            calib_size();
+            break;
+    }
+}
+
+void AutoFunctions::g_code_processor()
+{
     QFile inputFile(m_fileName);
     inputFile.open(QIODevice::ReadOnly);
     QTextStream in(&inputFile);
@@ -95,27 +100,39 @@ void AutoFunctions::run()
 
         if(isCommand("G0",newLine))//fast move
         {
+            emit send_settings(m_S,m_Fmax,-1);
             moveAndWait(m_X,m_Y,m_Z,m_W);
             m_validCommand = true;
         }
         if(isCommand("G1",newLine))//normal move
         {
+            if(0.001>abs(m_F-m_Fold))
+                emit send_settings(m_S,m_F/60,-1);
+
             moveAndWait(m_X,m_Y,m_Z,m_W);
             m_validCommand = true;
         }
         if(isCommand("G21",newLine))//use mm
             m_validCommand = true;
         if(isCommand("G28",newLine))//move home
+        {
+            move_home();
             m_validCommand = true;
+        }
         if(isCommand("G31",newLine))//move untile endswitch
+        {
+            calib_size();
             m_validCommand = true;
+        }
         if(isCommand("G90",newLine))//absolute referenz
             m_validCommand = true;
         if(isCommand("G91",newLine))//incrementel movement
             m_validCommand = true;
         if(isCommand("G92",newLine))//set position
+            emit send_setPosition(m_X,m_Y,m_Z,m_W);
             m_validCommand = true;
         if(isCommand("M104",newLine))//set temperatur
+            emit send_settings(m_S,m_F/60,-1);
             m_validCommand = true;
         if(isCommand("M107",newLine))
             m_validCommand = true;
@@ -126,6 +143,7 @@ void AutoFunctions::run()
         {
             emit errorLog("Line not Known:"+newLine);
         }
+        m_Fold = m_F;
     }
 }
 
@@ -155,4 +173,30 @@ void AutoFunctions::getValue(const QString indent,const QString line,float *targ
         resultStr.remove(0, 1);
         *target = resultStr.toFloat();
     }
+}
+
+void AutoFunctions::move_home()
+{
+    emit send_settings(50,-1,-1);
+    if(m_act_Z_end<0.5)
+        moveAndWait(m_act_X,m_act_Y,9999,m_act_W);
+    if(m_act_X_end>-0.5||m_act_Y_end>-0.5)
+        moveAndWait(-9999,-9999,9999,m_act_W);
+}
+
+void AutoFunctions::calib_size()
+{
+    emit Log("move home");
+    move_home();
+    emit Log("set position");
+    emit send_setPosition(0,0,0,0);
+    emit Log("move full size");
+    moveAndWait(9999,9999,0,0);
+    emit Log("result size");
+    m_size_X = m_act_X;
+    m_size_Y = m_act_Y;
+    emit Log("result size");
+    move_home();
+    emit Log("Sizecalib X size: "+QString::number(m_size_X)+" Y size: "+QString::number(m_size_Y));
+    emit Log("calib error X size: "+QString::number(m_act_X)+" Y size: "+QString::number(m_act_Y));
 }

@@ -64,6 +64,7 @@ void Serial::run()
     serial_show(true);
     m_dataReadyToSend = false;
     emit Log("serial open");
+    send('i',0,0,0,0);
     while(!m_quit)
     {
         //send data if some available

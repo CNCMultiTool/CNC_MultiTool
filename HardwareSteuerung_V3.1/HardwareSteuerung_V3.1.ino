@@ -296,6 +296,10 @@ void TempControle(){
 void recive_msg(){
   msg_available = false;
   switch(Buf.tel.comand){
+    case 'i':
+      sendsetting();
+      sendactpos();
+      send_variabelTestTommand('e',Xachse.SwitchID,Yachse.SwitchID,Zachse.SwitchID,0);
     case 'm'://move
       Xachse.soll_posi = Buf.tel.value[0];
       Yachse.soll_posi = Buf.tel.value[1];
@@ -310,7 +314,7 @@ void recive_msg(){
       Zachse.act_posi = Buf.tel.value[2];
       Wachse.act_posi = Buf.tel.value[3];
       setPose();
-      sendactpos();
+      sendconfirmpos();
       break;
     case 'p'://send pose
       sendactpos();
@@ -515,6 +519,15 @@ void sendtimes(){
 
 void sendactpos(){
   Buf.tel.comand = 'm';
+  Buf.tel.value[0] = Xachse.act_posi;
+  Buf.tel.value[1] = Yachse.act_posi;
+  Buf.tel.value[2] = Zachse.act_posi;
+  Buf.tel.value[3] = Wachse.act_posi;
+  send_tel();
+}
+
+void sendconfirmpos(){
+  Buf.tel.comand = 'c';
   Buf.tel.value[0] = Xachse.act_posi;
   Buf.tel.value[1] = Yachse.act_posi;
   Buf.tel.value[2] = Zachse.act_posi;
