@@ -135,7 +135,7 @@ void CNC_automation::process_recived(char command,float value1,float value2,floa
         m_AutoFunctions.m_act_Y = value2;
         m_AutoFunctions.m_act_Z = value3;
         m_AutoFunctions.m_act_W = value4;
-        Log("recive act Pos X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
+        //Log("recive act Pos X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
         break;
     case 'c'://set the actual position
         m_MainWindow.show_position(value1,value2,value3,value4);
@@ -147,7 +147,7 @@ void CNC_automation::process_recived(char command,float value1,float value2,floa
         m_AutoFunctions.m_act_Y = value2;
         m_AutoFunctions.m_act_Z = value3;
         m_AutoFunctions.m_act_W = value4;
-        Log("recive act Pos X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
+        //Log("recive act Pos X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
         break;
     case 'q'://set the actual position
         m_MainWindow.show_settings(value1,value2,value3);
@@ -173,7 +173,7 @@ void CNC_automation::process_recived(char command,float value1,float value2,floa
         m_AutoFunctions.m_act_X_end = value1;
         m_AutoFunctions.m_act_Y_end = value2;
         m_AutoFunctions.m_act_Z_end = value3;
-        Log("recive endswitch X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
+        //Log("recive endswitch X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
         break;
     default:
         break;

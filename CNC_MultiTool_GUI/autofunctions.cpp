@@ -230,6 +230,30 @@ void AutoFunctions::calib_size_process()
 void AutoFunctions::repeat_test_process()
 {
     emit Log("repeat test");
+    //fast smal movements (speed,dist,repeat)
+    emit Log("repeat test: fast smal movements");
+    repeat_movement(50,10,10);
+    //emit Log("repeat test: fast long movements");
+    repeat_movement(50,300,1);
+    //emit Log("repeat test: fast long movements");
+    repeat_movement(20,10,10);
+
+    emit Log("end repeattest");
+}
+
+void AutoFunctions::repeat_movement(float speed,float dist,int repeat)
+{
+    emit Log("settings speed: "+QString::number(speed)+"  trafel distans: "+QString::number(dist)+"  repeat`s: "+QString::number(repeat));
+    move_home();
+    emit send_setPosition(0,0,0,0);
+    emit send_settings(speed,-1,-1);
+    for(int i=0;i<repeat;i++)
+    {
+        moveAndWait(10,10,-10,0);
+        moveAndWait(10+dist,10+dist,-1*(10+dist),0);
+    }
+    move_home();
+    emit Log("result Xerror: "+QString::number(m_act_X)+"  Yerror: "+QString::number(m_act_Y)+"  Zerror: "+QString::number(m_act_Z));
 }
 
 void AutoFunctions::Z_calib_process()

@@ -298,7 +298,7 @@ void recive_msg(){
   switch(Buf.tel.comand){
     case 'i':
       sendsetting();
-      sendactpos();
+      sendconfirmpos();
       send_variabelTestTommand('e',Xachse.SwitchID,Yachse.SwitchID,Zachse.SwitchID,0);
     case 'm'://move
       Xachse.soll_posi = Buf.tel.value[0];

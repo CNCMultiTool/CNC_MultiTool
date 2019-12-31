@@ -49,6 +49,7 @@ private:
     bool isCommand(const QString indent,const QString line);
     void wait_for_finish();
     void moveAndWait(float X,float Y,float Z,float W);
+    void repeat_movement(float speed,float dist,int repeat);
     QString m_fileName;
 
     void g_code_process();
