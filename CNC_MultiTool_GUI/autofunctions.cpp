@@ -12,6 +12,9 @@ AutoFunctions::AutoFunctions()
     m_pause = false;
     m_aboard = false;
 
+    m_size_X = 269.89;
+    m_size_Y = 231.68;
+
     m_Fmax = 50;
 }
 
@@ -259,5 +262,26 @@ void AutoFunctions::repeat_movement(float speed,float dist,int repeat)
 void AutoFunctions::Z_calib_process()
 {
     emit Log("Z calib");
+    move_home();
+    //messure origion Z
+    moveAndWait(m_act_X,m_act_Y,-999,0);//move in home to z = 0
+    emit send_setPosition(0,0,0,0);// set origon
+    emit send_settings(20,-1,-1);//slower test speed
+    moveAndWait(m_act_X,m_act_Y,10,0);//lift TCP
+
+    probe_Z(m_size_X,0);
+    probe_Z(m_size_X,m_size_Y);
+    probe_Z(0,m_size_Y);
+    probe_Z(0,0);
+    emit Log("end of Z calib");
 }
 
+void AutoFunctions::probe_Z(float X,float Y)
+{
+    emit send_settings(50,-1,-1);//fast traffel speed
+    moveAndWait(X,Y,10,0);//move to test point
+    emit send_settings(20,-1,-1);//slower test speed
+    moveAndWait(X,Y,-999,0);//lower TCP
+    emit Log("Zerror: "+QString::number(m_act_Z)+" at X:"+QString::number(m_act_X)+" Y:"+QString::number(m_act_Y));
+    moveAndWait(X,Y,10,0);//lift TCP
+}

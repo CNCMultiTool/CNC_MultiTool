@@ -28,10 +28,11 @@ public:
     float m_act_X_end;
     float m_act_Y_end;
     float m_act_Z_end;
-
-private:
     float m_size_X;
     float m_size_Y;
+
+private:
+
 
     void run() override;
     float m_X;
@@ -50,6 +51,7 @@ private:
     void wait_for_finish();
     void moveAndWait(float X,float Y,float Z,float W);
     void repeat_movement(float speed,float dist,int repeat);
+    void probe_Z(float X,float Y);
     QString m_fileName;
 
     void g_code_process();

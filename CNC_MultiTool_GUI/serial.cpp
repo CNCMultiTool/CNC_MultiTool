@@ -134,6 +134,8 @@ void Serial::run()
 
 void Serial::send(char command,float value1,float value2,float value3,float value4)
 {
+    if(m_quit)
+        return;
     unsigned char newCheckSumm = 0;
     QByteArray sendData = QString("S").toUtf8();
     sendData += QString(command).toUtf8();
