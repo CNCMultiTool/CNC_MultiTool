@@ -233,7 +233,6 @@ void loop() {
     //sendsollpos();
     //sendsollstep();
     //sendactstep();
-    
   }
 }
 
@@ -242,7 +241,7 @@ float checkEndswitches(){
   float newYSwitchID = checkEndswitche(Yachse);
   float newZSwitchID = checkEndswitche(Zachse);
   if(Xachse.SwitchID != newXSwitchID || Yachse.SwitchID != newYSwitchID || Zachse.SwitchID != newZSwitchID){
-    send_variabelTestTommand('e',newXSwitchID,newYSwitchID,newZSwitchID,0);
+    send_variabelTestCommand('e',newXSwitchID,newYSwitchID,newZSwitchID,0);
   }
   Xachse.SwitchID = newXSwitchID;
   Yachse.SwitchID = newYSwitchID;
@@ -299,7 +298,7 @@ void recive_msg(){
     case 'i':
       sendsetting();
       sendconfirmpos();
-      send_variabelTestTommand('e',Xachse.SwitchID,Yachse.SwitchID,Zachse.SwitchID,0);
+      send_variabelTestCommand('e',Xachse.SwitchID,Yachse.SwitchID,Zachse.SwitchID,0);
     case 'm'://move
       Xachse.soll_posi = Buf.tel.value[0];
       Yachse.soll_posi = Buf.tel.value[1];
@@ -573,7 +572,7 @@ void sendRepeatRequest(){
   send_tel();
 }
 
-void send_variabelTestTommand(char C, float val1, float val2, float val3, float val4){
+void send_variabelTestCommand(char C, float val1, float val2, float val3, float val4){
   Buf.tel.comand = C;
   Buf.tel.value[0] = val1;
   Buf.tel.value[1] = val2;
