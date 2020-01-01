@@ -235,7 +235,7 @@ void AutoFunctions::repeat_test_process()
     emit Log("repeat test");
     //fast smal movements (speed,dist,repeat)
     emit Log("repeat test: fast smal movements");
-    repeat_movement(50,10,10);
+    repeat_movement(40,10,10);
     //emit Log("repeat test: fast long movements");
     //repeat_movement(50,100,1);
     //emit Log("repeat test: fast long movements");
@@ -253,7 +253,7 @@ void AutoFunctions::repeat_movement(float speed,float dist,int repeat)
     for(int i=0;i<repeat;i++)
     {
         moveAndWait(10,10,-10,0);
-        moveAndWait(10+dist,10+dist,-1*(10+dist),0);
+        moveAndWait(10,10,-1*(10+dist),0);
     }
     move_home();
     emit Log("result Xerror: "+QString::number(m_act_X)+"  Yerror: "+QString::number(m_act_Y)+"  Zerror: "+QString::number(m_act_Z));
