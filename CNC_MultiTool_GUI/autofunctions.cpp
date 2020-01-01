@@ -237,9 +237,9 @@ void AutoFunctions::repeat_test_process()
     emit Log("repeat test: fast smal movements");
     repeat_movement(50,10,10);
     //emit Log("repeat test: fast long movements");
-    repeat_movement(50,300,1);
+    //repeat_movement(50,100,1);
     //emit Log("repeat test: fast long movements");
-    repeat_movement(20,10,10);
+    //repeat_movement(40,10,10);
 
     emit Log("end repeattest");
 }
