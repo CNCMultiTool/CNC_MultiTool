@@ -1,4 +1,4 @@
-#include "cnc_automation.h"
+#include "mainwindow.h"
 
 #include <QApplication>
 
@@ -7,6 +7,9 @@ int main(int argc, char *argv[])
 {
 
     QApplication a(argc, argv);
-    CNC_automation w;
+    MainWindow w;
+    w.setWindowTitle("Hildegart QT");
+    w.show();
     return a.exec();
 }
+

@@ -18,6 +18,8 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
     autofunctions.cpp \
     cnc_automation.cpp \
+    cnc_basefunctions.cpp \
+    cnc_data.cpp \
     main.cpp \
     mainwindow.cpp \
     serial.cpp
@@ -25,6 +27,8 @@ SOURCES += \
 HEADERS += \
     autofunctions.h \
     cnc_automation.h \
+    cnc_basefunctions.h \
+    cnc_data.h \
     mainwindow.h \
     serial.h
 

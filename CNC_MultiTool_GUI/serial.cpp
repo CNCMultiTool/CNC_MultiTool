@@ -1,8 +1,9 @@
 #include "serial.h"
 
 
-Serial::Serial()
+Serial::Serial(cnc_data *database)
 {
+    m_database = database;
     const QMutexLocker locker(&m_mutex);
     m_quit = true;
     m_dataReadyToSend = false;
@@ -37,7 +38,6 @@ void Serial::open_close(const QString &portName)
 void Serial::run()
 {
     QSerialPort serial;
-    //m_serial = &serial;
     serial.setPortName(m_portName);
     serial.setParity(QSerialPort::Parity::NoParity);
     serial.setDataBits(QSerialPort::Data8);
@@ -61,7 +61,7 @@ void Serial::run()
     unsigned char checkSumm = 0;
     unsigned char newCheckSumm = 0;
 
-    serial_show(true);
+    emit show_serial(true);
     m_dataReadyToSend = false;
     emit Log("serial open");
     send('i',0,0,0,0);
@@ -121,19 +121,20 @@ void Serial::run()
             }
             else
             {
-                emit process_recived(command,m_recive_telegram.Value[0],m_recive_telegram.Value[1],m_recive_telegram.Value[2],m_recive_telegram.Value[3]);
+                emit recived(command,m_recive_telegram.Value[0],m_recive_telegram.Value[1],m_recive_telegram.Value[2],m_recive_telegram.Value[3]);
             }
 
             responseData.remove(0,TelegramSize);
         }
     }
     emit Log("serial close");
-    serial_show(false);
+    emit show_serial(false);
     serial.close();
 }
 
 void Serial::send(char command,float value1,float value2,float value3,float value4)
 {
+    emit Log("send: "+QString(command));
     if(m_quit)
         return;
     unsigned char newCheckSumm = 0;
@@ -163,12 +164,4 @@ void Serial::send(char command,float value1,float value2,float value3,float valu
     m_SendData = sendData;
     m_dataReadyToSend = true;
     m_mutex.unlock();
-
-    /*emit Log("send("+QString(command)+"  "+
-                       QString::number(m_send_telegram.Value[0])+"  "+
-                       QString::number(m_send_telegram.Value[1])+"  "+
-                       QString::number(m_send_telegram.Value[2])+"  "+
-                       QString::number(m_send_telegram.Value[3])+"  "+
-                       QString::number(newCheckSumm)+")");*/
-
 }

@@ -11,15 +11,24 @@
 #include <QRegExp>
 #include <QMainWindow>
 #include <QObject>
+#include <math.h>
 
-#include <serial.h>
-#include <mainwindow.h>
-#include <autofunctions.h>
+#include "cnc_data.h"
+#include "cnc_basefunctions.h"
 
 class CNC_automation : public QObject
 {
     Q_OBJECT
+public:
+    CNC_automation(cnc_data *database = nullptr,cnc_basefunctions *basefunctions=nullptr);
+    ~CNC_automation();
+    void GCode_Parser(QString fileName);
+    void act_pose_recived();
+
 private:
+    cnc_data *m_database;
+    cnc_basefunctions *m_basefunctions;
+
     //position
     float m_X;
     float m_Y;
@@ -29,45 +38,40 @@ private:
     float m_speed;
     float m_filament;
     float m_temperatur;
+    //correktion angel
+    float m_X_angel;
+    float m_Y_angel;
+    //max size of CNC
+    float m_size_X;
+    float m_size_Y;
+    //kalibration results
+    float m_result_X_max_Y_null;
+    float m_result_X_max_Y_max;
+    float m_result_X_null_Y_max;
+    float m_result_X_null_Y_null;
+
+
+    float calc_correction(float X,float Y);
 
     void getValue(const QString indent,const QString line,float *target);
     bool isCommand(const QString indent,const QString line);
     void wait_for_finish();
 
-    //
-    Serial m_Serial;
-    MainWindow m_MainWindow;
-    AutoFunctions m_AutoFunctions;
-
-public:
-    CNC_automation();
-    ~CNC_automation();
-    void GCode_Parser(QString fileName);
-    void act_pose_recived();
-
-public slots:
+signals:
     void Log(const QString &s);
     void errorLog(const QString &s);
-    void send(char command,float value1,float value2,float value3,float value4);
-    void send_move(float X,float Y,float Z,float W);
-    void send_settings(float speed,float temperatur,float filament);
-    void send_stop();
-    void send_getPosition();
-    void send_setPosition(float X,float Y,float Z,float W);
-    void serial_open_close(QString portName);
-    void serial_show(bool isOpen);
-    void process_recived(char command,float value1,float value2,float value3,float value4);
+
+public slots:
     void G_Code_Start(QString fileName);
     void G_Code_Pause();
     void G_Code_Stop();
 
     void move_home();
-    void calib_size();
+    void calc_correctionangel(QList<float>);
     void repeat_test();
     void Z_calib();
+    void calib_size();
 
-signals:
-    void reached_position();
 };
 
 #endif // CNC_AUTOMATION_H

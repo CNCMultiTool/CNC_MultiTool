@@ -5,6 +5,8 @@
 #include <QFile>
 #include <QTextStream>
 #include <QEventLoop>
+#include <QList>
+
 class AutoFunctions : public QThread
 {
     Q_OBJECT
@@ -33,7 +35,6 @@ public:
 
 private:
 
-
     void run() override;
     float m_X;
     float m_Y;
@@ -51,7 +52,7 @@ private:
     void wait_for_finish();
     void moveAndWait(float X,float Y,float Z,float W);
     void repeat_movement(float speed,float dist,int repeat);
-    void probe_Z(float X,float Y);
+    float probe_Z(float X,float Y);
     QString m_fileName;
 
     void g_code_process();
@@ -69,6 +70,7 @@ signals:
     void send_stop();
     void send_getPosition();
     void send_setPosition(float X,float Y,float Z,float W);
+    void calc_Zplane(QList<float> Z_errors);
 };
 
 #endif // AUTOFUNCTIONS_H

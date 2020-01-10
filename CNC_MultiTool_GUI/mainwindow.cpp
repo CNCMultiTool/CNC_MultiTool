@@ -15,7 +15,7 @@ MainWindow::MainWindow(QWidget *parent)
     for (const QSerialPortInfo &info : infos)
         ui->comboBoxComPortName->addItem(info.portName());
     //
-
+    //conect manual moving buttons for stop action by releasing
     connect(ui->pushButtonMoveXPos,SIGNAL(released()),this,SLOT(sendStopMoving()));
     connect(ui->pushButtonMoveXNeg,SIGNAL(released()),this,SLOT(sendStopMoving()));
     connect(ui->pushButtonMoveYPos,SIGNAL(released()),this,SLOT(sendStopMoving()));
@@ -25,6 +25,26 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->pushButtonMoveWPos,SIGNAL(released()),this,SLOT(sendStopMoving()));
     connect(ui->pushButtonMoveWNeg,SIGNAL(released()),this,SLOT(sendStopMoving()));
     connect(ui->pushButtonMoveSTOP,SIGNAL(pressed()),this,SLOT(sendStopMoving()));
+
+    connect(m_basefunctions,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
+    connect(m_basefunctions,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
+    connect(m_basefunctions,SIGNAL(send(char,float,float,float,float)),m_serial,SLOT(send(char,float,float,float,float)));
+
+    connect(m_database,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
+    connect(m_database,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
+    connect(m_database,SIGNAL(show_position(float,float,float,float)),this,SLOT(show_position(float,float,float,float)));
+    connect(m_database,SIGNAL(show_settings(float,float,float)),this,SLOT(show_settings(float,float,float)));
+    connect(m_database,SIGNAL(show_endswitch(float,float,float)),this,SLOT(show_endswitch(float,float,float)));
+    connect(m_database,SIGNAL(show_serial(bool)),this,SLOT(show_serial(bool)));
+
+    connect(m_serial,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
+    connect(m_serial,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
+    connect(m_serial,SIGNAL(show_serial(bool)),this,SLOT(show_serial(bool)));
+    connect(m_serial,SIGNAL(recived(char,float,float,float,float)),m_basefunctions,SLOT(recived(char,float,float,float,float)));
+
+    connect(m_automation,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
+    connect(m_automation,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
+
 }
 
 MainWindow::~MainWindow()
@@ -58,6 +78,20 @@ void MainWindow::show_settings(float speed,float temperatur,float filament)
     //ui->label_actPower->setNum(value4);
 }
 
+void MainWindow::show_serial(bool isOpen)
+{
+    if(isOpen)
+    {
+        ui->comboBoxComPortName->setEnabled(false);
+        ui->pushButtonSerialConnect->setStyleSheet("background-color: green");
+    }
+    else
+    {
+        ui->comboBoxComPortName->setEnabled(true);
+        ui->pushButtonSerialConnect->setStyleSheet("background-color: red");
+    }
+}
+
 void MainWindow::show_endswitch(float X, float Y, float Z)
 {
     endswitchButtonColor(X,ui->pushButtonMoveXPos,ui->pushButtonMoveXNeg);
@@ -80,29 +114,16 @@ void MainWindow::endswitchButtonColor(float value,QPushButton *PosButton,QPushBu
     }
 }
 
+void MainWindow::sendStopMoving()
+{
+    m_basefunctions->send_stop();
+}
 
 void MainWindow::on_pushButtonSerialConnect_clicked()
 {
-    emit serial_open_close(ui->comboBoxComPortName->currentText());
-}
-
-void MainWindow::show_serial(bool isOpen)
-{
-    if(isOpen)
-    {
-        ui->comboBoxComPortName->setEnabled(false);
-        ui->pushButtonSerialConnect->setStyleSheet("background-color: green");
-    }
-    else
-    {
-        ui->comboBoxComPortName->setEnabled(true);
-        ui->pushButtonSerialConnect->setStyleSheet("background-color: red");
-    }
-}
-
-void MainWindow::sendStopMoving()
-{
-    emit send_stop();
+    m_serial->open_close(ui->comboBoxComPortName->currentText());
+    m_basefunctions->test();
+    m_database->test();
 }
 
 void MainWindow::on_pushButtonMoveXPos_pressed()
@@ -110,7 +131,7 @@ void MainWindow::on_pushButtonMoveXPos_pressed()
     float Y =ui->label_YPos->text().toFloat();
     float Z =ui->label_ZPos->text().toFloat();
     float W =ui->label_WPos->text().toFloat();
-    emit send_move(9999,Y,Z,W);
+    m_basefunctions->send_move(9999,Y,Z,W);
 }
 
 void MainWindow::on_pushButtonMoveXNeg_pressed()
@@ -118,7 +139,7 @@ void MainWindow::on_pushButtonMoveXNeg_pressed()
     float Y =ui->label_YPos->text().toFloat();
     float Z =ui->label_ZPos->text().toFloat();
     float W =ui->label_WPos->text().toFloat();
-    emit send_move(-9999,Y,Z,W);
+    m_basefunctions->send_move(-9999,Y,Z,W);
 }
 
 void MainWindow::on_pushButtonMoveYPos_pressed()
@@ -126,7 +147,7 @@ void MainWindow::on_pushButtonMoveYPos_pressed()
     float X =ui->label_XPos->text().toFloat();
     float Z =ui->label_ZPos->text().toFloat();
     float W =ui->label_WPos->text().toFloat();
-    emit send_move(X,9999,Z,W);
+    m_basefunctions->send_move(X,9999,Z,W);
 }
 
 void MainWindow::on_pushButtonMoveYNeg_pressed()
@@ -134,7 +155,7 @@ void MainWindow::on_pushButtonMoveYNeg_pressed()
     float X =ui->label_XPos->text().toFloat();
     float Z =ui->label_ZPos->text().toFloat();
     float W =ui->label_WPos->text().toFloat();
-    emit send_move(X,-9999,Z,W);
+    m_basefunctions->send_move(X,-9999,Z,W);
 }
 
 void MainWindow::on_pushButtonMoveZPos_pressed()
@@ -142,7 +163,7 @@ void MainWindow::on_pushButtonMoveZPos_pressed()
     float X =ui->label_XPos->text().toFloat();
     float Y =ui->label_YPos->text().toFloat();
     float W =ui->label_WPos->text().toFloat();
-    emit send_move(X,Y,9999,W);
+    m_basefunctions->send_move(X,Y,9999,W);
 }
 
 void MainWindow::on_pushButtonMoveZNeg_pressed()
@@ -150,7 +171,7 @@ void MainWindow::on_pushButtonMoveZNeg_pressed()
     float X =ui->label_XPos->text().toFloat();
     float Y =ui->label_YPos->text().toFloat();
     float W =ui->label_WPos->text().toFloat();
-    emit send_move(X,Y,-9999,W);
+    m_basefunctions->send_move(X,Y,-9999,W);
 }
 
 void MainWindow::on_pushButtonMoveWPos_pressed()
@@ -158,7 +179,7 @@ void MainWindow::on_pushButtonMoveWPos_pressed()
     float X =ui->label_XPos->text().toFloat();
     float Y =ui->label_YPos->text().toFloat();
     float Z =ui->label_ZPos->text().toFloat();
-    emit send_move(X,Y,Z,9999);
+    m_basefunctions->send_move(X,Y,Z,9999);
 }
 
 void MainWindow::on_pushButtonMoveWNeg_pressed()
@@ -166,7 +187,7 @@ void MainWindow::on_pushButtonMoveWNeg_pressed()
     float X =ui->label_XPos->text().toFloat();
     float Y =ui->label_YPos->text().toFloat();
     float Z =ui->label_ZPos->text().toFloat();
-    emit send_move(X,Y,Z,-9999);
+    m_basefunctions->send_move(X,Y,Z,-9999);
 }
 
 void MainWindow::on_pushButtonCopyToMoveTo_pressed()
@@ -195,7 +216,7 @@ void MainWindow::on_pushButtonCopyToSetPosition_pressed()
 
 void MainWindow::on_pushButtonGetPosition_pressed()
 {
-    emit send_getPosition();
+    m_basefunctions->send_getPosition();
 }
 
 void MainWindow::on_pushButtonMoveTo_pressed()
@@ -204,7 +225,8 @@ void MainWindow::on_pushButtonMoveTo_pressed()
     float Y = ui->doubleSpinBoxMoveY->value();
     float Z = ui->doubleSpinBoxMoveZ->value();
     float W = ui->doubleSpinBoxMoveW->value();
-    emit send_move(X,Y,Z,W);
+    //m_basefunctions->send_move(X,Y,Z,W);
+    m_basefunctions->move_wait(X,Y,Z,W);
 }
 
 void MainWindow::on_pushButtonSetPosition_pressed()
@@ -213,7 +235,7 @@ void MainWindow::on_pushButtonSetPosition_pressed()
     float Y = ui->doubleSpinBoxSetY->value();
     float Z = ui->doubleSpinBoxSetZ->value();
     float W = ui->doubleSpinBoxSetW->value();
-    emit send_setPosition(X,Y,Z,W);
+    m_basefunctions->send_setPosition(X,Y,Z,W);
 }
 
 void MainWindow::on_pushButtonSetSettings_pressed()
@@ -221,7 +243,7 @@ void MainWindow::on_pushButtonSetSettings_pressed()
     float Speed = ui->spinBoxSpeed->value();
     float Temperatur = ui->spinBoxTemperatur->value();
     float Filament = ui->spinBoxFilament->value();
-    emit send_settings(Speed,Temperatur,Filament);
+    m_basefunctions->send_settings(Speed,Temperatur,Filament);
 }
 
 void MainWindow::on_pushButton_browseGCode_pressed()
@@ -237,25 +259,25 @@ void MainWindow::on_pushButton_browseGCode_pressed()
 
 void MainWindow::on_pushButton_startGCode_pressed()
 {
-    emit G_Code_Start(ui->lineEdit_fileGCode->text());
+    //emit G_Code_Start(ui->lineEdit_fileGCode->text());
 }
 
 void MainWindow::on_pushButton_home_pressed()
 {
-    emit move_home();
+    m_automation->move_home();
 }
 
 void MainWindow::on_pushButton_sizecalib_pressed()
 {
-    emit calib_size();
+    //emit calib_size();
 }
 
 void MainWindow::on_pushButton_repeattest_pressed()
 {
-    emit repeat_test();
+    //emit repeat_test();
 }
 
 void MainWindow::on_pushButton_Zcalib_pressed()
 {
-    emit Z_calib();
+    //emit Z_calib();
 }

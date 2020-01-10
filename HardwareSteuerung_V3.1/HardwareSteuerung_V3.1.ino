@@ -237,9 +237,9 @@ void loop() {
 }
 
 float checkEndswitches(){
-  float newXSwitchID = checkEndswitche(Xachse);
-  float newYSwitchID = checkEndswitche(Yachse);
-  float newZSwitchID = checkEndswitche(Zachse);
+  float newXSwitchID = checkEndswitch(Xachse);
+  float newYSwitchID = checkEndswitch(Yachse);
+  float newZSwitchID = checkEndswitch(Zachse);
   if(Xachse.SwitchID != newXSwitchID || Yachse.SwitchID != newYSwitchID || Zachse.SwitchID != newZSwitchID){
     send_variabelTestCommand('e',newXSwitchID,newYSwitchID,newZSwitchID,0);
   }
@@ -249,7 +249,7 @@ float checkEndswitches(){
 }
   
   
-float checkEndswitche(struct StepMotorBig &StepM){
+float checkEndswitch(struct StepMotorBig &StepM){
   float switchID;
   if(digitalRead(StepM.pinNull)==HIGH&& StepM.soll_step <= StepM.act_step){
     StepM.soll_step = StepM.act_step;
@@ -299,6 +299,7 @@ void recive_msg(){
       sendsetting();
       sendconfirmpos();
       send_variabelTestCommand('e',Xachse.SwitchID,Yachse.SwitchID,Zachse.SwitchID,0);
+      break;
     case 'm'://move
       Xachse.soll_posi = Buf.tel.value[0];
       Yachse.soll_posi = Buf.tel.value[1];

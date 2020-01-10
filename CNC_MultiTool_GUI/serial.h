@@ -6,6 +6,7 @@
 #include <QWaitCondition>
 #include <QSerialPort>
 #include <QTime>
+#include "cnc_data.h"
 
 union tTelegram
 {
@@ -18,15 +19,13 @@ class Serial : public QThread
 {
     Q_OBJECT
 public:
-    explicit Serial();
+    explicit Serial(cnc_data *database = nullptr);
     ~Serial();
     void open_close(const QString &portName);
     //void send(char command,float value1,float value2,float value3,float value4);
 
-public slots:
-    void send(char command,float value1,float value2,float value3,float value4);
-
 private:
+    cnc_data *m_database;
     void run() override;
     QSerialPort *m_serial;
     QString m_portName;
@@ -42,9 +41,11 @@ private:
 signals:
     void Log(const QString &s);
     void errorLog(const QString &s);
-    void process_recived(char command,float value1,float value2,float value3,float value4);
-    void serial_show(bool isOpen);
+    void recived(char command,float value1,float value2,float value3,float value4);
+    void show_serial(bool isOpen);
 
+public slots:
+    void send(char command,float value1,float value2,float value3,float value4);
 };
 
 #endif // SERIAL_H
