@@ -63,7 +63,7 @@ void Serial::run()
 
     emit show_serial(true);
     m_dataReadyToSend = false;
-    emit Log("serial open");
+    //emit Log("serial open");
     send('i',0,0,0,0);
     while(!m_quit)
     {
@@ -127,14 +127,14 @@ void Serial::run()
             responseData.remove(0,TelegramSize);
         }
     }
-    emit Log("serial close");
+    //emit Log("serial close");
     emit show_serial(false);
     serial.close();
 }
 
 void Serial::send(char command,float value1,float value2,float value3,float value4)
 {
-    emit Log("send: "+QString(command));
+    //emit Log("send: "+QString(command));
     if(m_quit)
         return;
     unsigned char newCheckSumm = 0;

@@ -11,6 +11,7 @@
 #include <QRegExp>
 #include <QMainWindow>
 #include <QObject>
+#include <QEventLoop>
 #include <math.h>
 
 #include "cnc_data.h"
@@ -22,56 +23,49 @@ class CNC_automation : public QObject
 public:
     CNC_automation(cnc_data *database = nullptr,cnc_basefunctions *basefunctions=nullptr);
     ~CNC_automation();
-    void GCode_Parser(QString fileName);
-    void act_pose_recived();
+
+    void move_home();
+    void repeat_test();
+    void Z_calib();
+    void calib_size();
+
+    void G_Code_Start(QString fileName);
+    void G_Code_Pause();
+    void G_Code_Stop();
 
 private:
     cnc_data *m_database;
     cnc_basefunctions *m_basefunctions;
 
-    //position
+    void repeat_movement(float speed,float dist,int repeat);
+    float probe_Z(float X,float Y);
+
+    void getValue(const QString indent,const QString line,float *target);
+    bool isCommand(const QString indent,const QString line);
+    void G_Code_Parser();
+
+    QString m_fileName;
+    bool m_aboard;
+    bool m_validCommand;
+    bool m_pause;
     float m_X;
     float m_Y;
     float m_Z;
     float m_W;
-    //settings
-    float m_speed;
-    float m_filament;
-    float m_temperatur;
-    //correktion angel
-    float m_X_angel;
-    float m_Y_angel;
-    //max size of CNC
-    float m_size_X;
-    float m_size_Y;
-    //kalibration results
-    float m_result_X_max_Y_null;
-    float m_result_X_max_Y_max;
-    float m_result_X_null_Y_max;
-    float m_result_X_null_Y_null;
+    float m_S;
+    float m_F;
+    float m_F_max;
+    float m_F_old;
+    QEventLoop m_wait_loop;
 
-
-    float calc_correction(float X,float Y);
-
-    void getValue(const QString indent,const QString line,float *target);
-    bool isCommand(const QString indent,const QString line);
-    void wait_for_finish();
 
 signals:
     void Log(const QString &s);
     void errorLog(const QString &s);
 
 public slots:
-    void G_Code_Start(QString fileName);
-    void G_Code_Pause();
-    void G_Code_Stop();
-
-    void move_home();
+    float calc_correction(float X,float Y);
     void calc_correctionangel(QList<float>);
-    void repeat_test();
-    void Z_calib();
-    void calib_size();
-
 };
 
 #endif // CNC_AUTOMATION_H

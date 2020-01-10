@@ -10,11 +10,6 @@ public:
     cnc_data();
 
     //values to send
-    //position
-    float m_soll_X;
-    float m_soll_Y;
-    float m_soll_Z;
-    float m_soll_W;
     //settings
     float m_soll_speed;
     float m_soll_filament;
@@ -51,6 +46,7 @@ public:
 
     void set_position(float X,float Y,float Z,float W);
     void set_settings(float speed,float temperatur,float filament);
+    void set_soll_settings(float speed,float temperatur,float filament);
     void set_endswitch(int X,int Y,int Z);
     void set_serial(bool isOpen);
 
@@ -64,8 +60,8 @@ private:
 signals:
     void Log(const QString &s);
     void errorLog(const QString &s);
-    void show_position(float X,float Y,float Z,float W);
-    void show_settings(float speed,float temperatur,float filament);
+    void show_position();
+    void show_settings();
     void show_endswitch(float X,float Y,float Z);
     void show_serial(bool isOpen);
 

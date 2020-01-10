@@ -10,6 +10,9 @@ MainWindow::MainWindow(QWidget *parent)
     ui->textEditLog->setReadOnly(true);
     ui->textEditLog_error->setReadOnly(true);
 
+    ui->spinBoxSpeed->setValue(50);
+    ui->spinBoxFilament->setValue(10);
+
     //chek availabal port add to the comboBox
     const auto infos = QSerialPortInfo::availablePorts();
     for (const QSerialPortInfo &info : infos)
@@ -32,8 +35,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(m_database,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_database,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
-    connect(m_database,SIGNAL(show_position(float,float,float,float)),this,SLOT(show_position(float,float,float,float)));
-    connect(m_database,SIGNAL(show_settings(float,float,float)),this,SLOT(show_settings(float,float,float)));
+    connect(m_database,SIGNAL(show_position()),this,SLOT(show_position()));
+    connect(m_database,SIGNAL(show_settings()),this,SLOT(show_settings()));
     connect(m_database,SIGNAL(show_endswitch(float,float,float)),this,SLOT(show_endswitch(float,float,float)));
     connect(m_database,SIGNAL(show_serial(bool)),this,SLOT(show_serial(bool)));
 
@@ -62,19 +65,19 @@ void MainWindow::errorLog(const QString &s)
     ui->textEditLog_error->append(s);
 }
 
-void MainWindow::show_position(float X,float Y,float Z,float W)
+void MainWindow::show_position()
 {
-    ui->label_XPos->setNum(X);
-    ui->label_YPos->setNum(Y);
-    ui->label_ZPos->setNum(Z);
-    ui->label_WPos->setNum(W);
+    ui->label_XPos->setText(QString::number(m_database->m_act_X));
+    ui->label_YPos->setText(QString::number(m_database->m_act_Y));
+    ui->label_ZPos->setText(QString::number(m_database->m_act_Z));
+    ui->label_WPos->setText(QString::number(m_database->m_act_W));
 }
 
-void MainWindow::show_settings(float speed,float temperatur,float filament)
+void MainWindow::show_settings()
 {
-    ui->label_actSpeed->setNum(speed);
-    ui->label_actTemperatur->setNum(temperatur);
-    ui->label_actFilament->setNum(filament);
+    ui->label_actSpeed->setText(QString::number(m_database->m_act_speed)+"/"+QString::number(m_database->m_soll_speed));
+    ui->label_actTemperatur->setText(QString::number(m_database->m_act_temperatur)+"/"+QString::number(m_database->m_soll_temperatur));
+    ui->label_actFilament->setText(QString::number(m_database->m_act_filament)+"/"+QString::number(m_database->m_soll_filament));
     //ui->label_actPower->setNum(value4);
 }
 
@@ -122,80 +125,80 @@ void MainWindow::sendStopMoving()
 void MainWindow::on_pushButtonSerialConnect_clicked()
 {
     m_serial->open_close(ui->comboBoxComPortName->currentText());
-    m_basefunctions->test();
-    m_database->test();
+    //m_basefunctions->test();
+    //m_database->test();
 }
 
 void MainWindow::on_pushButtonMoveXPos_pressed()
 {
-    float Y =ui->label_YPos->text().toFloat();
-    float Z =ui->label_ZPos->text().toFloat();
-    float W =ui->label_WPos->text().toFloat();
+    float Y = m_database->m_act_Y;
+    float Z = m_database->m_act_Z;
+    float W = m_database->m_act_W;
     m_basefunctions->send_move(9999,Y,Z,W);
 }
 
 void MainWindow::on_pushButtonMoveXNeg_pressed()
 {
-    float Y =ui->label_YPos->text().toFloat();
-    float Z =ui->label_ZPos->text().toFloat();
-    float W =ui->label_WPos->text().toFloat();
+    float Y = m_database->m_act_Y;
+    float Z = m_database->m_act_Z;
+    float W = m_database->m_act_W;
     m_basefunctions->send_move(-9999,Y,Z,W);
 }
 
 void MainWindow::on_pushButtonMoveYPos_pressed()
 {
-    float X =ui->label_XPos->text().toFloat();
-    float Z =ui->label_ZPos->text().toFloat();
-    float W =ui->label_WPos->text().toFloat();
+    float X = m_database->m_act_X;
+    float Z = m_database->m_act_Z;
+    float W = m_database->m_act_W;
     m_basefunctions->send_move(X,9999,Z,W);
 }
 
 void MainWindow::on_pushButtonMoveYNeg_pressed()
 {
-    float X =ui->label_XPos->text().toFloat();
-    float Z =ui->label_ZPos->text().toFloat();
-    float W =ui->label_WPos->text().toFloat();
+    float X = m_database->m_act_X;
+    float Z = m_database->m_act_Z;
+    float W = m_database->m_act_W;
     m_basefunctions->send_move(X,-9999,Z,W);
 }
 
 void MainWindow::on_pushButtonMoveZPos_pressed()
 {
-    float X =ui->label_XPos->text().toFloat();
-    float Y =ui->label_YPos->text().toFloat();
-    float W =ui->label_WPos->text().toFloat();
+    float X = m_database->m_act_X;
+    float Y = m_database->m_act_Y;
+    float W = m_database->m_act_W;
     m_basefunctions->send_move(X,Y,9999,W);
 }
 
 void MainWindow::on_pushButtonMoveZNeg_pressed()
 {
-    float X =ui->label_XPos->text().toFloat();
-    float Y =ui->label_YPos->text().toFloat();
-    float W =ui->label_WPos->text().toFloat();
+    float X = m_database->m_act_X;
+    float Y = m_database->m_act_Y;
+    float W = m_database->m_act_W;
     m_basefunctions->send_move(X,Y,-9999,W);
 }
 
 void MainWindow::on_pushButtonMoveWPos_pressed()
 {
-    float X =ui->label_XPos->text().toFloat();
-    float Y =ui->label_YPos->text().toFloat();
-    float Z =ui->label_ZPos->text().toFloat();
+    float X = m_database->m_act_X;
+    float Y = m_database->m_act_Y;
+    float Z = m_database->m_act_Z;
     m_basefunctions->send_move(X,Y,Z,9999);
 }
 
 void MainWindow::on_pushButtonMoveWNeg_pressed()
 {
-    float X =ui->label_XPos->text().toFloat();
-    float Y =ui->label_YPos->text().toFloat();
-    float Z =ui->label_ZPos->text().toFloat();
+    float X = m_database->m_act_X;
+    float Y = m_database->m_act_Y;
+    float Z = m_database->m_act_Z;
     m_basefunctions->send_move(X,Y,Z,-9999);
 }
 
 void MainWindow::on_pushButtonCopyToMoveTo_pressed()
 {
-    float X =ui->label_XPos->text().toDouble();
-    float Y =ui->label_YPos->text().toDouble();
-    float Z =ui->label_ZPos->text().toDouble();
-    float W =ui->label_WPos->text().toDouble();
+    float X = m_database->m_act_X;
+    float Y = m_database->m_act_Y;
+    float Z = m_database->m_act_Z;
+    float W = m_database->m_act_W;
     ui->doubleSpinBoxMoveX->setValue(X);
     ui->doubleSpinBoxMoveY->setValue(Y);
     ui->doubleSpinBoxMoveZ->setValue(Z);
@@ -204,10 +207,10 @@ void MainWindow::on_pushButtonCopyToMoveTo_pressed()
 
 void MainWindow::on_pushButtonCopyToSetPosition_pressed()
 {
-    float X =ui->label_XPos->text().toDouble();
-    float Y =ui->label_YPos->text().toDouble();
-    float Z =ui->label_ZPos->text().toDouble();
-    float W =ui->label_WPos->text().toDouble();
+    float X = m_database->m_act_X;
+    float Y = m_database->m_act_Y;
+    float Z = m_database->m_act_Z;
+    float W = m_database->m_act_W;
     ui->doubleSpinBoxSetX->setValue(X);
     ui->doubleSpinBoxSetY->setValue(Y);
     ui->doubleSpinBoxSetZ->setValue(Z);
@@ -246,6 +249,26 @@ void MainWindow::on_pushButtonSetSettings_pressed()
     m_basefunctions->send_settings(Speed,Temperatur,Filament);
 }
 
+void MainWindow::on_pushButton_home_pressed()
+{
+    m_automation->move_home();
+}
+
+void MainWindow::on_pushButton_sizecalib_pressed()
+{
+    m_automation->calib_size();
+}
+
+void MainWindow::on_pushButton_repeattest_pressed()
+{
+    m_automation->repeat_test();
+}
+
+void MainWindow::on_pushButton_Zcalib_pressed()
+{
+    m_automation->Z_calib();
+}
+
 void MainWindow::on_pushButton_browseGCode_pressed()
 {
     QString directory = QDir::toNativeSeparators(QFileDialog::getOpenFileName(this, tr("Open File"),QDir::currentPath(),tr("G-Code (*.gcode)")));
@@ -259,25 +282,15 @@ void MainWindow::on_pushButton_browseGCode_pressed()
 
 void MainWindow::on_pushButton_startGCode_pressed()
 {
-    //emit G_Code_Start(ui->lineEdit_fileGCode->text());
+    m_automation->G_Code_Start(ui->lineEdit_fileGCode->text());
 }
 
-void MainWindow::on_pushButton_home_pressed()
+void MainWindow::on_pushButton_pauseGCode_pressed()
 {
-    m_automation->move_home();
+    m_automation->G_Code_Pause();
 }
 
-void MainWindow::on_pushButton_sizecalib_pressed()
+void MainWindow::on_pushButton_AboardGCode_pressed()
 {
-    //emit calib_size();
-}
-
-void MainWindow::on_pushButton_repeattest_pressed()
-{
-    //emit repeat_test();
-}
-
-void MainWindow::on_pushButton_Zcalib_pressed()
-{
-    //emit Z_calib();
+    m_automation->G_Code_Stop();
 }

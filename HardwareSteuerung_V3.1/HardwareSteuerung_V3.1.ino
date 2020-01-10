@@ -59,7 +59,7 @@ struct StepMotorBig Zachse;
 
 bool msg_available;
 
-double Speed = 2; //mm pro minute
+double Speed = 50; //mm pro minute
 double dist;
 double ges_time;
 
@@ -390,7 +390,7 @@ void setPose(){
 void getMoveParams(){
   dist = sqrt(pow(Xachse.soll_posi-Xachse.act_posi,2)+pow(Yachse.soll_posi-Yachse.act_posi,2)+pow(Zachse.soll_posi-Zachse.act_posi,2)); //gesamtdistans
   if(dist == 0){
-    dist = abs(Wachse.soll_posi-Wachse.act_posi)*10;
+    dist = abs(Wachse.soll_posi-Wachse.act_posi);
   }
   ges_time = (dist/Speed)*1000000;
   
