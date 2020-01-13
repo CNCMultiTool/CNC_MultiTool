@@ -77,7 +77,6 @@ signals:
     void show_settings();
     void show_endswitch(float X,float Y,float Z);
     void show_serial(bool isOpen);
-    void is_at_heat();
 
 //private slots:
 

@@ -172,7 +172,7 @@ void Serial::send(char command,float value1,float value2,float value3,float valu
 
     while(m_dataReadyToSend)
     {
-
+        sleep(1);
     }
 
     m_mutex.lock();
