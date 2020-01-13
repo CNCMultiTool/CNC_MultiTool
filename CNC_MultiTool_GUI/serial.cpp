@@ -29,6 +29,7 @@ void Serial::open_close(const QString &portName)
     }
 
     m_quit = false;
+
     if (!isRunning())
         start();
     else
@@ -44,13 +45,16 @@ void Serial::run()
     serial.setStopBits(QSerialPort::TwoStop);
     serial.setBaudRate(QSerialPort::Baud9600);
     m_mutex.lock();
+    m_cond.wakeAll();
     if (!serial.open(QIODevice::ReadWrite)) {
         m_quit = true;
-        emit Log("can`t open Serial");
+        emit errorLog("can`t open Serial");
     }
     else
     {
         serial.clear();
+        emit Log("open Serial");
+        m_database->FileLog("INFO open Serial Port "+m_portName);
     }
     m_mutex.unlock();
 
@@ -65,12 +69,16 @@ void Serial::run()
     m_dataReadyToSend = false;
     //emit Log("serial open");
     send('i',0,0,0,0);
+    m_database->FileLog("INFO recquest settings");
     while(!m_quit)
     {
+
         //send data if some available
         m_mutex.lock();
+        m_cond.wakeAll();
         if(m_dataReadyToSend == true)
         {
+            m_database->FileLog("INFO send:"+QString(char(m_SendData[1]))+" A:"+QString::number(m_send_telegram.Value[0])+" B:"+QString::number(m_send_telegram.Value[1])+" C:"+QString::number(m_send_telegram.Value[2])+" D:"+QString::number(m_send_telegram.Value[3]));
             serial.write(m_SendData);
             m_dataReadyToSend = false;
         }
@@ -78,6 +86,7 @@ void Serial::run()
 
         //read byts from serial
         m_mutex.lock();
+        m_cond.wakeAll();
         responseData += serial.readAll();
         serial.waitForReadyRead(10);
         m_mutex.unlock();
@@ -95,7 +104,8 @@ void Serial::run()
         if(StartIndex!=0)
         {
             responseData.remove(0,StartIndex);
-            emit Log("delete "+QString::number(StartIndex));
+            emit errorLog("delete "+QString::number(StartIndex));
+            m_database->FileLog("ERROR delete "+QString::number(StartIndex));
         }
 
         //a complite telegram was recived and now get processd
@@ -115,13 +125,15 @@ void Serial::run()
             {
                 newCheckSumm += responseData[i];
             }
-            if(newCheckSumm!=checkSumm)
+            if(newCheckSumm != checkSumm)
             {
                 emit errorLog("check failt recive:"+QString::number(checkSumm)+" calc:"+QString::number(newCheckSumm));
+                m_database->FileLog("ERROR checksum failt :"+QString::number(checkSumm)+" calc:"+QString::number(newCheckSumm));
             }
             else
             {
                 emit recived(command,m_recive_telegram.Value[0],m_recive_telegram.Value[1],m_recive_telegram.Value[2],m_recive_telegram.Value[3]);
+                m_database->FileLog("INFO recived:"+QString(command)+" A:"+QString::number(m_recive_telegram.Value[0])+" B:"+QString::number(m_recive_telegram.Value[1])+" C:"+QString::number(m_recive_telegram.Value[2])+" D:"+QString::number(m_recive_telegram.Value[3]));
             }
 
             responseData.remove(0,TelegramSize);
@@ -130,6 +142,9 @@ void Serial::run()
     //emit Log("serial close");
     emit show_serial(false);
     serial.close();
+    emit Log("close Serial");
+    m_database->FileLog("INFO close Serial Port "+m_portName);
+
 }
 
 void Serial::send(char command,float value1,float value2,float value3,float value4)
@@ -161,6 +176,7 @@ void Serial::send(char command,float value1,float value2,float value3,float valu
     }
 
     m_mutex.lock();
+    m_cond.wakeAll();
     m_SendData = sendData;
     m_dataReadyToSend = true;
     m_mutex.unlock();

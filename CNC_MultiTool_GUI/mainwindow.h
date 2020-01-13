@@ -48,6 +48,8 @@ private:
     void repeat_test();
     void Z_calib();
 
+    bool m_alive;
+
 private slots:
     void Log(const QString &s);
     void errorLog(const QString &s);
@@ -103,5 +105,7 @@ private slots:
 
     void on_pushButton_pauseGCode_pressed();
     void on_pushButton_AboardGCode_pressed();
+    void on_pushButton_test_pressed();
+    void on_pushButton_rest_pressed();
 };
 #endif // MAINWINDOW_H

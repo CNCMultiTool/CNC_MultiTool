@@ -943,6 +943,13 @@
        </property>
       </widget>
      </item>
+     <item row="0" column="2">
+      <widget class="QPushButton" name="pushButton_repeattest">
+       <property name="text">
+        <string>repeat test</string>
+       </property>
+      </widget>
+     </item>
      <item row="0" column="1">
       <widget class="QPushButton" name="pushButton_sizecalib">
        <property name="text">
@@ -957,14 +964,34 @@
        </property>
       </widget>
      </item>
-     <item row="0" column="2">
-      <widget class="QPushButton" name="pushButton_repeattest">
+     <item row="1" column="3">
+      <widget class="QPushButton" name="pushButton_test">
        <property name="text">
-        <string>repeat test</string>
+        <string>TEST</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QPushButton" name="pushButton_rest">
+       <property name="text">
+        <string>RestPosition</string>
        </property>
       </widget>
      </item>
     </layout>
+   </widget>
+   <widget class="QLabel" name="label_alive">
+    <property name="geometry">
+     <rect>
+      <x>440</x>
+      <y>30</y>
+      <width>47</width>
+      <height>14</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>alive</string>
+    </property>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">

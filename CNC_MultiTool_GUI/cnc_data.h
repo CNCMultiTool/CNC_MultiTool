@@ -3,11 +3,19 @@
 
 
 #include <QObject>
+#include <QFile>
+#include <QTextStream>
+#include <QDateTime>
+#include <QMutex>
 class cnc_data : public QObject
 {
     Q_OBJECT
 public:
     cnc_data();
+
+    void FileLog(QString value);
+
+    bool m_is_heated;
 
     //values to send
     //settings
@@ -43,6 +51,8 @@ public:
     //correktion angel
     float m_X_angel;
     float m_Y_angel;
+    //TCP hight in home
+    float m_Zmax_nozzel;
 
     void set_position(float X,float Y,float Z,float W);
     void set_settings(float speed,float temperatur,float filament);
@@ -55,7 +65,10 @@ public:
 private:
     //status
     bool m_SerialIsOpen;
-
+    QString m_LogFileName = "CNC_Log.txt";
+    QFile *m_LogFile;
+    QMutex m_mutex;
+    ~cnc_data();
 
 signals:
     void Log(const QString &s);
@@ -64,6 +77,7 @@ signals:
     void show_settings();
     void show_endswitch(float X,float Y,float Z);
     void show_serial(bool isOpen);
+    void is_at_heat();
 
 //private slots:
 

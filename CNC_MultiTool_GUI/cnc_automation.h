@@ -17,7 +17,7 @@
 #include "cnc_data.h"
 #include "cnc_basefunctions.h"
 
-class CNC_automation : public QObject
+class CNC_automation : public QThread
 {
     Q_OBJECT
 public:
@@ -25,6 +25,7 @@ public:
     ~CNC_automation();
 
     void move_home();
+    void move_restposi();
     void repeat_test();
     void Z_calib();
     void calib_size();
@@ -34,6 +35,7 @@ public:
     void G_Code_Stop();
 
 private:
+    void run() override;
     cnc_data *m_database;
     cnc_basefunctions *m_basefunctions;
 
@@ -42,7 +44,6 @@ private:
 
     void getValue(const QString indent,const QString line,float *target);
     bool isCommand(const QString indent,const QString line);
-    void G_Code_Parser();
 
     QString m_fileName;
     bool m_aboard;
@@ -58,14 +59,14 @@ private:
     float m_F_old;
     QEventLoop m_wait_loop;
 
-
 signals:
     void Log(const QString &s);
     void errorLog(const QString &s);
 
 public slots:
-    float calc_correction(float X,float Y);
-    void calc_correctionangel(QList<float>);
+    void G_Code_Parser();
+    //float calc_correction(float X,float Y);
+    //void calc_correctionangel(QList<float>);
 };
 
 #endif // CNC_AUTOMATION_H

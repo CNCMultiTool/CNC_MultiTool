@@ -16,7 +16,7 @@ CNC_automation::CNC_automation(cnc_data *database,cnc_basefunctions *basefunctio
 
 CNC_automation::~CNC_automation()
 {
-
+    m_aboard = true;
 }
 
 void CNC_automation::move_home()
@@ -24,6 +24,13 @@ void CNC_automation::move_home()
     m_basefunctions->send_settings(50,m_database->m_soll_temperatur,m_database->m_soll_filament);
     m_basefunctions->move_wait(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
     m_basefunctions->move_wait(-9999,-9999,m_database->m_act_Z,m_database->m_act_W);
+}
+
+void CNC_automation::move_restposi()
+{
+    m_basefunctions->send_settings(50,m_database->m_soll_temperatur,m_database->m_soll_filament);
+    m_basefunctions->move_wait(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
+    m_basefunctions->move_wait(9999,-9999,m_database->m_act_Z,m_database->m_act_W);
 }
 
 void CNC_automation::calib_size()
@@ -93,10 +100,21 @@ float CNC_automation::probe_Z(float X,float Y)
 
 void CNC_automation::G_Code_Start(QString fileName)
 {
-    Log("start g-code: "+fileName);
+    emit Log("start g-code: "+fileName);
+    m_database->FileLog("start g-code: "+fileName);
     m_fileName = fileName;
     m_aboard = false;
     m_pause = false;
+    move_home();
+    m_basefunctions->send_setPosition(0,0,m_database->m_Zmax_nozzel,0);
+    if(!isRunning())
+    {
+        run();
+    }
+}
+
+void CNC_automation::run()
+{
     G_Code_Parser();
 }
 
@@ -134,13 +152,15 @@ void CNC_automation::G_Code_Parser()
     {
         if(m_pause)
         {
-            m_wait_loop.exec();
+           m_wait_loop.exec();
         }
         newLine = in.readLine();
+        m_database->FileLog(newLine);
         if(newLine.isNull())
         {
             emit Log("end of file");
-            return;
+            m_aboard = true;
+            continue;
         }
         rx.setPattern(";");
         if(rx.indexIn(newLine)==0)
@@ -187,24 +207,39 @@ void CNC_automation::G_Code_Parser()
             m_validCommand = true;
         }
         if(isCommand("G90",newLine))//absolute referenz
+        {
             m_validCommand = true;
+        }
         if(isCommand("G91",newLine))//incrementel movement
+        {
             m_validCommand = true;
+        }
         if(isCommand("G92",newLine))//set position
+        {
             m_basefunctions->send_setPosition(m_X,m_Y,m_Z,m_W);
             m_validCommand = true;
+        }
         if(isCommand("M104",newLine))//set temperatur
+        {
             m_basefunctions->send_settings(m_F/60,m_S,-1);
             m_validCommand = true;
+        }
         if(isCommand("M107",newLine))
+        {
             m_validCommand = true;
+        }
         if(isCommand("M109",newLine))//wait for reaching temperatur
+        {
             m_basefunctions->send_settings(m_F/60,m_S,-1);
+            emit Log("Wait for Nozzel to heat");
+            m_basefunctions->wait_heat();
+            emit Log("Nozzel is heated");
             m_validCommand = true;
-
+        }
         if(!m_validCommand)
         {
             emit errorLog("Line not Known:"+newLine);
+            emit Log("Line not Known:"+newLine);
         }
         m_F_old = m_F;
     }
@@ -239,7 +274,7 @@ void CNC_automation::getValue(const QString indent,const QString line,float *tar
         *target = resultStr.toFloat();
     }
 }
-
+/*
 void CNC_automation::calc_correctionangel(QList<float> Z_errors)
 {
     //m_X_angel = atan(Z_errors[0]/m_size_X);
@@ -259,4 +294,4 @@ float CNC_automation::calc_correction(float X,float Y)
     //float Ycorr = Y * tan(m_X_angel);
     //return(Xcorr+Ycorr);
 }
-
+*/

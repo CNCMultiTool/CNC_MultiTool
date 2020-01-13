@@ -79,6 +79,22 @@ void MainWindow::show_settings()
     ui->label_actTemperatur->setText(QString::number(m_database->m_act_temperatur)+"/"+QString::number(m_database->m_soll_temperatur));
     ui->label_actFilament->setText(QString::number(m_database->m_act_filament)+"/"+QString::number(m_database->m_soll_filament));
     //ui->label_actPower->setNum(value4);
+    if(m_database->m_is_heated)
+        ui->label_actTemperatur->setStyleSheet("background-color: green");
+    else
+        ui->label_actTemperatur->setStyleSheet("background-color: red");
+
+    if(m_alive)
+    {
+        m_alive = false;
+        ui->label_alive->setStyleSheet("background-color: blue");
+
+    }
+    else
+    {
+        m_alive = true;
+        ui->label_alive->setStyleSheet("background-color: lightblue");
+    }
 }
 
 void MainWindow::show_serial(bool isOpen)
@@ -293,4 +309,14 @@ void MainWindow::on_pushButton_pauseGCode_pressed()
 void MainWindow::on_pushButton_AboardGCode_pressed()
 {
     m_automation->G_Code_Stop();
+}
+
+void MainWindow::on_pushButton_test_pressed()
+{
+    m_database->test();
+}
+
+void MainWindow::on_pushButton_rest_pressed()
+{
+    m_automation->move_restposi();
 }

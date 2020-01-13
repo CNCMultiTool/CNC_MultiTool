@@ -33,10 +33,37 @@ cnc_data::cnc_data()
     m_error_X_max_Y_max = 0;
     m_error_X_null_Y_max = 0;
     m_error_X_null_Y_null = 0;
+
+    m_Zmax_nozzel = 170.8;
+
+    m_LogFile = new QFile;
+    m_LogFile->setFileName(m_LogFileName);
+
+    const QMutexLocker locker(&m_mutex);
+}
+
+cnc_data::~cnc_data()
+{
+    m_LogFile->close();
+}
+
+void cnc_data::FileLog(QString value)
+{
+    m_mutex.lock();
+    m_LogFile->open(QIODevice::Append | QIODevice::Text);
+    value = QDateTime::currentDateTime().toString("dd.MM.yyyy hh:mm:ss.ms ") + value +"\n";
+    QTextStream out(m_LogFile);
+    out.setCodec("UTF-8");
+    if (m_LogFile != 0) {
+      out << value;
+    }
+    m_LogFile->close();
+    m_mutex.unlock();
 }
 
 void cnc_data::test()
 {
+    FileLog("test Log File in QT");
     emit Log("database is alive");
 }
 

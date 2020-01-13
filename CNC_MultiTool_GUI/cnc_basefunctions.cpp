@@ -21,6 +21,14 @@ void cnc_basefunctions::move_wait(float X,float Y,float Z,float W)
     m_loop.exec();
 }
 
+void cnc_basefunctions::wait_heat()
+{
+    if(!m_database->m_is_heated)
+    {
+        m_loop.exec();
+    }
+}
+
 void cnc_basefunctions::send_settings(float speed,float temperatur,float filament)
 {
     float s = speed;
@@ -63,15 +71,27 @@ void cnc_basefunctions::recived(char command,float value1,float value2,float val
         {
             m_loop.exit();
         }
-        //emit Log("recive act Pos X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
+        m_database->FileLog("INFO recived set position and ready for next move: X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
         break;
     case 'c'://set the actual position
         m_database->set_position(value1,value2,value3,value4);
-        //emit Log("recive act Pos X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
+        m_database->FileLog("INFO recived set position: X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
         break;
-    case 'q'://set the actual position
+    case 'q'://set the actual settings
         m_database->set_settings(value1,value2,value3);
-        //emit Log("recive Settings Speed:"+QString::number(value1)+" Temperatur:"+QString::number(value2)+" Filament:"+QString::number(value3));
+        m_database->FileLog("INFO recived current setting: speed:"+QString::number(value1)+" temperatur:"+QString::number(value2)+" filament:"+QString::number(value3)+" PWM:"+QString::number(value4));
+        if(5>abs(m_database->m_act_temperatur-m_database->m_soll_temperatur))
+        {
+            m_database->m_is_heated = true;
+            if(m_loop.isRunning())
+            {
+                m_loop.exit();
+            }
+        }
+        else
+        {
+            m_database->m_is_heated = false;
+        }
         break;
     case 'w':
         //emit Log("recive StepTimes X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
@@ -87,6 +107,7 @@ void cnc_basefunctions::recived(char command,float value1,float value2,float val
         break;
     case 'e':
         m_database->set_endswitch(value1,value2,value3);
+        m_database->FileLog("INFO recived endswitches: X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
         //emit Log("recive endswitch X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
         break;
     default:
