@@ -197,6 +197,8 @@ void CNC_automation::G_Code_Parser()
         }
         if(isCommand("G21",newLine))//use mm
         {
+            emit Log("use mm");
+            m_database->FileLog("use mm");
             m_validCommand = true;
         }
         if(isCommand("G28",newLine))//move home
@@ -211,10 +213,13 @@ void CNC_automation::G_Code_Parser()
         }
         if(isCommand("G90",newLine))//absolute referenz
         {
+            m_database->FileLog("find G90 (useless comand)");
             m_validCommand = true;
         }
         if(isCommand("G91",newLine))//incrementel movement
         {
+            m_database->FileLog("ERROR find G91 (useless comand)");
+            emit errorLog("use incrementel movement");
             m_validCommand = true;
         }
         if(isCommand("G92",newLine))//set position
@@ -227,8 +232,14 @@ void CNC_automation::G_Code_Parser()
             m_basefunctions->settings_wait(m_F/60,m_S,-1);
             m_validCommand = true;
         }
+        if(isCommand("M106",newLine))
+        {
+            m_database->FileLog("find M106 (useless comand)");
+            m_validCommand = true;
+        }
         if(isCommand("M107",newLine))
         {
+            m_database->FileLog("find M107 (useless comand)");
             m_validCommand = true;
         }
         if(isCommand("M109",newLine))//wait for reaching temperatur
@@ -243,6 +254,7 @@ void CNC_automation::G_Code_Parser()
         {
             emit errorLog("Line not Known:"+newLine);
             emit Log("Line not Known:"+newLine);
+            m_database->FileLog("Line not Known:"+newLine);
         }
         m_F_old = m_F;
     }
