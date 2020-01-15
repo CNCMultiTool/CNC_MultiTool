@@ -14,12 +14,17 @@ class cnc_basefunctions: public QObject
 public:
     cnc_basefunctions(cnc_data *database = nullptr);
     void move_wait(float X,float Y,float Z,float W);
+    void settings_wait(float speed,float temperatur,float filament);
+    void setPosition_wait(float X,float Y,float Z,float W);
     void wait_heat();
     void test();
 
 private:
     cnc_data *m_database;
     QEventLoop m_loop;
+    QEventLoop m_heat_loop;
+    QEventLoop m_setPos_loop;
+    QEventLoop m_setting_loop;
     bool m_atPose;
 
 signals:

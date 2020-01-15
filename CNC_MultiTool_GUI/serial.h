@@ -6,6 +6,7 @@
 #include <QWaitCondition>
 #include <QSerialPort>
 #include <QTime>
+#include <QEventLoop>
 #include "cnc_data.h"
 
 union tTelegram
@@ -35,6 +36,7 @@ private:
     tTelegram m_recive_telegram;
     tTelegram m_send_telegram;
 
+    QEventLoop m_wait_send_loop;
     QByteArray m_SendData;
     bool m_dataReadyToSend;
 

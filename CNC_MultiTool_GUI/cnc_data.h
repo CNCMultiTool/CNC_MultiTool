@@ -16,6 +16,8 @@ public:
     void FileLog(QString value);
 
     bool m_is_heated;
+    bool m_g_code_inProcess;
+    bool m_wait_heating;
 
     //values to send
     //settings

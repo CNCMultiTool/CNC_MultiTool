@@ -195,8 +195,6 @@ void loop() {
   //if(digitalRead(23)==HIGH){
   //  digitalWrite(temprelai,HIGH);
   //}
-
-  
   
   if(msg_available){
     recive_msg();
@@ -216,7 +214,7 @@ void loop() {
         if(Wachse.soll_step == Wachse.act_step){
           if(sendPose == false){
             act_steps_to_act_posi();
-            sendactpos();
+            sendconfirmpos();
             sendPose = true;
           }
         }
@@ -228,11 +226,6 @@ void loop() {
   if(cycle_time<time_now){
     cycle_time = time_now + 1000000;
     sendsetting();
-    //sendtimes();
-    //sendactpos();
-    //sendsollpos();
-    //sendsollstep();
-    //sendactstep();
   }
 }
 
@@ -242,13 +235,12 @@ float checkEndswitches(){
   float newZSwitchID = checkEndswitch(Zachse);
   if(Xachse.SwitchID != newXSwitchID || Yachse.SwitchID != newYSwitchID || Zachse.SwitchID != newZSwitchID){
     send_variabelTestCommand('e',newXSwitchID,newYSwitchID,newZSwitchID,0);
+    sendactpos();
   }
   Xachse.SwitchID = newXSwitchID;
   Yachse.SwitchID = newYSwitchID;
   Zachse.SwitchID = newZSwitchID;
 }
-  
-  
 float checkEndswitch(struct StepMotorBig &StepM){
   float switchID;
   if(digitalRead(StepM.pinNull)==HIGH&& StepM.soll_step <= StepM.act_step){
@@ -262,7 +254,6 @@ float checkEndswitch(struct StepMotorBig &StepM){
   }
   return(switchID);
 }
-
 void TempControle(){
   PID_time = millis();
   U1 = analogRead(0);
@@ -291,7 +282,6 @@ void TempControle(){
     digitalWrite(temprelai, HIGH);
   }
 }
-
 void recive_msg(){
   msg_available = false;
   switch(Buf.tel.comand){
@@ -305,8 +295,8 @@ void recive_msg(){
       Yachse.soll_posi = Buf.tel.value[1];
       Zachse.soll_posi = Buf.tel.value[2];
       Wachse.soll_posi = Buf.tel.value[3];
-      getMoveParams();
       sendPose = false;
+      getMoveParams();
       break;
     case 'n'://set new pose
       Xachse.act_posi = Buf.tel.value[0];
@@ -314,7 +304,7 @@ void recive_msg(){
       Zachse.act_posi = Buf.tel.value[2];
       Wachse.act_posi = Buf.tel.value[3];
       setPose();
-      sendconfirmpos();
+      sendPose = false;
       break;
     case 'p'://send pose
       sendactpos();
@@ -323,13 +313,14 @@ void recive_msg(){
       Speed = Buf.tel.value[0];
       soll_T = Buf.tel.value[1];
       Wachse.steps_pmm = Buf.tel.value[2];
-      sendsetting();
+      sendconfirmsetting();
       break;
     case 'c'://send setting
       sendsetting();
       break;
     case 'b'://send stop
       act_equal_soll();
+      sendPose = false;
       break;
     case 'r'://PID parameter
       KP = Buf.tel.value[0];
@@ -340,6 +331,7 @@ void recive_msg(){
       }else{
         myPID.SetTunings(KP, KI, KD,P_ON_M);
       }
+      break;
     case 'N':
       strncpy(Buf.buf,last_send_buf , 18);
       send_tel();
@@ -399,19 +391,16 @@ void getMoveParams(){
   BigM_move_params(Zachse);
   MediM_move_params(Wachse);  
 }
-
 void BigM_move_params(struct StepMotorBig &StepM){
   StepM.soll_step = StepM.soll_posi*StepM.steps_pmm;
   StepM.time_pstep = ges_time/abs(StepM.soll_step-StepM.act_step);
   StepM.time_next_step = micros();
 }
-
 void MediM_move_params(struct StepMotorMedi &StepM){
   StepM.soll_step = StepM.soll_posi*StepM.steps_pmm;
   StepM.time_pstep = ges_time/abs(StepM.soll_step-StepM.act_step);
   StepM.time_next_step = micros();
 }
-
 ///////////////////////////////////fürt einen schrit aus und gibt den actuellen an////////////////////////////7
 void treiberBig(struct StepMotorBig &StepM){
   if(time_now >= StepM.time_next_step){
@@ -441,7 +430,6 @@ void treiberBig(struct StepMotorBig &StepM){
     }
   }
 }
-
 void treiberMedi(struct StepMotorMedi &StepM){
   if(time_now >= StepM.time_next_step){
     if(StepM.soll_step>StepM.act_step){
@@ -463,7 +451,6 @@ void treiberMedi(struct StepMotorMedi &StepM){
     }
   }
 }
-
 void StepMedi(struct StepMotorMedi &StepM,int direct){
   StepM.motor_step += direct;
   if (StepM.motor_step > 3){
@@ -499,7 +486,6 @@ void StepMedi(struct StepMotorMedi &StepM,int direct){
       break;
   }
 }
-
 //Serial Send Funktions///////////////////////////////////////////////////////////////////
 void sendsetting(){
   Buf.tel.comand = 'q';
@@ -510,12 +496,12 @@ void sendsetting(){
   send_tel();
 }
 
-void sendtimes(){
-  Buf.tel.comand = 'w';
-  Buf.tel.value[0] = Xachse.time_pstep;
-  Buf.tel.value[1] = Yachse.time_pstep;
-  Buf.tel.value[2] = Zachse.time_pstep;
-  Buf.tel.value[3] = Wachse.time_pstep;
+void sendconfirmsetting(){
+  Buf.tel.comand = 'a';
+  Buf.tel.value[0] = Speed;//Speed;//curent speed  (now-heatStartTime)/1000;
+  Buf.tel.value[1] = T;//temperatur
+  Buf.tel.value[2] = Wachse.steps_pmm;//Output;
+  Buf.tel.value[3] = Output;
   send_tel();
 }
 
@@ -534,6 +520,15 @@ void sendconfirmpos(){
   Buf.tel.value[1] = Yachse.act_posi;
   Buf.tel.value[2] = Zachse.act_posi;
   Buf.tel.value[3] = Wachse.act_posi;
+  send_tel();
+}
+
+void sendtimes(){
+  Buf.tel.comand = 'w';
+  Buf.tel.value[0] = Xachse.time_pstep;
+  Buf.tel.value[1] = Yachse.time_pstep;
+  Buf.tel.value[2] = Zachse.time_pstep;
+  Buf.tel.value[3] = Wachse.time_pstep;
   send_tel();
 }
 

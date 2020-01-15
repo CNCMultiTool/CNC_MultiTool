@@ -47,7 +47,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(m_automation,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_automation,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
-
 }
 
 MainWindow::~MainWindow()
