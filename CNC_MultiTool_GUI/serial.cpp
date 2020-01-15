@@ -77,7 +77,7 @@ void Serial::run()
         m_mutex.lock();
         if(m_dataReadyToSend == true)
         {
-            m_database->FileLog("DEBUG start sending");
+            //m_database->FileLog("DEBUG start sending");
             serial.write(m_SendData);
             if(!serial.waitForBytesWritten())
             {
@@ -86,18 +86,18 @@ void Serial::run()
             }
             m_dataReadyToSend = false;
             //m_wait_send_loop.exit();
-            m_database->FileLog("DEBUG finish sending");
+            //m_database->FileLog("DEBUG finish sending");
         }
         m_mutex.unlock();
 
         //read byts from serial
         m_mutex.lock();
-        m_database->FileLog("DEBUG start reciving");
+        //m_database->FileLog("DEBUG start reciving");
         while(serial.waitForReadyRead(10))
         {
             responseData += serial.readAll();
         }
-        m_database->FileLog("DEBUG end reciving");
+        //m_database->FileLog("DEBUG end reciving");
         m_mutex.unlock();
 
         //check if Start codon is present
