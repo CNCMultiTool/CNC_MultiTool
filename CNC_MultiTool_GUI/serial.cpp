@@ -45,7 +45,6 @@ void Serial::run()
     serial.setStopBits(QSerialPort::TwoStop);
     serial.setBaudRate(QSerialPort::Baud9600);
     m_mutex.lock();
-    m_cond.wakeAll();
     if (!serial.open(QIODevice::ReadWrite)) {
         m_quit = true;
         emit errorLog("can`t open Serial");

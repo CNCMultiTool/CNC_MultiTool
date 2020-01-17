@@ -160,7 +160,7 @@ void CNC_automation::G_Code_Parser()
         {
             emit Log("end of file");
             m_aboard = true;
-            continue;
+            break;// /////////////////////////////////testing
         }
         rx.setPattern(";");
         if(rx.indexIn(newLine)==0)

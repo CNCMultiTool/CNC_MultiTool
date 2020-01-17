@@ -187,6 +187,11 @@ void setup() {
   myPID.SetOutputLimits(0, WindowSize);
   myPID.SetSampleTime(WindowSize);
   myPID.SetMode(AUTOMATIC);
+
+  pinMode(22,OUTPUT);
+  pinMode(24,OUTPUT);
+  pinMode(26,OUTPUT);
+  pinMode(28,OUTPUT);
   
 }
 
@@ -195,19 +200,23 @@ void loop() {
   //if(digitalRead(23)==HIGH){
   //  digitalWrite(temprelai,HIGH);
   //}
-  
+  digitalWrite(22,HIGH);
   if(msg_available){
     recive_msg();
   }
+  digitalWrite(22,LOW);
+  digitalWrite(24,HIGH);
   checkEndswitches();
   TempControle();
-
+  digitalWrite(24,LOW);
+  digitalWrite(26,HIGH);
   //motors drive
   treiberBig(Xachse);
   treiberBig(Yachse);
   treiberBig(Zachse);
   treiberMedi(Wachse);
-  
+  digitalWrite(26,LOW);
+  digitalWrite(28,HIGH);
   if(Xachse.soll_step == Xachse.act_step){
     if(Yachse.soll_step == Yachse.act_step){
       if(Zachse.soll_step == Zachse.act_step){
@@ -221,7 +230,7 @@ void loop() {
       }
     }
   }
-
+  digitalWrite(28,LOW);
   //something to do everi 1000 ms
   if(cycle_time<time_now){
     cycle_time = time_now + 1000000;

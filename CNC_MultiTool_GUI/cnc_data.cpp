@@ -76,11 +76,12 @@ void cnc_data::set_position(float X,float Y,float Z,float W)
     emit show_position();
 }
 
-void cnc_data::set_settings(float speed,float temperatur,float filament)
+void cnc_data::set_settings(float speed,float temperatur,float filament,float output)
 {
     m_act_speed = speed;
     m_act_temperatur = temperatur;
     m_act_filament = filament;
+    m_output = output;
     emit show_settings();
 }
 
