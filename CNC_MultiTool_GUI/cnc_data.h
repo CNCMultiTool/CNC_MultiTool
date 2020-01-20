@@ -70,7 +70,7 @@ private:
     bool m_SerialIsOpen;
     QString m_LogFileName = "CNC_Log.txt";
     QFile *m_LogFile;
-    QMutex m_mutex;
+    QMutex m_file_mutex;
     ~cnc_data();
 
 signals:

@@ -44,6 +44,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_serial,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
     connect(m_serial,SIGNAL(show_serial(bool)),this,SLOT(show_serial(bool)));
     connect(m_serial,SIGNAL(recived(char,float,float,float,float)),m_basefunctions,SLOT(recived(char,float,float,float,float)));
+    connect(m_serial,SIGNAL(show_loops()),this,SLOT(show_loops()));
 
     connect(m_automation,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_automation,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
@@ -116,6 +117,28 @@ void MainWindow::show_endswitch(float X, float Y, float Z)
     endswitchButtonColor(Y,ui->pushButtonMoveYPos,ui->pushButtonMoveYNeg);
     endswitchButtonColor(Z,ui->pushButtonMoveZPos,ui->pushButtonMoveZNeg);
 }
+
+void MainWindow::show_loops()
+{
+    loop_labelCollor(ui->label_move_loop,&m_basefunctions->m_loop);
+    loop_labelCollor(ui->label_setPos_loop,&m_basefunctions->m_setPos_loop);
+    loop_labelCollor(ui->label_setSettings_loop,&m_basefunctions->m_setting_loop);
+    loop_labelCollor(ui->label_heating_loop,&m_basefunctions->m_heat_loop);
+}
+void MainWindow::loop_labelCollor(QLabel *label,QEventLoop *loop)
+{
+    loop->wakeUp();
+    if(loop->isRunning())
+    {
+        label->setStyleSheet("background-color: green");
+    }
+    else
+    {
+        label->setStyleSheet("background-color: red");
+    }
+}
+
+
 
 //paints the movebuttons red or green depending of the endswitches
 void MainWindow::endswitchButtonColor(float value,QPushButton *PosButton,QPushButton *NegButton)

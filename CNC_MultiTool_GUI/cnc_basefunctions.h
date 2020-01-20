@@ -18,14 +18,16 @@ public:
     void setPosition_wait(float X,float Y,float Z,float W);
     void wait_heat();
     void test();
-
-private:
-    cnc_data *m_database;
     QEventLoop m_loop;
     QEventLoop m_heat_loop;
     QEventLoop m_setPos_loop;
     QEventLoop m_setting_loop;
+
+private:
+    cnc_data *m_database;
+
     bool m_atPose;
+    void endloop(QEventLoop &loop);
 
 signals:
     void Log(const QString &s);

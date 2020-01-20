@@ -11,10 +11,7 @@ Serial::Serial(cnc_data *database)
 
 Serial::~Serial()
 {
-    m_mutex.lock();
     m_quit = true;
-    m_cond.wakeOne();
-    m_mutex.unlock();
     wait();
 }
 
@@ -32,17 +29,15 @@ void Serial::open_close(const QString &portName)
 
     if (!isRunning())
         start();
-    else
-        m_cond.wakeOne();
 }
 
 void Serial::run()
 {
     QSerialPort serial;
     serial.setPortName(m_portName);
-    serial.setParity(QSerialPort::Parity::NoParity);
+    serial.setParity(QSerialPort::Parity::EvenParity);
     serial.setDataBits(QSerialPort::Data8);
-    serial.setStopBits(QSerialPort::TwoStop);
+    serial.setStopBits(QSerialPort::OneStop);
     serial.setBaudRate(QSerialPort::Baud9600);
     m_mutex.lock();
     if (!serial.open(QIODevice::ReadWrite)) {
@@ -72,33 +67,49 @@ void Serial::run()
     m_database->FileLog("INFO recquest settings");
     while(!m_quit)
     {
+
         //send data if some available
-        m_mutex.lock();
-        if(m_dataReadyToSend == true)
+        if(m_mutex.try_lock())
         {
-            //m_database->FileLog("DEBUG start sending");
-            serial.write(m_SendData);
-            if(!serial.waitForBytesWritten())
+            if(m_SendData.count()>0)
             {
-                emit Log("timeout durring sending");
-                m_database->FileLog("ERROR timeout durring sending");
+                QByteArray sendByte = m_SendData[0];
+                m_SendData.pop_front();
+                int writtenBytes = serial.write(sendByte);
+                serial.waitForBytesWritten(-1);
+                if(serial.error()!=0&&serial.error()!=12)
+                {
+                    m_database->FileLog("ERROR Serial write : "+serial.errorString());
+                    emit errorLog("ERROR Serial write : "+serial.errorString());
+                    serial.clearError();
+                    //serial.clear();
+                }
+                if(writtenBytes<19)
+                {
+                    m_database->FileLog("ERROR Serial no bytes written");
+                    emit errorLog("ERROR Serial no bytes written");
+                }
+                //serial.flush();
             }
-            m_dataReadyToSend = false;
-            //m_wait_send_loop.exit();
-            //m_database->FileLog("DEBUG finish sending");
+            m_mutex.unlock();
         }
-        m_mutex.unlock();
-
-        //read byts from serial
-        m_mutex.lock();
-        //m_database->FileLog("DEBUG start reciving");
-        while(serial.waitForReadyRead(10))
+        else
         {
-            responseData += serial.readAll();
+            m_database->FileLog("DEBUG cant log send mutex");
         }
-        //m_database->FileLog("DEBUG end reciving");
-        m_mutex.unlock();
+        //read byts from serial
+        //m_database->FileLog("DEBUG start reciving");
+        //if(serial.bytesAvailable())
+        //{
+        responseData += serial.readAll();
+        serial.waitForReadyRead(10);
+        //}
 
+        //m_database->FileLog("DEBUG end reciving");
+        if(responseData.length()>0)
+        {
+            m_database->FileLog("DEBUG len of recived byte"+QString::number(responseData.length()));
+        }
         //check if Start codon is present
         for(int i = 0;i<responseData.size();i++)
         {
@@ -112,23 +123,22 @@ void Serial::run()
         if(StartIndex!=0)
         {
             responseData.remove(0,StartIndex);
-            emit errorLog("delete "+QString::number(StartIndex));
+            emit errorLog("ERROR delete "+QString::number(StartIndex));
             m_database->FileLog("ERROR delete "+QString::number(StartIndex));
         }
 
         //a complite telegram was recived and now get processd
         if(responseData.size()>=TelegramSize)
         {
-            //m_database->FileLog("DEBUG enter processing telegram");
             //put bytes needet form (chars and floats)
             command = responseData[1];
             for(int i=0;i<16;i++)
             {
                 recive_telegram.Bytes[i] = responseData[i+2];
             }
-            checkSumm = responseData[18];
-            //m_database->FileLog("DEBUG checksumm check");
+
             //check the checksumm
+            checkSumm = responseData[18];
             newCheckSumm = 0;
             for(int i=0;i<TelegramSize-1;i++)
             {
@@ -141,12 +151,13 @@ void Serial::run()
             }
             else
             {
-                emit recived(command,recive_telegram.Value[0],recive_telegram.Value[1],recive_telegram.Value[2],recive_telegram.Value[3]);
                 m_database->FileLog("INFO recived:"+QString(command)+" A:"+QString::number(recive_telegram.Value[0])+" B:"+QString::number(recive_telegram.Value[1])+" C:"+QString::number(recive_telegram.Value[2])+" D:"+QString::number(recive_telegram.Value[3]));
+                emit recived(command,recive_telegram.Value[0],recive_telegram.Value[1],recive_telegram.Value[2],recive_telegram.Value[3]);
+                m_database->FileLog("INFO end reciveprocess");
             }
-            //m_database->FileLog("DEBUG end Telegramm process");
             responseData.remove(0,TelegramSize);
         }
+        emit show_loops();
     }
     //emit Log("serial close");
     emit show_serial(false);
@@ -179,9 +190,10 @@ void Serial::send(char command,float value1,float value2,float value3,float valu
         newCheckSumm += sendData[i];
     }
     sendData += newCheckSumm;
-    m_database->FileLog("INFO send:"+QString(command)+" A:"+QString::number(value1)+" B:"+QString::number(value2)+" C:"+QString::number(value3)+" D:"+QString::number(value4));
+    m_database->FileLog("DEBUG try log to send");
     m_mutex.lock();
-    m_SendData = sendData;
+    m_SendData.push_back(sendData);
     m_dataReadyToSend = true;
     m_mutex.unlock();
+    m_database->FileLog("INFO send:"+QString(command)+" A:"+QString::number(value1)+" B:"+QString::number(value2)+" C:"+QString::number(value3)+" D:"+QString::number(value4));
 }

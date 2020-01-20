@@ -3,11 +3,25 @@
 cnc_basefunctions::cnc_basefunctions(cnc_data *database)
 {
     m_database = database;
+
+    endloop(m_loop);
+    endloop(m_heat_loop);
+    endloop(m_setPos_loop);
+    endloop(m_setting_loop);
+}
+
+void cnc_basefunctions::endloop(QEventLoop &loop)
+{
+    loop.exit();
 }
 
 void cnc_basefunctions::test()
 {
     emit Log("basefunction is alive");
+    endloop(m_loop);
+    endloop(m_heat_loop);
+    endloop(m_setPos_loop);
+    endloop(m_setting_loop);
 }
 
 void cnc_basefunctions::send_move(float X,float Y,float Z,float W)

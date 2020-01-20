@@ -21,14 +21,14 @@ CNC_automation::~CNC_automation()
 
 void CNC_automation::move_home()
 {
-    m_basefunctions->settings_wait(50,m_database->m_soll_temperatur,m_database->m_soll_filament);
+    m_basefunctions->send_settings(50,m_database->m_soll_temperatur,m_database->m_soll_filament);
     m_basefunctions->move_wait(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
     m_basefunctions->move_wait(-9999,-9999,m_database->m_act_Z,m_database->m_act_W);
 }
 
 void CNC_automation::move_restposi()
 {
-    m_basefunctions->settings_wait(50,m_database->m_soll_temperatur,m_database->m_soll_filament);
+    m_basefunctions->send_settings(50,m_database->m_soll_temperatur,m_database->m_soll_filament);
     m_basefunctions->move_wait(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
     m_basefunctions->move_wait(9999,-9999,m_database->m_act_Z,m_database->m_act_W);
 }
@@ -168,9 +168,10 @@ void CNC_automation::G_Code_Parser()
             emit Log("Comment: "+newLine);
             continue;
         }
-        if(newLine == "")
+        if(newLine=="")
         {
             emit Log("emty line");
+            continue;
         }
         getValue("X",newLine,&m_X);
         getValue("Y",newLine,&m_Y);
@@ -181,16 +182,20 @@ void CNC_automation::G_Code_Parser()
 
         if(isCommand("G0",newLine))//fast move
         {
-            m_F = m_F_max;
-            m_basefunctions->settings_wait(m_F/60,m_S,-1);
+            m_F = m_F_max*60;
+            m_basefunctions->send_settings(m_F/60,m_S,-1);
             m_basefunctions->move_wait(m_X,m_Y,m_Z,m_W);
             m_validCommand = true;
         }
         if(isCommand("G1",newLine))//normal move
         {
+            if(m_F>m_F_max*60)
+            {
+                m_F=m_F_max*60;
+            }
             if(0.001<abs(m_F-m_F_old))
             {
-                m_basefunctions->settings_wait(m_F/60,m_S,-1);
+                m_basefunctions->send_settings(m_F/60,m_S,-1);
             }
             m_basefunctions->move_wait(m_X,m_Y,m_Z,m_W);
             m_validCommand = true;
@@ -229,7 +234,7 @@ void CNC_automation::G_Code_Parser()
         }
         if(isCommand("M104",newLine))//set temperatur
         {
-            m_basefunctions->settings_wait(m_F/60,m_S,-1);
+            m_basefunctions->send_settings(m_F/60,m_S,-1);
             m_validCommand = true;
         }
         if(isCommand("M106",newLine))
@@ -244,7 +249,7 @@ void CNC_automation::G_Code_Parser()
         }
         if(isCommand("M109",newLine))//wait for reaching temperatur
         {
-            m_basefunctions->settings_wait(m_F/60,m_S,-1);
+            m_basefunctions->send_settings(m_F/60,m_S,-1);
             emit Log("Wait for Nozzel to heat");
             m_basefunctions->wait_heat();
             emit Log("Nozzel is heated");
