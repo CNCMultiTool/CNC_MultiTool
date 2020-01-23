@@ -35,6 +35,8 @@ public:
     void G_Code_Stop();
 
 private:
+    QFile m_inputFile;
+    QTextStream m_in;
     void run() override;
     cnc_data *m_database;
     cnc_basefunctions *m_basefunctions;
@@ -57,7 +59,6 @@ private:
     float m_F;
     float m_F_max;
     float m_F_old;
-    QEventLoop m_wait_loop;
 
 signals:
     void Log(const QString &s);

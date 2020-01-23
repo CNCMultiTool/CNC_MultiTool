@@ -13,29 +13,20 @@ class cnc_basefunctions: public QObject
     Q_OBJECT
 public:
     cnc_basefunctions(cnc_data *database = nullptr);
-    void move_wait(float X,float Y,float Z,float W);
-    void settings_wait(float speed,float temperatur,float filament);
-    void setPosition_wait(float X,float Y,float Z,float W);
-    void wait_heat();
     void test();
     QEventLoop m_loop;
-    QEventLoop m_heat_loop;
-    QEventLoop m_setPos_loop;
-    QEventLoop m_setting_loop;
+    void serial_send(char command,float value1,float value2,float value3,float value4);
 
 private:
     cnc_data *m_database;
-
-    bool m_atPose;
-    void endloop(QEventLoop &loop);
 
 signals:
     void Log(const QString &s);
     void errorLog(const QString &s);
     void send(char command,float value1,float value2,float value3,float value4);
-    void G_Code_Parser();
 
 public slots:
+    void move_wait(float X,float Y,float Z,float W);
     void send_move(float X,float Y,float Z,float W);
     void send_settings(float speed,float temperatur,float filament);
     void send_stop();

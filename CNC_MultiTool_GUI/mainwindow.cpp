@@ -39,15 +39,17 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_database,SIGNAL(show_settings()),this,SLOT(show_settings()));
     connect(m_database,SIGNAL(show_endswitch(float,float,float)),this,SLOT(show_endswitch(float,float,float)));
     connect(m_database,SIGNAL(show_serial(bool)),this,SLOT(show_serial(bool)));
+    connect(m_database,SIGNAL(show_status()),this,SLOT(show_status()));
 
     connect(m_serial,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_serial,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
-    connect(m_serial,SIGNAL(show_serial(bool)),this,SLOT(show_serial(bool)));
     connect(m_serial,SIGNAL(recived(char,float,float,float,float)),m_basefunctions,SLOT(recived(char,float,float,float,float)));
-    connect(m_serial,SIGNAL(show_loops()),this,SLOT(show_loops()));
 
     connect(m_automation,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_automation,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
+
+    connect(this,SIGNAL(serial_start()),m_serial,SLOT(serial_start()));
+    connect(this,SIGNAL(serial_close()),m_serial,SLOT(serial_close()));
 }
 
 MainWindow::~MainWindow()
@@ -58,6 +60,11 @@ MainWindow::~MainWindow()
 void MainWindow::Log(const QString &s)
 {
     ui->textEditLog->append(s);
+}
+
+void MainWindow::test()
+{
+    ui->textEditLog->append("test");
 }
 
 void MainWindow::errorLog(const QString &s)
@@ -79,7 +86,7 @@ void MainWindow::show_settings()
     ui->label_actTemperatur->setText(QString::number(m_database->m_act_temperatur)+"/"+QString::number(m_database->m_soll_temperatur));
     ui->label_actFilament->setText(QString::number(m_database->m_act_filament)+"/"+QString::number(m_database->m_soll_filament));
     ui->label_actPower->setNum(m_database->m_output);
-    if(m_database->m_is_heated)
+    if(m_database->m_HWisAtHeat)
         ui->label_actTemperatur->setStyleSheet("background-color: green");
     else
         ui->label_actTemperatur->setStyleSheet("background-color: red");
@@ -118,27 +125,25 @@ void MainWindow::show_endswitch(float X, float Y, float Z)
     endswitchButtonColor(Z,ui->pushButtonMoveZPos,ui->pushButtonMoveZNeg);
 }
 
-void MainWindow::show_loops()
+void MainWindow::show_status()
 {
-    loop_labelCollor(ui->label_move_loop,&m_basefunctions->m_loop);
-    loop_labelCollor(ui->label_setPos_loop,&m_basefunctions->m_setPos_loop);
-    loop_labelCollor(ui->label_setSettings_loop,&m_basefunctions->m_setting_loop);
-    loop_labelCollor(ui->label_heating_loop,&m_basefunctions->m_heat_loop);
-}
-void MainWindow::loop_labelCollor(QLabel *label,QEventLoop *loop)
-{
-    loop->wakeUp();
-    if(loop->isRunning())
+    if(m_database->m_HWisMoving)
     {
-        label->setStyleSheet("background-color: green");
+        ui->label_moveing->setStyleSheet("background-color: green");
     }
     else
     {
-        label->setStyleSheet("background-color: red");
+        ui->label_moveing->setStyleSheet("background-color: red");
+    }
+    if(m_database->m_HWisHeating)
+    {
+        ui->label_heating->setStyleSheet("background-color: green");
+    }
+    else
+    {
+        ui->label_heating->setStyleSheet("background-color: red");
     }
 }
-
-
 
 //paints the movebuttons red or green depending of the endswitches
 void MainWindow::endswitchButtonColor(float value,QPushButton *PosButton,QPushButton *NegButton)
@@ -162,9 +167,17 @@ void MainWindow::sendStopMoving()
 
 void MainWindow::on_pushButtonSerialConnect_clicked()
 {
-    m_serial->open_close(ui->comboBoxComPortName->currentText());
-    //m_basefunctions->test();
-    //m_database->test();
+    if(m_database->m_SerialIsOpen)
+    {
+        emit Log("close serial");
+        emit serial_close();
+    }
+    else
+    {
+        emit Log("open serial");
+        m_database->m_SerialPortName = ui->comboBoxComPortName->currentText();
+        emit serial_start();
+    }
 }
 
 void MainWindow::on_pushButtonMoveXPos_pressed()
@@ -266,8 +279,7 @@ void MainWindow::on_pushButtonMoveTo_pressed()
     float Y = ui->doubleSpinBoxMoveY->value();
     float Z = ui->doubleSpinBoxMoveZ->value();
     float W = ui->doubleSpinBoxMoveW->value();
-    //m_basefunctions->send_move(X,Y,Z,W);
-    m_basefunctions->move_wait(X,Y,Z,W);
+    m_basefunctions->send_move(X,Y,Z,W);
 }
 
 void MainWindow::on_pushButtonSetPosition_pressed()

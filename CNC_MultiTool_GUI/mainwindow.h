@@ -7,6 +7,7 @@
 #include <QTime>
 #include <QLabel>
 #include <QString>
+#include <QThread>
 #include <cnc_basefunctions.h>
 #include <cnc_data.h>
 #include <cnc_automation.h>
@@ -31,10 +32,7 @@ private:
     Serial *m_serial = new Serial(m_database);
     CNC_automation *m_automation = new CNC_automation(m_database,m_basefunctions);
 
-
     void endswitchButtonColor(float value,QPushButton *PosButton,QPushButton *NegButton);
-    void loop_labelCollor(QLabel *label,QEventLoop *loop);
-
     void send_move(float X,float Y,float Z,float W);
     void send_settings(float speed,float temperatur,float filament);
     void send_stop();
@@ -52,15 +50,20 @@ private:
 
     bool m_alive;
 
+signals:
+    void serial_start();
+    void serial_close();
+
 private slots:
     void Log(const QString &s);
     void errorLog(const QString &s);
+    void test();
 
     void show_position();
     void show_settings();
     void show_endswitch(float X,float Y,float Z);
     void show_serial(bool isOpen);
-    void show_loops();
+    void show_status();
 
     void sendStopMoving();
     void on_pushButtonSerialConnect_clicked();

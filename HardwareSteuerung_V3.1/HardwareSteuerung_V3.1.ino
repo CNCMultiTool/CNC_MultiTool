@@ -1,6 +1,7 @@
 #include <PID_v1.h>
 
 struct telegram{
+  char space;
   char comand;
   float value[4];
   char check_byte;
@@ -8,10 +9,8 @@ struct telegram{
 
 union {
   telegram tel;
-  char buf[18];
+  char buf[19];
 } Buf;
-
-char last_send_buf[18];
 
 struct StepMotorMedi {
   //Settings
@@ -67,6 +66,8 @@ unsigned long time_now = micros();
 unsigned long cycle_time = micros();
 
 bool sendPose = false;
+
+bool alavie;
 
 double U1;
 double U2;
@@ -310,7 +311,7 @@ void recive_msg(){
       Zachse.act_posi = Buf.tel.value[2];
       Wachse.act_posi = Buf.tel.value[3];
       setPose();
-      sendPose = false;
+      //sendPose = false;
       break;
     case 'p'://send pose
       sendactpos();
@@ -336,6 +337,18 @@ void recive_msg(){
         myPID.SetTunings(KP, KI, KD,P_ON_E);
       }else{
         myPID.SetTunings(KP, KI, KD,P_ON_M);
+      }
+      break;
+    case 'j':
+      if(alavie)
+      {
+        alavie = false;
+        digitalWrite(28,LOW);
+      }
+      else
+      {
+        alavie = true;
+        digitalWrite(28,HIGH);
       }
       break;
     case 'N':
@@ -586,47 +599,19 @@ void send_variabelTestCommand(char C, float val1, float val2, float val3, float 
 }
 
 void serialEvent(){
-  char read_buf[1] = {'n'};
-  if(Serial.available()){
-    while(read_buf[0]!='S'){
-      Serial.readBytes(read_buf,1);
-    }
-    Serial.readBytes(Buf.buf,18);
-    if(Buf.buf[17] != calc_checkbyte()){
-      sendRepeatRequest();
-      msg_available = false;
-    }else{
-      msg_available = true;
-    }
-  }
+  Serial.readBytes(Buf.buf,19);
+  msg_available = true;
 }
 
 void send_tel(){
-  char send_buffer[19];
-  Buf.buf[17] = calc_checkbyte();
-  strncpy(last_send_buf, Buf.buf, 18);
-  send_buffer[0] = 'S';
-  for(int i=0;i<18;i++){
-    send_buffer[i+1] = Buf.buf[i];
-  }
-  //for(int i = 0;i<19;i++){
-  if(Serial.write(send_buffer,19)!=19)
-  {
-    digitalWrite(22,HIGH);
-    digitalWrite(24,LOW);
-  }
-  else
-  {
-    digitalWrite(24,HIGH);
-    digitalWrite(22,LOW);
-  }
-  
-  //}
+  Buf.buf[0] = 'S';
+  Buf.buf[18] = calc_checkbyte();
+  Serial.write(Buf.buf,19);
 }
 
 char calc_checkbyte(){
-  char check_byte = 'S';
-  for(int i = 0;i<17;i++){
+  char check_byte = 0;
+  for(int i = 0;i<18;i++){
     check_byte +=  Buf.buf[i];
   }
   return(check_byte);

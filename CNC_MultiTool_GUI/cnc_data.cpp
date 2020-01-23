@@ -36,6 +36,12 @@ cnc_data::cnc_data()
 
     m_Zmax_nozzel = 170.8;
 
+    m_HWisHeating = false;
+    m_HWisMoving = false;
+
+    m_SerialIsOpen = false;
+    m_Serial_quit = true;
+
     m_LogFile = new QFile;
     m_LogFile->setFileName(m_LogFileName);
 
@@ -105,4 +111,16 @@ void cnc_data::set_serial(bool isOpen)
 {
     m_SerialIsOpen = isOpen;
     emit show_serial(isOpen);
+}
+
+void cnc_data::set_HWisHeating(bool status)
+{
+    m_HWisHeating = status;
+    emit show_status();
+}
+
+void cnc_data::set_HWisMoving(bool status)
+{
+    m_HWisMoving = status;
+    emit show_status();
 }

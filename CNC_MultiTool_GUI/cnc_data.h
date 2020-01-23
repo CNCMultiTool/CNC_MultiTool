@@ -7,6 +7,14 @@
 #include <QTextStream>
 #include <QDateTime>
 #include <QMutex>
+#include <QSerialPort>
+
+union tTelegram
+{
+    float Value[4];
+    char Bytes[16];
+};
+
 class cnc_data : public QObject
 {
     Q_OBJECT
@@ -15,9 +23,12 @@ public:
 
     void FileLog(QString value);
 
-    bool m_is_heated;
-    bool m_g_code_inProcess;
-    bool m_wait_heating;
+    QString m_SerialPortName;
+
+    bool m_HWisHeating;
+    bool m_HWisAtHeat;
+    bool m_HWisMoving;
+
 
     //values to send
     //settings
@@ -65,9 +76,14 @@ public:
 
     void test();
 
-private:
-    //status
+    void set_HWisHeating(bool status);
+    void set_HWisMoving(bool status);
+
     bool m_SerialIsOpen;
+    bool m_Serial_quit;
+    void serial_send(char command,float value1,float value2,float value3,float value4);
+
+private:
     QString m_LogFileName = "CNC_Log.txt";
     QFile *m_LogFile;
     QMutex m_file_mutex;
@@ -80,6 +96,7 @@ signals:
     void show_settings();
     void show_endswitch(float X,float Y,float Z);
     void show_serial(bool isOpen);
+    void show_status();
 
 //private slots:
 

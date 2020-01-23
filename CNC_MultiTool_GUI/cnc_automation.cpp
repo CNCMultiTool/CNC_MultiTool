@@ -37,7 +37,7 @@ void CNC_automation::calib_size()
 {
     emit Log("calib size (do not use manuel move)");
     move_home();
-    m_basefunctions->setPosition_wait(0,0,0,0);
+    m_basefunctions->send_setPosition(0,0,0,0);
     m_basefunctions->move_wait(9999,9999,0,0);
     m_database->m_size_X = m_database->m_act_X;
     m_database->m_size_Y = m_database->m_act_Y;
@@ -124,7 +124,6 @@ void CNC_automation::G_Code_Pause()
     {
         m_pause = false;
         m_basefunctions->move_wait(m_X,m_Y,m_Z,m_W);
-        m_wait_loop.exit();
     }
     else
     {
@@ -229,7 +228,7 @@ void CNC_automation::G_Code_Parser()
         }
         if(isCommand("G92",newLine))//set position
         {
-            m_basefunctions->setPosition_wait(m_X,m_Y,m_Z,m_W);
+            m_basefunctions->send_setPosition(m_X,m_Y,m_Z,m_W);
             m_validCommand = true;
         }
         if(isCommand("M104",newLine))//set temperatur
@@ -251,8 +250,7 @@ void CNC_automation::G_Code_Parser()
         {
             m_basefunctions->send_settings(m_F/60,m_S,-1);
             emit Log("Wait for Nozzel to heat");
-            m_basefunctions->wait_heat();
-            emit Log("Nozzel is heated");
+            m_database->set_HWisHeating(true);
             m_validCommand = true;
         }
         if(!m_validCommand)

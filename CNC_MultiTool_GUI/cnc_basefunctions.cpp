@@ -3,44 +3,23 @@
 cnc_basefunctions::cnc_basefunctions(cnc_data *database)
 {
     m_database = database;
-
-    endloop(m_loop);
-    endloop(m_heat_loop);
-    endloop(m_setPos_loop);
-    endloop(m_setting_loop);
-}
-
-void cnc_basefunctions::endloop(QEventLoop &loop)
-{
-    loop.exit();
 }
 
 void cnc_basefunctions::test()
 {
     emit Log("basefunction is alive");
-    endloop(m_loop);
-    endloop(m_heat_loop);
-    endloop(m_setPos_loop);
-    endloop(m_setting_loop);
 }
 
 void cnc_basefunctions::send_move(float X,float Y,float Z,float W)
 {
-    emit send('m',X,Y,Z,W);
+    serial_send('m',X,Y,Z,W);
+    m_database->set_HWisMoving(true);
 }
 
 void cnc_basefunctions::move_wait(float X,float Y,float Z,float W)
 {
     send_move(X,Y,Z,W);
     m_loop.exec();
-}
-
-void cnc_basefunctions::wait_heat()
-{
-    if(!m_database->m_is_heated)
-    {
-        m_heat_loop.exec();
-    }
 }
 
 void cnc_basefunctions::send_settings(float speed,float temperatur,float filament)
@@ -61,12 +40,6 @@ void cnc_basefunctions::send_settings(float speed,float temperatur,float filamen
     emit send('s',s,t,f,0);
 }
 
-void cnc_basefunctions::settings_wait(float speed,float temperatur,float filament)
-{
-    send_settings(speed,temperatur,filament);
-    m_setting_loop.exec();
-}
-
 void cnc_basefunctions::send_stop()
 {
     emit send('b',0,0,0,0);
@@ -82,64 +55,37 @@ void cnc_basefunctions::send_setPosition(float X,float Y,float Z,float W)
     emit send('n',X,Y,Z,W);
 }
 
-void cnc_basefunctions::setPosition_wait(float X,float Y,float Z,float W)
-{
-    emit send('n',X,Y,Z,W);
-    m_setPos_loop.exec();
-}
-
 void cnc_basefunctions::recived(char command,float value1,float value2,float value3,float value4)
 {
     switch(command)
     {
-    case 'm'://set the actual position ready for next comand
+    case 'm'://end of movemend
         m_database->set_position(value1,value2,value3,value4);
         m_database->FileLog("INFO recived set position: X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
         break;
-    case 'c'://set the actual position
+    case 'c'://end of movemend and ready for next comand
         m_database->set_position(value1,value2,value3,value4);
-        if(m_loop.isRunning())
-        {
-            m_loop.exit();
-        }
-        if(m_setPos_loop.isRunning())
-        {
-            m_setPos_loop.exit();
-        }
+        m_database->set_HWisMoving(false);
+        m_loop.exit();
         m_database->FileLog("INFO recived set position and ready for next command: X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
         break;
     case 'q'://set the actual settings
-        m_database->set_settings(value1,value2,value3,value4);
         m_database->FileLog("INFO recived current setting: speed:"+QString::number(value1)+" temperatur:"+QString::number(value2)+" filament:"+QString::number(value3)+" PWM:"+QString::number(value4));
         if(5>abs(m_database->m_act_temperatur-m_database->m_soll_temperatur))
         {
-            m_database->m_is_heated = true;
-            m_heat_loop.exit();
+            m_database->m_HWisAtHeat = true;
         }
         else
         {
-            m_database->m_is_heated = false;
+            m_database->m_HWisAtHeat = false;
         }
+        m_database->set_settings(value1,value2,value3,value4);
+        emit send('j',0,0,0,0);
         break;
     case 'a':
         m_database->set_settings(value1,value2,value3,value4);
-        if(m_setting_loop.isRunning())
-        {
-            m_setting_loop.exit();
-        }
         m_database->FileLog("INFO recived current setting and ready for next command: speed:"+QString::number(value1)+" temperatur:"+QString::number(value2)+" filament:"+QString::number(value3)+" PWM:"+QString::number(value4));
-        break;
-    case 'w':
-        //emit Log("recive StepTimes X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
-        break;
-    case 'j':
-        //emit Log("recive SollPosi X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
-        break;
-    case 'k':
-        //emit Log("recive SollStep X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
-        break;
-    case 'b':
-        //emit Log("recive actStep X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
+
         break;
     case 'e':
         m_database->set_endswitch(value1,value2,value3);
@@ -149,4 +95,10 @@ void cnc_basefunctions::recived(char command,float value1,float value2,float val
     default:
         break;
     }
+}
+
+void cnc_basefunctions::serial_send(char command,float value1,float value2,float value3,float value4)
+{
+    m_database->m_Serial_quit = true;
+    emit send(command,value1,value2,value3,value4);
 }
