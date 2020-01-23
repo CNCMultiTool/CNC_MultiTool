@@ -31,8 +31,7 @@ public:
     void calib_size();
 
     void G_Code_Start(QString fileName);
-    void G_Code_Pause();
-    void G_Code_Stop();
+
 
 private:
     QFile m_inputFile;
@@ -40,6 +39,10 @@ private:
     void run() override;
     cnc_data *m_database;
     cnc_basefunctions *m_basefunctions;
+
+    QTimer *timer = new QTimer(this);
+    QFile inputFile;
+    QTextStream in;
 
     void repeat_movement(float speed,float dist,int repeat);
     float probe_Z(float X,float Y);
@@ -66,6 +69,8 @@ signals:
 
 public slots:
     void G_Code_Parser();
+    void G_Code_Pause();
+    void G_Code_Stop();
     //float calc_correction(float X,float Y);
     //void calc_correctionangel(QList<float>);
 };

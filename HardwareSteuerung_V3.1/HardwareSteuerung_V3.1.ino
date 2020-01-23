@@ -98,7 +98,7 @@ unsigned long PID_time = millis();
 int debug = 0;
 
 void setup() {
-  Serial.begin(9600,SERIAL_8E1);//9600
+  Serial.begin(115200,SERIAL_8E1);//9600
   
   /*TODO
    * EndPins
@@ -311,7 +311,7 @@ void recive_msg(){
       Zachse.act_posi = Buf.tel.value[2];
       Wachse.act_posi = Buf.tel.value[3];
       setPose();
-      //sendPose = false;
+      sendactpos();
       break;
     case 'p'://send pose
       sendactpos();

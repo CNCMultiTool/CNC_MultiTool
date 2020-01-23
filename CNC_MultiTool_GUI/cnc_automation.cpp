@@ -100,6 +100,8 @@ float CNC_automation::probe_Z(float X,float Y)
 
 void CNC_automation::G_Code_Start(QString fileName)
 {
+    if(timer->isActive())
+        timer->stop();
     emit Log("start g-code: "+fileName);
     m_database->FileLog("start g-code: "+fileName);
     m_fileName = fileName;
@@ -107,10 +109,18 @@ void CNC_automation::G_Code_Start(QString fileName)
     m_pause = false;
     move_home();
     m_basefunctions->send_setPosition(0,0,m_database->m_Zmax_nozzel,0);
-    if(!isRunning())
-    {
-        run();
-    }
+    //if(!isRunning())
+    //{
+    //    start();
+    //}
+
+    inputFile.setFileName(m_fileName);
+    inputFile.open(QIODevice::ReadOnly);
+    in.setDevice(&inputFile);
+    in.setCodec("UTF-8");
+
+    timer->start(1);
+    connect(timer,SIGNAL(timeout()),this,SLOT(G_Code_Parser()));
 }
 
 void CNC_automation::run()
@@ -124,10 +134,14 @@ void CNC_automation::G_Code_Pause()
     {
         m_pause = false;
         m_basefunctions->move_wait(m_X,m_Y,m_Z,m_W);
+        if(!timer->isActive())
+            timer->start();
     }
     else
     {
         m_pause = true;
+        if(timer->isActive())
+            timer->stop();
         m_basefunctions->send_stop();
     }
 }
@@ -135,134 +149,130 @@ void CNC_automation::G_Code_Pause()
 void CNC_automation::G_Code_Stop()
 {
     m_aboard = true;
+    if(timer->isActive())
+        timer->stop();
     m_basefunctions->send_stop();
 }
 
 void CNC_automation::G_Code_Parser()
 {
-    QFile inputFile(m_fileName);
-    inputFile.open(QIODevice::ReadOnly);
-    QTextStream in(&inputFile);
-    in.setCodec("UTF-8");
+    //emit Log("g-code parser");
     QString newLine;
     QRegExp rx;
-
-    while(!m_aboard)
+    if(m_database->m_HWisMoving)
+        return;
+    if(m_database->m_HWisHeating)
+        return;
+    newLine = in.readLine();
+    m_database->FileLog(newLine);
+    if(newLine.isNull())
     {
-        //if(m_pause)
-        //{
-        //  m_wait_loop.exec();
-        //}
-        newLine = in.readLine();
-        m_database->FileLog(newLine);
-        if(newLine.isNull())
-        {
-            emit Log("end of file");
-            m_aboard = true;
-            break;// /////////////////////////////////testing
-        }
-        rx.setPattern(";");
-        if(rx.indexIn(newLine)==0)
-        {
-            emit Log("Comment: "+newLine);
-            continue;
-        }
-        if(newLine=="")
-        {
-            emit Log("emty line");
-            continue;
-        }
-        getValue("X",newLine,&m_X);
-        getValue("Y",newLine,&m_Y);
-        getValue("Z",newLine,&m_Z);
-        getValue("E",newLine,&m_W);
-        getValue("S",newLine,&m_S);
-        getValue("F",newLine,&m_F);
-
-        if(isCommand("G0",newLine))//fast move
-        {
-            m_F = m_F_max*60;
-            m_basefunctions->send_settings(m_F/60,m_S,-1);
-            m_basefunctions->move_wait(m_X,m_Y,m_Z,m_W);
-            m_validCommand = true;
-        }
-        if(isCommand("G1",newLine))//normal move
-        {
-            if(m_F>m_F_max*60)
-            {
-                m_F=m_F_max*60;
-            }
-            if(0.001<abs(m_F-m_F_old))
-            {
-                m_basefunctions->send_settings(m_F/60,m_S,-1);
-            }
-            m_basefunctions->move_wait(m_X,m_Y,m_Z,m_W);
-            m_validCommand = true;
-        }
-        if(isCommand("G21",newLine))//use mm
-        {
-            emit Log("use mm");
-            m_database->FileLog("use mm");
-            m_validCommand = true;
-        }
-        if(isCommand("G28",newLine))//move home
-        {
-            move_home();
-            m_validCommand = true;
-        }
-        if(isCommand("G31",newLine))//move untile endswitch
-        {
-            //calib_size();
-            m_validCommand = true;
-        }
-        if(isCommand("G90",newLine))//absolute referenz
-        {
-            m_database->FileLog("find G90 (useless comand)");
-            m_validCommand = true;
-        }
-        if(isCommand("G91",newLine))//incrementel movement
-        {
-            m_database->FileLog("ERROR find G91 (useless comand)");
-            emit errorLog("use incrementel movement");
-            m_validCommand = true;
-        }
-        if(isCommand("G92",newLine))//set position
-        {
-            m_basefunctions->send_setPosition(m_X,m_Y,m_Z,m_W);
-            m_validCommand = true;
-        }
-        if(isCommand("M104",newLine))//set temperatur
-        {
-            m_basefunctions->send_settings(m_F/60,m_S,-1);
-            m_validCommand = true;
-        }
-        if(isCommand("M106",newLine))
-        {
-            m_database->FileLog("find M106 (useless comand)");
-            m_validCommand = true;
-        }
-        if(isCommand("M107",newLine))
-        {
-            m_database->FileLog("find M107 (useless comand)");
-            m_validCommand = true;
-        }
-        if(isCommand("M109",newLine))//wait for reaching temperatur
-        {
-            m_basefunctions->send_settings(m_F/60,m_S,-1);
-            emit Log("Wait for Nozzel to heat");
-            m_database->set_HWisHeating(true);
-            m_validCommand = true;
-        }
-        if(!m_validCommand)
-        {
-            emit errorLog("Line not Known:"+newLine);
-            emit Log("Line not Known:"+newLine);
-            m_database->FileLog("Line not Known:"+newLine);
-        }
-        m_F_old = m_F;
+        emit Log("end of file");
+        m_aboard = true;
+        inputFile.close();
+        if(timer->isActive())
+            timer->stop();
+        emit Log("G-Code is finishd");
+        return;// /////////////////////////////////testing
     }
-    inputFile.close();
-    emit Log("G-Code is finishd");
+    rx.setPattern(";");
+    if(rx.indexIn(newLine)==0)
+    {
+        emit Log("Comment: "+newLine);
+        return;
+    }
+    if(newLine=="")
+    {
+        emit Log("emty line");
+        return;
+    }
+    getValue("X",newLine,&m_X);
+    getValue("Y",newLine,&m_Y);
+    getValue("Z",newLine,&m_Z);
+    getValue("E",newLine,&m_W);
+    getValue("S",newLine,&m_S);
+    getValue("F",newLine,&m_F);
+
+    if(isCommand("G0",newLine))//fast move
+    {
+        m_F = m_F_max*60;
+        m_basefunctions->send_settings(m_F/60,m_S,-1);
+        m_basefunctions->move_wait(m_X,m_Y,m_Z,m_W);
+        m_validCommand = true;
+    }
+    if(isCommand("G1",newLine))//normal move
+    {
+        if(m_F>m_F_max*60)
+        {
+            m_F=m_F_max*60;
+        }
+        if(0.001<abs(m_F-m_F_old))
+        {
+            m_basefunctions->send_settings(m_F/60,m_S,-1);
+        }
+        m_basefunctions->move_wait(m_X,m_Y,m_Z,m_W);
+        m_validCommand = true;
+    }
+    if(isCommand("G21",newLine))//use mm
+    {
+        emit Log("use mm");
+        m_database->FileLog("use mm");
+        m_validCommand = true;
+    }
+    if(isCommand("G28",newLine))//move home
+    {
+        move_home();
+        m_validCommand = true;
+    }
+    if(isCommand("G31",newLine))//move untile endswitch
+    {
+        //calib_size();
+        m_validCommand = true;
+    }
+    if(isCommand("G90",newLine))//absolute referenz
+    {
+        m_database->FileLog("find G90 (useless comand)");
+        m_validCommand = true;
+    }
+    if(isCommand("G91",newLine))//incrementel movement
+    {
+        m_database->FileLog("ERROR find G91 (useless comand)");
+        emit errorLog("use incrementel movement");
+        m_validCommand = true;
+    }
+    if(isCommand("G92",newLine))//set position
+    {
+        m_basefunctions->send_setPosition(m_X,m_Y,m_Z,m_W);
+        m_validCommand = true;
+    }
+    if(isCommand("M104",newLine))//set temperatur
+    {
+        m_basefunctions->send_settings(m_F/60,m_S,-1);
+        m_validCommand = true;
+    }
+    if(isCommand("M106",newLine))
+    {
+        m_database->FileLog("find M106 (useless comand)");
+        m_validCommand = true;
+    }
+    if(isCommand("M107",newLine))
+    {
+        m_database->FileLog("find M107 (useless comand)");
+        m_validCommand = true;
+    }
+    if(isCommand("M109",newLine))//wait for reaching temperatur
+    {
+        m_basefunctions->send_settings(m_F/60,m_S,-1);
+        emit Log("Wait for Nozzel to heat");
+        m_database->set_HWisHeating(true);
+        m_validCommand = true;
+    }
+    if(!m_validCommand)
+    {
+        emit errorLog("Line not Known:"+newLine);
+        emit Log("Line not Known:"+newLine);
+        m_database->FileLog("Line not Known:"+newLine);
+    }
 }
 
 bool CNC_automation::isCommand(const QString indent,const QString line)

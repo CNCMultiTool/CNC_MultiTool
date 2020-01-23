@@ -169,14 +169,14 @@ void MainWindow::on_pushButtonSerialConnect_clicked()
 {
     if(m_database->m_SerialIsOpen)
     {
-        emit Log("close serial");
-        emit serial_close();
+        Log("close serial");
+        m_serial->serial_close();
     }
     else
     {
-        emit Log("open serial");
+        Log("open serial");
         m_database->m_SerialPortName = ui->comboBoxComPortName->currentText();
-        emit serial_start();
+        m_serial->serial_start();
     }
 }
 

@@ -5,7 +5,7 @@ Serial::Serial(cnc_data *database)
 {
     m_database = database;
     const QMutexLocker locker(&m_mutex);
-    connect(&MySerial,SIGNAL(readyRead()),this,SLOT(recive()));
+    //connect(&MySerial,SIGNAL(readyRead()),this,SLOT(recive()));
 }
 
 Serial::~Serial()
@@ -21,7 +21,7 @@ void Serial::serial_start()
     MySerial.setParity(QSerialPort::Parity::EvenParity);
     MySerial.setDataBits(QSerialPort::Data8);
     MySerial.setStopBits(QSerialPort::OneStop);
-    MySerial.setBaudRate(QSerialPort::Baud9600);
+    MySerial.setBaudRate(QSerialPort::Baud115200);
     if (!MySerial.open(QIODevice::ReadWrite)) {
         emit errorLog("can`t start Serial");
         m_database->set_serial(false);
@@ -30,7 +30,7 @@ void Serial::serial_start()
     }
     m_database->m_Serial_quit = false;
     MySerial.clear();
-    timer->start(10);
+    timer->start(1);
     connect(timer,SIGNAL(timeout()),this,SLOT(recive()));
     m_database->set_serial(true);
     send('i',0,0,0,0);
@@ -56,7 +56,7 @@ void Serial::recive()
         m_mutex.lock();
         if(m_SendData.count()>0)
         {
-            emit Log("send something");
+            //emit Log("send something");
             QByteArray sendByte = m_SendData[0];
             m_SendData.pop_front();
             MySerial.write(sendByte);
@@ -70,7 +70,7 @@ void Serial::recive()
         //a complite telegram was recived and now get processd
         if(responseData.size()>=TelegramSize)
         {
-            emit Log("telegram size :"+QString::number(responseData.size()));
+            //emit Log("telegram size :"+QString::number(responseData.size()));
             //put bytes needet form (chars and floats)
             command = responseData[1];
             for(int i=0;i<16;i++)
@@ -92,7 +92,8 @@ void Serial::recive()
             LogText += QString::number(recive_telegram.Value[2])+" ";
             LogText += QString::number(recive_telegram.Value[3])+" ";
             LogText += QString::number(checkSumm);
-            emit Log(LogText);
+            //emit Log(LogText);
+            m_database->FileLog("INFO rexive:"+LogText);
             if(newCheckSumm != checkSumm)
             {
                 emit errorLog("check failt recive:"+QString::number(checkSumm)+" calc:"+QString::number(newCheckSumm));
@@ -131,5 +132,13 @@ void Serial::send(char command,float value1,float value2,float value3,float valu
     m_mutex.lock();
     m_SendData.push_back(sendData);
     m_mutex.unlock();
-    m_database->FileLog("INFO send:"+QString(command)+" A:"+QString::number(value1)+" B:"+QString::number(value2)+" C:"+QString::number(value3)+" D:"+QString::number(value4));
+    QString LogText = QString(char(responseData[0]))+" ";
+    LogText += QString(command)+" ";
+    LogText += QString::number(send_telegram.Value[0])+" ";
+    LogText += QString::number(send_telegram.Value[1])+" ";
+    LogText += QString::number(send_telegram.Value[2])+" ";
+    LogText += QString::number(send_telegram.Value[3])+" ";
+    LogText += QString::number(responseData[18]);
+    //emit Log(LogText);
+    m_database->FileLog("INFO send:"+LogText);
 }

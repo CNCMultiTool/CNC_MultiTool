@@ -12,7 +12,7 @@ void cnc_basefunctions::test()
 
 void cnc_basefunctions::send_move(float X,float Y,float Z,float W)
 {
-    serial_send('m',X,Y,Z,W);
+    emit send('m',X,Y,Z,W);
     m_database->set_HWisMoving(true);
 }
 
@@ -74,6 +74,7 @@ void cnc_basefunctions::recived(char command,float value1,float value2,float val
         if(5>abs(m_database->m_act_temperatur-m_database->m_soll_temperatur))
         {
             m_database->m_HWisAtHeat = true;
+            m_database->m_HWisHeating = false;
         }
         else
         {
@@ -85,7 +86,6 @@ void cnc_basefunctions::recived(char command,float value1,float value2,float val
     case 'a':
         m_database->set_settings(value1,value2,value3,value4);
         m_database->FileLog("INFO recived current setting and ready for next command: speed:"+QString::number(value1)+" temperatur:"+QString::number(value2)+" filament:"+QString::number(value3)+" PWM:"+QString::number(value4));
-
         break;
     case 'e':
         m_database->set_endswitch(value1,value2,value3);
@@ -97,8 +97,3 @@ void cnc_basefunctions::recived(char command,float value1,float value2,float val
     }
 }
 
-void cnc_basefunctions::serial_send(char command,float value1,float value2,float value3,float value4)
-{
-    m_database->m_Serial_quit = true;
-    emit send(command,value1,value2,value3,value4);
-}
