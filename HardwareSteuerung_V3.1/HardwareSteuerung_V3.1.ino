@@ -230,10 +230,10 @@ void loop() {
   }
 
   //something to do everi 1000 ms
-  if(cycle_time<time_now){
-    cycle_time = time_now + 1000000;
-    sendsetting();
-  }
+  //if(cycle_time<time_now){
+  //  cycle_time = time_now + 1000000;
+  //  sendsetting();
+  //}
 }
 
 float checkEndswitches(){
@@ -302,8 +302,9 @@ void recive_msg(){
       Yachse.soll_posi = Buf.tel.value[1];
       Zachse.soll_posi = Buf.tel.value[2];
       Wachse.soll_posi = Buf.tel.value[3];
-      sendPose = false;
       getMoveParams();
+      sendPose = false;
+      send_answer();
       break;
     case 'n'://set new pose
       Xachse.act_posi = Buf.tel.value[0];
@@ -324,22 +325,6 @@ void recive_msg(){
       break;
     case 'c'://send setting
       sendsetting();
-      break;
-    case 'b'://send stop
-      act_equal_soll();
-      sendPose = false;
-      break;
-    case 'r'://PID parameter
-      KP = Buf.tel.value[0];
-      KI = Buf.tel.value[1];
-      KD = Buf.tel.value[2];
-      if(Buf.tel.value[3]>0.5){
-        myPID.SetTunings(KP, KI, KD,P_ON_E);
-      }else{
-        myPID.SetTunings(KP, KI, KD,P_ON_M);
-      }
-      break;
-    case 'j':
       if(alavie)
       {
         alavie = false;
@@ -351,14 +336,41 @@ void recive_msg(){
         digitalWrite(28,HIGH);
       }
       break;
-    case 'N':
+    case 'b'://send stop
+      act_equal_soll();
+      sendconfirmpos();
+      break;
+    case 'r'://PID parameter
+      KP = Buf.tel.value[0];
+      KI = Buf.tel.value[1];
+      KD = Buf.tel.value[2];
+      if(Buf.tel.value[3]>0.5){
+        myPID.SetTunings(KP, KI, KD,P_ON_E);
+      }else{
+        myPID.SetTunings(KP, KI, KD,P_ON_M);
+      }
+      send_answer();
+      break;
+    //case 'N':
       //strncpy(Buf.buf,last_send_buf , 18);
       //send_tel();
-      sendconfirmsetting();
-      sendPose = false;
-      break;
+      //sendRepeatRequest();
+      //sendconfirmsetting();
+      //sendPose = false;
+      //digitalWrite(22,HIGH);
+      //break;
     default:
       sendRepeatRequest();
+      sendPose = false;
+      digitalWrite(24,HIGH);
+      Serial.flush();
+      Serial.end();
+      Serial.begin(115200,SERIAL_8E1);//9600
+      while(Serial.available())
+      {
+        char dummy[1];
+        Serial.readBytes(dummy,1);
+      }
       break;
   }
 }
@@ -596,6 +608,10 @@ void send_variabelTestCommand(char C, float val1, float val2, float val3, float 
   Buf.tel.value[2] = val3;
   Buf.tel.value[3] = val4;
   send_tel();
+}
+
+void send_answer(){
+  send_variabelTestCommand('I',0,0,0,0);
 }
 
 void serialEvent(){

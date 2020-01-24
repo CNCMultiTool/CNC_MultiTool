@@ -21,9 +21,13 @@ CNC_automation::~CNC_automation()
 
 void CNC_automation::move_home()
 {
+    emit Log("move_home : setting");
     m_basefunctions->send_settings(50,m_database->m_soll_temperatur,m_database->m_soll_filament);
+    emit Log("move_home : move Z");
     m_basefunctions->move_wait(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
+    emit Log("move_home : move XY");
     m_basefunctions->move_wait(-9999,-9999,m_database->m_act_Z,m_database->m_act_W);
+    emit Log("move_home : finish");
 }
 
 void CNC_automation::move_restposi()
@@ -206,7 +210,7 @@ void CNC_automation::G_Code_Parser()
         {
             m_F=m_F_max*60;
         }
-        if(0.001<abs(m_F-m_F_old))
+        if(0.001>abs(m_F-m_F_old))
         {
             m_basefunctions->send_settings(m_F/60,m_S,-1);
         }

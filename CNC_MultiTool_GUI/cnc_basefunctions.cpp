@@ -81,7 +81,7 @@ void cnc_basefunctions::recived(char command,float value1,float value2,float val
             m_database->m_HWisAtHeat = false;
         }
         m_database->set_settings(value1,value2,value3,value4);
-        emit send('j',0,0,0,0);
+        //emit send('j',0,0,0,0);
         break;
     case 'a':
         m_database->set_settings(value1,value2,value3,value4);
@@ -91,6 +91,10 @@ void cnc_basefunctions::recived(char command,float value1,float value2,float val
         m_database->set_endswitch(value1,value2,value3);
         m_database->FileLog("INFO recived endswitches: X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
         //emit Log("recive endswitch X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
+        break;
+    case 'I':
+        m_database->FileLog("INFO recived Answer");
+        //emit Log("INFO recived Answer");
         break;
     default:
         break;

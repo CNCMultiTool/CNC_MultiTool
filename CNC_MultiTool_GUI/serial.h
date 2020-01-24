@@ -23,9 +23,13 @@ private:
     QSerialPort MySerial;
     cnc_data *m_database;
     QMutex m_mutex;
+    QMutex m_serial_mutex;
     QByteArray responseData;
+    QByteArray lastSendData;
     QList<QByteArray> m_SendData;
     QTimer *timer = new QTimer(this);
+    QTimer *send_timeout = new QTimer(this);
+    QTimer *setting_timer = new QTimer(this);
 
 signals:
     void Log(const QString &s);
@@ -38,6 +42,8 @@ public slots:
     void serial_start();
     void serial_close();
     void send(char command,float value1,float value2,float value3,float value4);
+    void timeout_handler();
+    void request_settings();
 
 };
 
