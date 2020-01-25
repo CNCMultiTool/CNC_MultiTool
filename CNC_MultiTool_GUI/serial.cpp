@@ -103,6 +103,7 @@ void Serial::timeout_handler()
     send('I',0,0,0,0);//clear the arduino serial
     send('i',0,0,0,0);//init sequenz of arduino
     m_SendData.push_back(buffer);//resend last command
+    m_database->FileLog("ERROR add to resend: "+QString(char(buffer[1])));
 }
 
 void Serial::request_settings()
@@ -187,6 +188,8 @@ void Serial::recive()
         {
             emit errorLog("check failt recive:"+QString::number(checkSumm)+" calc:"+QString::number(newCheckSumm));
             m_database->FileLog("ERROR checksum failt :"+QString::number(checkSumm)+" calc:"+QString::number(newCheckSumm));
+            responseData.clear();
+            timeout_handler();
         }
         else
         {
