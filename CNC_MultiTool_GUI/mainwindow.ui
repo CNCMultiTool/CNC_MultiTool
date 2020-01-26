@@ -781,6 +781,9 @@
        <property name="maximum">
         <number>999</number>
        </property>
+       <property name="value">
+        <number>37</number>
+       </property>
       </widget>
      </item>
      <item row="1" column="1">
@@ -919,8 +922,8 @@
     </property>
     <property name="geometry">
      <rect>
-      <x>510</x>
-      <y>470</y>
+      <x>520</x>
+      <y>460</y>
       <width>511</width>
       <height>151</height>
      </rect>

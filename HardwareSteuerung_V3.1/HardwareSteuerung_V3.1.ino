@@ -10,7 +10,7 @@ struct telegram{
 union {
   telegram tel;
   char buf[19];
-} Buf;
+} Buf,SenBuf;
 
 struct StepMotorMedi {
   //Settings
@@ -58,14 +58,17 @@ struct StepMotorBig Zachse;
 
 bool msg_available;
 
+char lastSend[19];
+
 double Speed = 50; //mm pro minute
 double dist;
 double ges_time;
 
 unsigned long time_now = micros();
 unsigned long cycle_time = micros();
+unsigned long old_time_now = micros();
 
-bool sendPose = false;
+bool sendPose = true;
 
 bool alavie;
 
@@ -96,6 +99,8 @@ unsigned long windowStartTime;
 unsigned long PID_time = millis();
 
 int debug = 0;
+
+bool wait_for_response = false;
 
 void setup() {
   Serial.begin(115200,SERIAL_8E1);//9600
@@ -153,7 +158,7 @@ void setup() {
   Wachse.time_next_step = 0;
   Wachse.time_pstep = 0;
   Wachse.motor_step = 0;
-  Wachse.steps_pmm = 20;
+  Wachse.steps_pmm = 37;
   Wachse.pin1 = 29;
   Wachse.pin2 = 31;
   Wachse.pin3 = 33;
@@ -193,14 +198,19 @@ void setup() {
   pinMode(24,OUTPUT);
   pinMode(26,OUTPUT);
   pinMode(28,OUTPUT);
-  
 }
 
 void loop() {
   time_now = micros();
-  //if(digitalRead(23)==HIGH){
-  //  digitalWrite(temprelai,HIGH);
-  //}
+  if(time_now<old_time_now){
+    digitalWrite(28,HIGH);
+  }
+  /*if(digitalRead(23)==HIGH){
+    digitalWrite(22,LOW);
+    digitalWrite(24,LOW);
+    digitalWrite(26,LOW);
+    digitalWrite(28,LOW);
+  }*/
 
   if(msg_available){
     recive_msg();
@@ -229,11 +239,14 @@ void loop() {
     }
   }
 
-  //something to do everi 1000 ms
-  //if(cycle_time<time_now){
-  //  cycle_time = time_now + 1000000;
-  //  sendsetting();
-  //}
+  //timeout
+  if(cycle_time < time_now && wait_for_response)
+  {
+    wait_for_response = false;
+    serieltimeouthandler();
+    digitalWrite(22,HIGH);
+  }
+  old_time_now = time_now;
 }
 
 float checkEndswitches(){
@@ -242,7 +255,7 @@ float checkEndswitches(){
   float newZSwitchID = checkEndswitch(Zachse);
   if(Xachse.SwitchID != newXSwitchID || Yachse.SwitchID != newYSwitchID || Zachse.SwitchID != newZSwitchID){
     send_variabelTestCommand('e',newXSwitchID,newYSwitchID,newZSwitchID,0);
-    sendactpos();
+    sendactposition();
   }
   Xachse.SwitchID = newXSwitchID;
   Yachse.SwitchID = newYSwitchID;
@@ -295,7 +308,7 @@ void recive_msg(){
     case 'i':
       sendsetting();
       sendconfirmpos();
-      send_variabelTestCommand('e',Xachse.SwitchID,Yachse.SwitchID,Zachse.SwitchID,0);
+      sendendswitch();
       break;
     case 'm'://move
       Xachse.soll_posi = Buf.tel.value[0];
@@ -304,77 +317,69 @@ void recive_msg(){
       Wachse.soll_posi = Buf.tel.value[3];
       getMoveParams();
       sendPose = false;
-      send_answer();
+      sendConfirmAnswer();
       break;
-    case 'n'://set new pose
+    case 'p'://set new pose
       Xachse.act_posi = Buf.tel.value[0];
       Yachse.act_posi = Buf.tel.value[1];
       Zachse.act_posi = Buf.tel.value[2];
       Wachse.act_posi = Buf.tel.value[3];
       setPose();
-      sendactpos();
+      sendactposition();
       break;
-    case 'p'://send pose
-      sendactpos();
+    case 't'://send pose
+      sendactposition();
       break;
     case 's': //set speed
       Speed = Buf.tel.value[0];
       soll_T = Buf.tel.value[1];
       Wachse.steps_pmm = Buf.tel.value[2];
-      sendconfirmsetting();
+      sendsetting();
       break;
-    case 'c'://send setting
+    case 'r'://send setting (request settings)
       sendsetting();
       if(alavie)
       {
         alavie = false;
-        digitalWrite(28,LOW);
+        //digitalWrite(28,LOW);
       }
       else
       {
         alavie = true;
-        digitalWrite(28,HIGH);
+        //digitalWrite(28,HIGH);
       }
       break;
     case 'b'://send stop
       act_equal_soll();
       sendconfirmpos();
       break;
-    case 'r'://PID parameter
-      KP = Buf.tel.value[0];
-      KI = Buf.tel.value[1];
-      KD = Buf.tel.value[2];
-      if(Buf.tel.value[3]>0.5){
-        myPID.SetTunings(KP, KI, KD,P_ON_E);
-      }else{
-        myPID.SetTunings(KP, KI, KD,P_ON_M);
-      }
-      send_answer();
+    case 'N'://repetrquest error detection
+      Serial.write(lastSend,19);
+      //digitalWrite(28,HIGH);
+      //stop_responstimer();
       break;
-    //case 'N':
-      //strncpy(Buf.buf,last_send_buf , 18);
-      //send_tel();
-      //sendRepeatRequest();
-      //sendconfirmsetting();
-      //sendPose = false;
-      //digitalWrite(22,HIGH);
-      //break;
+    case 'a'://repetrquest error detection
+      //stop_responstimer();
+      break;
     default:
-      sendRepeatRequest();
-      sendPose = false;
-      digitalWrite(24,HIGH);
-      Serial.flush();
-      Serial.end();
-      Serial.begin(115200,SERIAL_8E1);//9600
-      while(Serial.available())
-      {
-        char dummy[1];
-        Serial.readBytes(dummy,1);
-      }
+      //digitalWrite(24,HIGH);
+      //stop_responstimer();
       break;
   }
 }
-
+void serieltimeouthandler(){
+      //digitalWrite(22,HIGH);
+      Serial.flush();
+      Serial.end();
+      Serial.begin(115200,SERIAL_8E1);//9600
+      char dummy[1];
+      while(Serial.available())
+      {
+        Serial.readBytes(dummy,1);
+      }
+      sendRepeatRequest();
+      Serial.write(lastSend,19);
+}
 //strops the movement (set soll pos equal act pos)
 void act_equal_soll(){
   Xachse.soll_step = Xachse.act_step;
@@ -410,7 +415,6 @@ void setPose(){
   Zachse.soll_step = Zachse.act_step;
   Wachse.soll_step = Wachse.act_step;
 }
-
 //berechnet die  parameter für eine bewegung für eine achse
 void getMoveParams(){
   dist = sqrt(pow(Xachse.soll_posi-Xachse.act_posi,2)+pow(Yachse.soll_posi-Yachse.act_posi,2)+pow(Zachse.soll_posi-Zachse.act_posi,2)); //gesamtdistans
@@ -520,115 +524,81 @@ void StepMedi(struct StepMotorMedi &StepM,int direct){
   }
 }
 //Serial Send Funktions///////////////////////////////////////////////////////////////////
-void sendsetting(){
-  Buf.tel.comand = 'q';
-  Buf.tel.value[0] = Speed;//Speed;//curent speed  (now-heatStartTime)/1000;
-  Buf.tel.value[1] = T;//temperatur
-  Buf.tel.value[2] = Wachse.steps_pmm;//Output;
-  Buf.tel.value[3] = Output;
-  send_tel();
+void sendendswitch(){
+  send_variabelTestCommand('e',Xachse.SwitchID,Yachse.SwitchID,Zachse.SwitchID,0);
+  start_responstimer();
 }
-
-void sendconfirmsetting(){
-  Buf.tel.comand = 'a';
-  Buf.tel.value[0] = Speed;//Speed;//curent speed  (now-heatStartTime)/1000;
-  Buf.tel.value[1] = T;//temperatur
-  Buf.tel.value[2] = Wachse.steps_pmm;//Output;
-  Buf.tel.value[3] = Output;
-  send_tel();
+void sendactposition(){
+  send_variabelTestCommand('m',Xachse.act_posi,Yachse.act_posi,Zachse.act_posi,Wachse.act_posi);
 }
-
-void sendactpos(){
-  Buf.tel.comand = 'm';
-  Buf.tel.value[0] = Xachse.act_posi;
-  Buf.tel.value[1] = Yachse.act_posi;
-  Buf.tel.value[2] = Zachse.act_posi;
-  Buf.tel.value[3] = Wachse.act_posi;
-  send_tel();
-}
-
 void sendconfirmpos(){
-  Buf.tel.comand = 'c';
-  Buf.tel.value[0] = Xachse.act_posi;
-  Buf.tel.value[1] = Yachse.act_posi;
-  Buf.tel.value[2] = Zachse.act_posi;
-  Buf.tel.value[3] = Wachse.act_posi;
-  send_tel();
+  send_variabelTestCommand('c',Xachse.act_posi,Yachse.act_posi,Zachse.act_posi,Wachse.act_posi);
+  start_responstimer();
 }
-
-void sendtimes(){
-  Buf.tel.comand = 'w';
-  Buf.tel.value[0] = Xachse.time_pstep;
-  Buf.tel.value[1] = Yachse.time_pstep;
-  Buf.tel.value[2] = Zachse.time_pstep;
-  Buf.tel.value[3] = Wachse.time_pstep;
-  send_tel();
-}
-
-void sendsollpos(){
-  Buf.tel.comand = 'j';
-  Buf.tel.value[0] = Xachse.soll_posi;
-  Buf.tel.value[1] = Yachse.soll_posi;
-  Buf.tel.value[2] = Zachse.soll_posi;
-  Buf.tel.value[3] = Wachse.soll_posi;
-  send_tel();
-}
-
-void sendsollstep(){
-  Buf.tel.comand = 'k';
-  Buf.tel.value[0] = Xachse.soll_step;
-  Buf.tel.value[1] = Yachse.soll_step;
-  Buf.tel.value[2] = Zachse.soll_step;
-  Buf.tel.value[3] = Wachse.soll_step;
-  send_tel();
-}
-
-void sendactstep(){
-  Buf.tel.comand = 'b';
-  Buf.tel.value[0] = Xachse.act_step;
-  Buf.tel.value[1] = Yachse.act_step;
-  Buf.tel.value[2] = Zachse.act_step;
-  Buf.tel.value[3] = Wachse.act_step;
-  send_tel();
-}
-
 void sendRepeatRequest(){
-  Buf.tel.comand = 'N';
-  Buf.tel.value[0] = 0;
-  Buf.tel.value[1] = 0;
-  Buf.tel.value[2] = 0;
-  Buf.tel.value[3] = 0;
-  send_tel();
+  send_variabelTestCommand('N',0,0,0,0);
+  start_responstimer();
 }
-
+void sendConfirmAnswer(){
+  send_variabelTestCommand('a',0,0,0,0);
+}
+void sendsetting(){
+  send_variabelTestCommand('s',Speed,T,Wachse.steps_pmm,Output);
+}
 void send_variabelTestCommand(char C, float val1, float val2, float val3, float val4){
-  Buf.tel.comand = C;
-  Buf.tel.value[0] = val1;
-  Buf.tel.value[1] = val2;
-  Buf.tel.value[2] = val3;
-  Buf.tel.value[3] = val4;
+  SenBuf.tel.comand = C;
+  SenBuf.tel.value[0] = val1;
+  SenBuf.tel.value[1] = val2;
+  SenBuf.tel.value[2] = val3;
+  SenBuf.tel.value[3] = val4;
   send_tel();
 }
-
-void send_answer(){
-  send_variabelTestCommand('I',0,0,0,0);
+void start_responstimer(){
+  wait_for_response = true;
+  cycle_time = time_now + 30000;
 }
-
+void stop_responstimer(){
+  wait_for_response = false;
+}
 void serialEvent(){
-  Serial.readBytes(Buf.buf,19);
-  msg_available = true;
+  char bufS[1];
+  char bufBig[18];
+  bool wrong_telegram = false;
+  stop_responstimer();
+  Serial.readBytes(bufS,1);
+  while(bufS[0] != 'S'){
+    Serial.readBytes(bufS,1);
+    //digitalWrite(28,HIGH);
+  }
+  
+  Serial.readBytes(bufBig,18);
+  Buf.buf[0] = bufS[0];
+  for(int i=0;i<18;i++){
+    Buf.buf[i+1] = bufBig[i];
+  }
+  
+  if(Buf.buf[18]!=calc_checkbyte(Buf.buf)){
+    //digitalWrite(26,HIGH);
+    wrong_telegram = true;
+  }
+  if(wrong_telegram == true){
+    sendRepeatRequest();
+    //digitalWrite(22,HIGH);
+  }else{
+    msg_available = true;
+    //digitalWrite(24,HIGH);
+  }
 }
-
 void send_tel(){
-  Buf.buf[0] = 'S';
-  Buf.buf[18] = calc_checkbyte();
-  Serial.write(Buf.buf,19);
+  SenBuf.buf[0] = 'S';
+  SenBuf.buf[18] = calc_checkbyte(SenBuf.buf);
+  Serial.write(SenBuf.buf,19);
+  strncpy(lastSend,SenBuf.buf,19);
 }
-
-char calc_checkbyte(){
+char calc_checkbyte(char buf[19]){
   char check_byte = 0;
   for(int i = 0;i<18;i++){
-    check_byte +=  Buf.buf[i];
+    check_byte +=  buf[i];
   }
   return(check_byte);
 }

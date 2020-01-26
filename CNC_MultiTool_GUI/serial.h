@@ -11,6 +11,7 @@
 #include <QCoreApplication>
 #include "cnc_data.h"
 
+
 class Serial : public QObject
 {
     Q_OBJECT
@@ -42,7 +43,7 @@ public slots:
     void serial_start();
     void serial_close();
     void send(char command,float value1,float value2,float value3,float value4);
-    void timeout_handler();
+    void error_handler();
     void request_settings();
 
 };

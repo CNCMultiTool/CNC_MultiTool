@@ -19,6 +19,7 @@ public:
 
 private:
     cnc_data *m_database;
+    void send_ConfirmAnswer();
 
 signals:
     void Log(const QString &s);

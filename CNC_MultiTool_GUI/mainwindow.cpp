@@ -59,7 +59,8 @@ MainWindow::~MainWindow()
 
 void MainWindow::Log(const QString &s)
 {
-    ui->textEditLog->append(s);
+    QString text = QDateTime::currentDateTime().toString("hh:mm:ss.ms ") + s;
+    ui->textEditLog->append(text);
 }
 
 void MainWindow::test()

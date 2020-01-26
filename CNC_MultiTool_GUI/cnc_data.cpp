@@ -9,7 +9,7 @@ cnc_data::cnc_data()
     m_Y_angel = 0.0023308;
 
     m_soll_speed = 0;
-    m_soll_filament = 0;
+    m_soll_filament = 37;
     m_soll_temperatur = 0;
 
     //values recived
@@ -20,7 +20,7 @@ cnc_data::cnc_data()
     m_act_W = 0;
     //settings
     m_act_speed = 0;
-    m_act_filament = 0;
+    m_act_filament = 37;
     m_act_temperatur = 0;
 
     //status
