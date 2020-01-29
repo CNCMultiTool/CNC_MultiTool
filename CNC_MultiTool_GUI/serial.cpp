@@ -57,57 +57,68 @@ void Serial::error_handler()
         timer->stop();
         setting_timer->stop();
         send_timeout->stop();
-        emit Log("ERROR SerialTimeout occured");
+        //emit Log("ERROR SerialTimeout occured");
         emit errorLog("ERROR SerialTimeout occured");
         m_database->FileLog("ERROR SerialTimeout occured");
         //m_serial_mutex.lock();
         if(MySerial.isOpen())
         {
-            emit Log("timeout_handler: serial is still open");
+            //emit Log("timeout_handler: serial is still open");
             m_database->FileLog("ERROR timeout_handler: serial is still open");
             MySerial.waitForBytesWritten(10);
             MySerial.waitForReadyRead(10);
             MySerial.close();
-            emit Log("timeout_handler: close serial");
+            //emit Log("timeout_handler: close serial");
             m_database->FileLog("ERROR timeout_handler: close serial");
             if(MySerial.open(QIODevice::ReadWrite))
             {
-                emit Log("timeout_handler: open and clear serial");
+                //emit Log("timeout_handler: open and clear serial");
                 m_database->FileLog("ERROR timeout_handler: open and clear serial");
                 MySerial.clear();
             }
             else
             {
-                emit Log("cant open serial in timeouthandling");
+                //emit Log("cant open serial in timeouthandling");
                 m_database->FileLog("ERROR cant open serial in timeouthandling");
             }
         }
         else
         {
-            emit Log("timeout_handler: serial is already close");
+            //emit Log("timeout_handler: serial is already close");
             m_database->FileLog("ERROR timeout_handler: serial is already close");
             if(MySerial.open(QIODevice::ReadWrite))
             {
-                emit Log("timeout_handler: open and clear serial");
+                //emit Log("timeout_handler: open and clear serial");
                 m_database->FileLog("ERROR timeout_handler: open and clear serial");
                 MySerial.clear();
             }
             else
             {
-                emit Log("cant open serial in timeouthandling");
+                //emit Log("cant open serial in timeouthandling");
                 m_database->FileLog("ERROR cant open serial in timeouthandling");
             }
         }
         timer->start();
         setting_timer->start();
-        QByteArray buffer = lastSendData;
+        QByteArray buffer = lastSendData;//speicere das zuletzt gesendete um es später erneut zu senden
         send('i',0,0,0,0);//init sequenz of arduino
         m_SendData.push_back(buffer);//resend last command
         m_database->FileLog("ERROR add to resend: "+QString(char(buffer[1])));
     }catch(...){
-        emit errorLog("error_handler() throw an error");
+        emit errorLog("ERROR error_handler() throw an error");
         m_database->FileLog("ERROR error_handler() throw an error");
     }
+}
+
+void Serial::answer_repeatrequest()
+{
+    QString reciveTetxt;
+    m_SendData.push_back(lastSendData);
+    for(int i = 0;i<19;i++)
+    {
+        reciveTetxt += QString(char(lastSendData[i]));
+    }
+    emit Log("INFO resend last:"+reciveTetxt);
 }
 
 void Serial::request_settings()
@@ -188,7 +199,7 @@ void Serial::recive()
             LogText += QString::number(recive_telegram.Value[2])+" ";
             LogText += QString::number(recive_telegram.Value[3])+" ";
             LogText += QString::number(checkSumm);
-            emit Log("INFO recive:"+LogText);
+            //emit Log("INFO recive:"+LogText);
             //QString reciveTetxt;
             //for(int i = 0;i<19;i++)
             //{
@@ -247,6 +258,6 @@ void Serial::send(char command,float value1,float value2,float value3,float valu
     LogText += QString::number(send_telegram.Value[2])+" ";
     LogText += QString::number(send_telegram.Value[3])+" ";
     LogText += QString::number(sendData[18]);
-    emit Log("INFO send:"+LogText);
+    //emit Log("INFO send:"+LogText);
     m_database->FileLog("INFO send:"+LogText);
 }

@@ -25,6 +25,7 @@ signals:
     void Log(const QString &s);
     void errorLog(const QString &s);
     void send(char command,float value1,float value2,float value3,float value4);
+    void answer_repeatrequest();
 
 public slots:
     void move_wait(float X,float Y,float Z,float W);

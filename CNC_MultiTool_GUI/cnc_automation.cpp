@@ -21,14 +21,14 @@ CNC_automation::~CNC_automation()
 
 void CNC_automation::move_home()
 {
-    m_basefunctions->send_settings(50,m_database->m_soll_temperatur,m_database->m_soll_filament);
+    m_basefunctions->send_settings(50,-1,-1);
     m_basefunctions->move_wait(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
     m_basefunctions->move_wait(-9999,-9999,m_database->m_act_Z,m_database->m_act_W);
 }
 
 void CNC_automation::move_restposi()
 {
-    m_basefunctions->send_settings(50,m_database->m_soll_temperatur,m_database->m_soll_filament);
+    m_basefunctions->send_settings(50,-1,-1);
     m_basefunctions->move_wait(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
     m_basefunctions->move_wait(9999,-9999,m_database->m_act_Z,m_database->m_act_W);
 }

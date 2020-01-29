@@ -11,7 +11,11 @@ MainWindow::MainWindow(QWidget *parent)
     ui->textEditLog_error->setReadOnly(true);
 
     ui->spinBoxSpeed->setValue(50);
-    ui->spinBoxFilament->setValue(10);
+    ui->spinBoxFilament->setValue(35);
+
+    m_database->m_soll_speed = ui->spinBoxSpeed->value();
+    m_database->m_soll_temperatur = ui->spinBoxTemperatur->value();
+    m_database->m_soll_filament = ui->spinBoxFilament->value();
 
     //chek availabal port add to the comboBox
     const auto infos = QSerialPortInfo::availablePorts();
@@ -32,6 +36,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_basefunctions,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_basefunctions,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
     connect(m_basefunctions,SIGNAL(send(char,float,float,float,float)),m_serial,SLOT(send(char,float,float,float,float)));
+    connect(m_basefunctions,SIGNAL(answer_repeatrequest()),m_serial,SLOT(answer_repeatrequest()));
 
     connect(m_database,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_database,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
@@ -354,4 +359,19 @@ void MainWindow::on_pushButton_test_pressed()
 void MainWindow::on_pushButton_rest_pressed()
 {
     m_automation->move_restposi();
+}
+
+void MainWindow::on_spinBoxSpeed_valueChanged(int arg1)
+{
+    m_database->m_soll_speed = arg1;
+}
+
+void MainWindow::on_spinBoxTemperatur_valueChanged(int arg1)
+{
+    m_database->m_soll_temperatur = arg1;
+}
+
+void MainWindow::on_spinBoxFilament_valueChanged(int arg1)
+{
+    m_database->m_soll_filament = arg1;
 }

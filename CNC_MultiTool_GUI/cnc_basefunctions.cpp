@@ -63,6 +63,7 @@ void cnc_basefunctions::send_ConfirmAnswer()
 
 void cnc_basefunctions::recived(char command,float value1,float value2,float value3,float value4)
 {
+    QString LogText;
     switch(command)
     {
     case 'm'://end of movemend
@@ -93,13 +94,29 @@ void cnc_basefunctions::recived(char command,float value1,float value2,float val
         m_database->FileLog("INFO recived Answer");
         //emit Log("INFO recived Answer");
         break;
+    case 'N':
+        emit answer_repeatrequest();
+        m_database->FileLog("INFO recived Repetrequest");
+        emit Log("INFO recived Repetrequest");
+        break;
     case 'e':
         m_database->set_endswitch(value1,value2,value3);
         m_database->FileLog("INFO recived endswitches: X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
         //emit Log("recive endswitch X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
         send_ConfirmAnswer();
         break;
+    case 'd':
+        LogText = "DEBUG recived Debug";
+        LogText += " value 1 :"+QString::number(value1);
+        LogText += " value 2 :"+QString::number(value2);
+        LogText += " value 3 :"+QString::number(value3);
+        LogText += " value 4 :"+QString::number(value4);
+        m_database->FileLog(LogText);
+        emit Log(LogText);
+        break;
     default:
+        m_database->FileLog("unknown kommand from Arduino");
+        emit Log("unknown kommand from Arduino");
         break;
     }
 }

@@ -29,7 +29,7 @@ struct StepMotorMedi {
   double act_posi;//actuelle position in mm
   double soll_posi;//soll position in mm
   unsigned long time_pstep;
-  unsigned long time_next_step;  
+  unsigned long time_next_step;
 };
 
 struct StepMotorBig {
@@ -48,8 +48,14 @@ struct StepMotorBig {
   double act_posi;//actuelle position in mm
   double soll_posi;//soll position in mm
   unsigned long time_pstep;
-  unsigned long time_next_step;  
+  unsigned long time_next_step; 
+  
+  //rampen
+  //unsigned long ist_time_pstep;
+  unsigned long step_div;
+  unsigned long ramp_step; 
 };
+int acceleration_steps = 20;
 
 struct StepMotorMedi Wachse;
 struct StepMotorBig Xachse;
@@ -104,7 +110,11 @@ bool wait_for_response = false;
 
 void setup() {
   Serial.begin(115200,SERIAL_8E1);//9600
-  
+  char dummy[1];
+  while(Serial.available())
+  {
+    Serial.readBytes(dummy,1);
+  }
   /*TODO
    * EndPins
    */
@@ -187,7 +197,7 @@ void setup() {
   pinMode(Wachse.pin3,OUTPUT);
   pinMode(Wachse.pin4,OUTPUT);
 
-  pinMode(23,INPUT);
+  pinMode(23,INPUT_PULLUP);
   pinMode(temprelai,OUTPUT);
 
   myPID.SetOutputLimits(0, WindowSize);
@@ -205,12 +215,12 @@ void loop() {
   if(time_now<old_time_now){
     digitalWrite(28,HIGH);
   }
-  /*if(digitalRead(23)==HIGH){
-    digitalWrite(22,LOW);
-    digitalWrite(24,LOW);
-    digitalWrite(26,LOW);
-    digitalWrite(28,LOW);
-  }*/
+//  if(digitalRead(23)==HIGH){
+//    digitalWrite(22,LOW);
+//    digitalWrite(24,LOW);
+//    digitalWrite(26,LOW);
+//    digitalWrite(28,LOW);
+//  }
 
   if(msg_available){
     recive_msg();
@@ -254,12 +264,12 @@ float checkEndswitches(){
   float newYSwitchID = checkEndswitch(Yachse);
   float newZSwitchID = checkEndswitch(Zachse);
   if(Xachse.SwitchID != newXSwitchID || Yachse.SwitchID != newYSwitchID || Zachse.SwitchID != newZSwitchID){
-    send_variabelTestCommand('e',newXSwitchID,newYSwitchID,newZSwitchID,0);
+    Xachse.SwitchID = newXSwitchID;
+    Yachse.SwitchID = newYSwitchID;
+    Zachse.SwitchID = newZSwitchID;
+    sendendswitch();
     sendactposition();
   }
-  Xachse.SwitchID = newXSwitchID;
-  Yachse.SwitchID = newYSwitchID;
-  Zachse.SwitchID = newZSwitchID;
 }
 float checkEndswitch(struct StepMotorBig &StepM){
   float switchID;
@@ -377,8 +387,8 @@ void serieltimeouthandler(){
       {
         Serial.readBytes(dummy,1);
       }
-      sendRepeatRequest();
       Serial.write(lastSend,19);
+      //sendRepeatRequest();      
 }
 //strops the movement (set soll pos equal act pos)
 void act_equal_soll(){
@@ -430,13 +440,48 @@ void getMoveParams(){
 }
 void BigM_move_params(struct StepMotorBig &StepM){
   StepM.soll_step = StepM.soll_posi*StepM.steps_pmm;
-  StepM.time_pstep = ges_time/abs(StepM.soll_step-StepM.act_step);
+  StepM.step_div = abs(StepM.soll_step-StepM.act_step);
+  StepM.time_pstep = ges_time/StepM.step_div;
   StepM.time_next_step = micros();
+  StepM.ramp_step = 0;
 }
 void MediM_move_params(struct StepMotorMedi &StepM){
   StepM.soll_step = StepM.soll_posi*StepM.steps_pmm;
   StepM.time_pstep = ges_time/abs(StepM.soll_step-StepM.act_step);
   StepM.time_next_step = micros();
+}
+
+unsigned long calc_steptime(struct StepMotorBig &StepM){
+  unsigned long curr_step = StepM.step_div-abs(StepM.soll_step-StepM.act_step);
+  unsigned long ist_time_pstep = StepM.time_pstep;
+  double soll_speed = (1/double(StepM.time_pstep)) * 100;
+  double next_speed;
+  int state = 0;
+  if(StepM.step_div/2<curr_step)//abbremsen
+  {
+    state = 1;
+    if(abs(StepM.step_div-curr_step) < acceleration_steps)
+    {
+      state = 2;
+      next_speed = (soll_speed/double(acceleration_steps))*double((abs(StepM.step_div-curr_step)+1));
+      ist_time_pstep = 1/(next_speed/100);
+    }
+  }
+  else    //beschleunigung
+  {
+    if(StepM.ramp_step < acceleration_steps)
+    {
+      next_speed = (soll_speed/double(acceleration_steps))*double(acceleration_steps-(acceleration_steps-StepM.ramp_step)+1);
+      ist_time_pstep = 1/(next_speed/100);
+      StepM.ramp_step += 1;
+    }
+  }      
+  
+  if(ist_time_pstep>10000){
+    ist_time_pstep=10000;
+  }
+  //send_debug(ist_time_pstep,next_speed,state,curr_step);
+  return(ist_time_pstep);
 }
 ///////////////////////////////////fürt einen schrit aus und gibt den actuellen an////////////////////////////7
 void treiberBig(struct StepMotorBig &StepM){
@@ -447,7 +492,8 @@ void treiberBig(struct StepMotorBig &StepM){
       digitalWrite(StepM.pinDIR,HIGH);
       digitalWrite(StepM.pinPUL,LOW);
       digitalWrite(StepM.pinPUL,HIGH);
-      StepM.time_next_step += StepM.time_pstep;
+      //StepM.time_next_step += StepM.time_pstep;
+      StepM.time_next_step += calc_steptime(StepM);
       StepM.act_step++;
     }else if(StepM.soll_step<StepM.act_step){
       //one stepp back
@@ -455,7 +501,8 @@ void treiberBig(struct StepMotorBig &StepM){
       digitalWrite(StepM.pinDIR,LOW);
       digitalWrite(StepM.pinPUL,LOW);
       digitalWrite(StepM.pinPUL,HIGH);
-      StepM.time_next_step += StepM.time_pstep;
+      //StepM.time_next_step += StepM.time_pstep;
+      StepM.time_next_step += calc_steptime(StepM);
       StepM.act_step--;
     }else if(time_now >= StepM.time_next_step+500000){
       //turn motor off
@@ -524,6 +571,11 @@ void StepMedi(struct StepMotorMedi &StepM,int direct){
   }
 }
 //Serial Send Funktions///////////////////////////////////////////////////////////////////
+void send_debug(float a,float b,float c,float d){
+  send_variabelTestCommand('d',a,b,c,d);
+  start_responstimer();
+}
+
 void sendendswitch(){
   send_variabelTestCommand('e',Xachse.SwitchID,Yachse.SwitchID,Zachse.SwitchID,0);
   start_responstimer();
@@ -555,7 +607,7 @@ void send_variabelTestCommand(char C, float val1, float val2, float val3, float 
 }
 void start_responstimer(){
   wait_for_response = true;
-  cycle_time = time_now + 30000;
+  cycle_time = time_now + 50000;
 }
 void stop_responstimer(){
   wait_for_response = false;

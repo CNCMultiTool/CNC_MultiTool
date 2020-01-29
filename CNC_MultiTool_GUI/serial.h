@@ -45,6 +45,7 @@ public slots:
     void send(char command,float value1,float value2,float value3,float value4);
     void error_handler();
     void request_settings();
+    void answer_repeatrequest();
 
 };
 

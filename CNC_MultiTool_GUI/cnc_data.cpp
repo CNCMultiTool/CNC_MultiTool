@@ -4,6 +4,7 @@ cnc_data::cnc_data()
 {
     m_size_X = 269.89;
     m_size_Y = 231.68;
+    m_Zmax_nozzel = 170.95;
 
     m_X_angel = -0.00155619;
     m_Y_angel = 0.0023308;
@@ -33,8 +34,6 @@ cnc_data::cnc_data()
     m_error_X_max_Y_max = 0;
     m_error_X_null_Y_max = 0;
     m_error_X_null_Y_null = 0;
-
-    m_Zmax_nozzel = 170.8;
 
     m_HWisHeating = false;
     m_HWisMoving = false;
