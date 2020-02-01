@@ -321,6 +321,9 @@ void recive_msg(){
       sendendswitch();
       break;
     case 'm'://move
+      if(sendPose == false){
+        send_debug(1,0,0,0);
+      }
       Xachse.soll_posi = Buf.tel.value[0];
       Yachse.soll_posi = Buf.tel.value[1];
       Zachse.soll_posi = Buf.tel.value[2];
