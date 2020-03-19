@@ -28,11 +28,13 @@ void cnc_basefunctions::send_settings(float speed,float temperatur,float filamen
     float t = temperatur;
     float f = filament;
     if(s<0)
-        s = m_database->m_soll_speed;
+        s = m_database->m_act_speed;
     if(t<0)
-        t = m_database->m_soll_temperatur;
+        t = m_database->m_act_temperatur;
     if(f<1)
-        f = m_database->m_soll_filament;
+        f = 1;
+    if(f<0)
+        f = m_database->m_act_filament;
 
 
     m_database->set_soll_settings(s,t,f);
