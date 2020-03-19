@@ -77,7 +77,12 @@ void cnc_basefunctions::recived(char command,float value1,float value2,float val
         m_database->FileLog("INFO recived set position and ready for next command: X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
         send_ConfirmAnswer();
         break;
+<<<<<<< HEAD
     case 's'://set the actual settings
+=======
+    case 'q'://set the actual settings
+        m_database->set_settings(value1,value2,value3);
+>>>>>>> parent of 08a1822... functional fersion with bug
         m_database->FileLog("INFO recived current setting: speed:"+QString::number(value1)+" temperatur:"+QString::number(value2)+" filament:"+QString::number(value3)+" PWM:"+QString::number(value4));
         if(5>abs(m_database->m_act_temperatur-m_database->m_soll_temperatur))
         {
@@ -88,7 +93,24 @@ void cnc_basefunctions::recived(char command,float value1,float value2,float val
         {
             m_database->m_HWisAtHeat = false;
         }
+<<<<<<< HEAD
         m_database->set_settings(value1,value2,value3,value4);
+=======
+        break;
+    case 'a':
+        m_database->set_settings(value1,value2,value3);
+        if(m_setting_loop.isRunning())
+        {
+            m_setting_loop.exit();
+        }
+        m_database->FileLog("INFO recived current setting and ready for next command: speed:"+QString::number(value1)+" temperatur:"+QString::number(value2)+" filament:"+QString::number(value3)+" PWM:"+QString::number(value4));
+        break;
+    case 'w':
+        //emit Log("recive StepTimes X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
+        break;
+    case 'j':
+        //emit Log("recive SollPosi X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
+>>>>>>> parent of 08a1822... functional fersion with bug
         break;
     case 'a':
         m_database->FileLog("INFO recived Answer");

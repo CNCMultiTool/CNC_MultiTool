@@ -167,6 +167,7 @@ void CNC_automation::G_Code_Parser()
     m_database->FileLog(newLine);
     if(newLine.isNull())
     {
+<<<<<<< HEAD
         emit Log("end of file");
         m_aboard = true;
         inputFile.close();
@@ -192,6 +193,36 @@ void CNC_automation::G_Code_Parser()
     getValue("E",newLine,&m_W);
     getValue("S",newLine,&m_S);
     getValue("F",newLine,&m_F);
+=======
+        //if(m_pause)
+        //{
+        //  m_wait_loop.exec();
+        //}
+        newLine = in.readLine();
+        m_database->FileLog(newLine);
+        if(newLine.isNull())
+        {
+            emit Log("end of file");
+            m_aboard = true;
+            continue;
+        }
+        rx.setPattern(";");
+        if(rx.indexIn(newLine)==0)
+        {
+            emit Log("Comment: "+newLine);
+            continue;
+        }
+        if(newLine == "")
+        {
+            emit Log("emty line");
+        }
+        getValue("X",newLine,&m_X);
+        getValue("Y",newLine,&m_Y);
+        getValue("Z",newLine,&m_Z);
+        getValue("E",newLine,&m_W);
+        getValue("S",newLine,&m_S);
+        getValue("F",newLine,&m_F);
+>>>>>>> parent of 08a1822... functional fersion with bug
 
     if(isCommand("G0",newLine))//fast move
     {

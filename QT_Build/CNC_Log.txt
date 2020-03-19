@@ -1,0 +1,262 @@
+19.03.2020 19:53:02.532 INFO send:S i 0 0 0 0 -68
+19.03.2020 19:53:02.532 INFO send command: i
+19.03.2020 19:53:02.532 INFO recive:S s 50 23.4778 37 0 241
+19.03.2020 19:53:02.532 INFO recived current setting: speed:50 temperatur:23.4778 filament:37 PWM:0
+19.03.2020 19:53:02.532 INFO recive:S c 0 0 0 0 182
+19.03.2020 19:53:02.532 INFO recived set position and ready for next command: X:0 Y:0 Z:0 W:0
+19.03.2020 19:53:02.532 INFO send:S a 0 0 0 0 -76
+19.03.2020 19:53:02.532 INFO send command: a
+19.03.2020 19:53:02.532 INFO recive:S e 0 -1 1 0 182
+19.03.2020 19:53:02.532 INFO recived endswitches: X:0 Y:-1 Z:1 W:0
+19.03.2020 19:53:02.532 INFO send:S a 0 0 0 0 -76
+19.03.2020 19:53:02.532 INFO send command: a
+19.03.2020 19:53:03.533 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:53:03.533 INFO send command: r
+19.03.2020 19:53:03.533 INFO recive:S s 50 23.4778 37 0 241
+19.03.2020 19:53:03.533 INFO recived current setting: speed:50 temperatur:23.4778 filament:37 PWM:0
+19.03.2020 19:53:04.534 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:53:04.534 INFO send command: r
+19.03.2020 19:53:04.534 INFO recive:S s 50 23.4778 37 0 241
+19.03.2020 19:53:04.534 INFO recived current setting: speed:50 temperatur:23.4778 filament:37 PWM:0
+19.03.2020 19:53:05.535 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:53:05.535 INFO send command: r
+19.03.2020 19:53:05.535 INFO recive:S s 50 23.4778 37 0 241
+19.03.2020 19:53:05.535 INFO recived current setting: speed:50 temperatur:23.4778 filament:37 PWM:0
+19.03.2020 19:53:06.536 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:53:06.536 INFO send command: r
+19.03.2020 19:53:06.536 INFO recive:S s 50 23.4778 37 0 241
+19.03.2020 19:53:06.536 INFO recived current setting: speed:50 temperatur:23.4778 filament:37 PWM:0
+19.03.2020 19:53:07.537 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:53:07.537 INFO send command: r
+19.03.2020 19:53:07.537 INFO recive:S s 50 23.4778 37 0 241
+19.03.2020 19:53:07.537 INFO recived current setting: speed:50 temperatur:23.4778 filament:37 PWM:0
+19.03.2020 19:53:08.538 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:53:08.538 INFO send command: r
+19.03.2020 19:53:08.538 INFO recive:S s 50 23.4778 37 0 241
+19.03.2020 19:53:08.538 INFO recived current setting: speed:50 temperatur:23.4778 filament:37 PWM:0
+19.03.2020 19:53:09.539 INFO send:S m 9999 0 0 0 94
+19.03.2020 19:53:09.539 INFO send command: m
+19.03.2020 19:53:09.539 INFO recive:S a 0 0 0 0 180
+19.03.2020 19:53:09.539 INFO recived Answer
+19.03.2020 19:53:09.539 INFO send:S b 0 0 0 0 -75
+19.03.2020 19:53:09.539 INFO send command: b
+19.03.2020 19:53:09.539 INFO recive:S c 2.68 0 0 0 197
+19.03.2020 19:53:09.539 INFO recived set position and ready for next command: X:2.68 Y:0 Z:0 W:0
+19.03.2020 19:53:09.539 INFO send:S a 0 0 0 0 -76
+19.03.2020 19:53:09.539 INFO send command: a
+19.03.2020 19:53:09.539 INFO recive:S c 2.68 0 0 0 197
+19.03.2020 19:53:09.539 INFO recived set position and ready for next command: X:2.68 Y:0 Z:0 W:0
+19.03.2020 19:53:09.539 INFO send:S a 0 0 0 0 -76
+19.03.2020 19:53:09.539 INFO send command: a
+19.03.2020 19:53:09.539 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:53:09.539 INFO send command: r
+19.03.2020 19:53:09.539 INFO recive:S s 50 23.4778 37 0 241
+19.03.2020 19:53:09.539 INFO recived current setting: speed:50 temperatur:23.4778 filament:37 PWM:0
+19.03.2020 19:53:10.5310 INFO send:S m 2.68 9999 0 0 109
+19.03.2020 19:53:10.5310 INFO send command: m
+19.03.2020 19:53:10.5310 INFO recive:S a 0 0 0 0 180
+19.03.2020 19:53:10.5310 INFO recived Answer
+19.03.2020 19:53:10.5310 INFO recive:S e 0 0 1 0 119
+19.03.2020 19:53:10.5310 INFO recived endswitches: X:0 Y:0 Z:1 W:0
+19.03.2020 19:53:10.5310 INFO send:S a 0 0 0 0 -76
+19.03.2020 19:53:10.5310 INFO send command: a
+19.03.2020 19:53:10.5310 INFO recive:S m 2.68 0 0 0 207
+19.03.2020 19:53:10.5310 INFO recived set position: X:2.68 Y:0 Z:0 W:0
+19.03.2020 19:53:10.5310 INFO send:S b 0 0 0 0 -75
+19.03.2020 19:53:10.5310 INFO send command: b
+19.03.2020 19:53:10.5310 INFO recive:S c 2.68 2.57 0 0 132
+19.03.2020 19:53:10.5310 INFO recived set position and ready for next command: X:2.68 Y:2.57 Z:0 W:0
+19.03.2020 19:53:10.5310 INFO send:S a 0 0 0 0 -76
+19.03.2020 19:53:10.5310 INFO send command: a
+19.03.2020 19:53:10.5310 INFO recive:S c 2.68 2.57 0 0 132
+19.03.2020 19:53:10.5310 INFO recived set position and ready for next command: X:2.68 Y:2.57 Z:0 W:0
+19.03.2020 19:53:10.5310 INFO send:S a 0 0 0 0 -76
+19.03.2020 19:53:10.5310 INFO send command: a
+19.03.2020 19:53:10.5310 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:53:10.5310 INFO send command: r
+19.03.2020 19:53:10.5310 INFO recive:S s 50 23.4778 37 0 241
+19.03.2020 19:53:10.5310 INFO recived current setting: speed:50 temperatur:23.4778 filament:37 PWM:0
+19.03.2020 19:53:11.5311 INFO send:S m -9999 2.57 0 0 -99
+19.03.2020 19:53:11.5311 INFO send command: m
+19.03.2020 19:53:11.5311 INFO recive:S a 0 0 0 0 180
+19.03.2020 19:53:11.5311 INFO recived Answer
+19.03.2020 19:53:11.5311 INFO send:S b 0 0 0 0 -75
+19.03.2020 19:53:11.5311 INFO send command: b
+19.03.2020 19:53:11.5311 INFO recive:S c 0.55 2.57 0 0 89
+19.03.2020 19:53:11.5311 INFO recived set position and ready for next command: X:0.55 Y:2.57 Z:0 W:0
+19.03.2020 19:53:11.5311 INFO send:S a 0 0 0 0 -76
+19.03.2020 19:53:11.5311 INFO send command: a
+19.03.2020 19:53:11.5311 INFO recive:S c 0.55 2.57 0 0 89
+19.03.2020 19:53:11.5311 INFO recived set position and ready for next command: X:0.55 Y:2.57 Z:0 W:0
+19.03.2020 19:53:11.5311 INFO send:S a 0 0 0 0 -76
+19.03.2020 19:53:11.5311 INFO send command: a
+19.03.2020 19:53:11.5311 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:53:11.5311 INFO send command: r
+19.03.2020 19:53:11.5311 INFO recive:S s 50 23.4778 37 0 241
+19.03.2020 19:53:11.5311 INFO recived current setting: speed:50 temperatur:23.4778 filament:37 PWM:0
+19.03.2020 19:53:12.5312 INFO send:S m 0.55 2.57 -9999 0 -127
+19.03.2020 19:53:12.5312 INFO send command: m
+19.03.2020 19:53:12.5312 INFO recive:S a 0 0 0 0 180
+19.03.2020 19:53:12.5312 INFO recived Answer
+19.03.2020 19:53:12.5312 INFO recive:S e 0 0 0 0 184
+19.03.2020 19:53:12.5312 INFO recived endswitches: X:0 Y:0 Z:0 W:0
+19.03.2020 19:53:12.5312 INFO send:S a 0 0 0 0 -76
+19.03.2020 19:53:12.5312 INFO send command: a
+19.03.2020 19:53:12.5312 INFO recive:S m 0.55 2.57 0 0 99
+19.03.2020 19:53:12.5312 INFO recived set position: X:0.55 Y:2.57 Z:0 W:0
+19.03.2020 19:53:12.5312 INFO send:S b 0 0 0 0 -75
+19.03.2020 19:53:12.5312 INFO send command: b
+19.03.2020 19:53:12.5312 INFO recive:S c 0.55 2.57 -3.09 0 175
+19.03.2020 19:53:12.5312 INFO recived set position and ready for next command: X:0.55 Y:2.57 Z:-3.09 W:0
+19.03.2020 19:53:12.5312 INFO send:S a 0 0 0 0 -76
+19.03.2020 19:53:12.5312 INFO send command: a
+19.03.2020 19:53:12.5312 INFO recive:S c 0.55 2.57 -3.09 0 175
+19.03.2020 19:53:12.5312 INFO recived set position and ready for next command: X:0.55 Y:2.57 Z:-3.09 W:0
+19.03.2020 19:53:12.5312 INFO send:S a 0 0 0 0 -76
+19.03.2020 19:53:12.5312 INFO send command: a
+19.03.2020 19:53:12.5312 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:53:12.5312 INFO send command: r
+19.03.2020 19:53:12.5312 INFO recive:S s 50 23.4778 37 0 241
+19.03.2020 19:53:12.5312 INFO recived current setting: speed:50 temperatur:23.4778 filament:37 PWM:0
+19.03.2020 19:53:13.5313 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:53:13.5313 INFO send command: r
+19.03.2020 19:53:13.5313 INFO recive:S s 50 23.4778 37 0 241
+19.03.2020 19:53:13.5313 INFO recived current setting: speed:50 temperatur:23.4778 filament:37 PWM:0
+19.03.2020 19:53:14.5314 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:53:14.5314 INFO send command: r
+19.03.2020 19:53:14.5314 INFO recive:S s 50 23.4778 37 0 241
+19.03.2020 19:53:14.5314 INFO recived current setting: speed:50 temperatur:23.4778 filament:37 PWM:0
+19.03.2020 19:53:15.5315 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:53:15.5315 INFO send command: r
+19.03.2020 19:53:15.5315 INFO recive:S s 50 23.4778 37 0 241
+19.03.2020 19:53:15.5315 INFO recived current setting: speed:50 temperatur:23.4778 filament:37 PWM:0
+19.03.2020 19:53:16.5316 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:53:16.5316 INFO send command: r
+19.03.2020 19:53:16.5316 INFO recive:S s 50 23.4778 37 0 241
+19.03.2020 19:53:16.5316 INFO recived current setting: speed:50 temperatur:23.4778 filament:37 PWM:0
+19.03.2020 19:53:17.5317 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:53:17.5317 INFO send command: r
+19.03.2020 19:53:17.5317 INFO recive:S s 50 23.4778 37 0 241
+19.03.2020 19:53:17.5317 INFO recived current setting: speed:50 temperatur:23.4778 filament:37 PWM:0
+19.03.2020 19:53:18.5318 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:53:18.5318 INFO send command: r
+19.03.2020 19:53:18.5318 INFO recive:S s 50 23.4778 37 0 241
+19.03.2020 19:53:18.5318 INFO recived current setting: speed:50 temperatur:23.4778 filament:37 PWM:0
+19.03.2020 19:53:19.5319 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:53:19.5319 INFO send command: r
+19.03.2020 19:53:19.5319 INFO recive:S s 50 23.4778 37 0 241
+19.03.2020 19:53:19.5319 INFO recived current setting: speed:50 temperatur:23.4778 filament:37 PWM:0
+19.03.2020 19:53:20.5320 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:53:20.5320 INFO send command: r
+19.03.2020 19:53:20.5320 INFO recive:S s 50 23.4778 37 0 241
+19.03.2020 19:53:20.5320 INFO recived current setting: speed:50 temperatur:23.4778 filament:37 PWM:0
+19.03.2020 19:54:30.5430 INFO send:S i 0 0 0 0 -68
+19.03.2020 19:54:30.5430 INFO send command: i
+19.03.2020 19:54:30.5430 INFO recive:S s 50 23.4778 37 0 241
+19.03.2020 19:54:30.5430 INFO recived current setting: speed:50 temperatur:23.4778 filament:37 PWM:0
+19.03.2020 19:54:30.5430 INFO recive:S c 0.55 2.57 -3.09 0 175
+19.03.2020 19:54:30.5430 INFO recived set position and ready for next command: X:0.55 Y:2.57 Z:-3.09 W:0
+19.03.2020 19:54:30.5430 INFO send:S a 0 0 0 0 -76
+19.03.2020 19:54:30.5430 INFO send command: a
+19.03.2020 19:54:30.5430 INFO recive:S e 0 0 0 0 184
+19.03.2020 19:54:30.5430 INFO recived endswitches: X:0 Y:0 Z:0 W:0
+19.03.2020 19:54:30.5430 INFO send:S a 0 0 0 0 -76
+19.03.2020 19:54:30.5430 INFO send command: a
+19.03.2020 19:54:31.5431 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:54:31.5431 INFO send command: r
+19.03.2020 19:54:31.5431 INFO recive:S s 50 23.4778 37 0 241
+19.03.2020 19:54:31.5431 INFO recived current setting: speed:50 temperatur:23.4778 filament:37 PWM:0
+19.03.2020 19:54:32.5432 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:54:32.5432 INFO send command: r
+19.03.2020 19:54:32.5432 INFO recive:S s 50 23.4778 37 0 241
+19.03.2020 19:54:32.5432 INFO recived current setting: speed:50 temperatur:23.4778 filament:37 PWM:0
+19.03.2020 19:54:32.5432 INFO send:S s 50 23.4778 1 0 90
+19.03.2020 19:54:32.5432 INFO send:S m 0.55 2.57 9999 0 1
+19.03.2020 19:54:32.5432 INFO send command: s
+19.03.2020 19:54:32.5432 INFO send command: m
+19.03.2020 19:54:32.5432 INFO recive:S s 50 23.4778 1 0 90
+19.03.2020 19:54:32.5432 INFO recived current setting: speed:50 temperatur:23.4778 filament:1 PWM:0
+19.03.2020 19:54:32.5432 INFO recive:S a 0 0 0 0 180
+19.03.2020 19:54:32.5432 INFO recived Answer
+19.03.2020 19:54:32.5432 INFO recive:S e 0 0 1 0 119
+19.03.2020 19:54:32.5432 INFO recived endswitches: X:0 Y:0 Z:1 W:0
+19.03.2020 19:54:32.5432 INFO send:S a 0 0 0 0 -76
+19.03.2020 19:54:32.5432 INFO send command: a
+19.03.2020 19:54:32.5432 INFO recive:S m 0.55 2.57 -3.09 0 185
+19.03.2020 19:54:32.5432 INFO recived set position: X:0.55 Y:2.57 Z:-3.09 W:0
+19.03.2020 19:54:32.5432 INFO recive:S c 0.55 2.57 0.09 0 139
+19.03.2020 19:54:32.5432 INFO recived set position and ready for next command: X:0.55 Y:2.57 Z:0.09 W:0
+19.03.2020 19:54:32.5432 INFO send:S a 0 0 0 0 -76
+19.03.2020 19:54:32.5432 INFO send:S m -9999 -9999 0.09 0 46
+19.03.2020 19:54:32.5432 INFO send command: a
+19.03.2020 19:54:32.5432 INFO send command: m
+19.03.2020 19:54:32.5432 INFO recive:S a 0 0 0 0 180
+19.03.2020 19:54:32.5432 INFO recived Answer
+19.03.2020 19:54:32.5432 INFO recive:S e 0 -1 1 0 182
+19.03.2020 19:54:32.5432 INFO recived endswitches: X:0 Y:-1 Z:1 W:0
+19.03.2020 19:54:32.5432 INFO send:S a 0 0 0 0 -76
+19.03.2020 19:54:32.5432 INFO send command: a
+19.03.2020 19:54:32.5432 INFO recive:S m 0.55 2.57 0.09 0 149
+19.03.2020 19:54:32.5432 INFO recived set position: X:0.55 Y:2.57 Z:0.09 W:0
+19.03.2020 19:54:33.5433 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:54:33.5433 INFO send command: r
+19.03.2020 19:54:33.5433 INFO recive:S s 50 23.4778 1 0 90
+19.03.2020 19:54:33.5433 INFO recived current setting: speed:50 temperatur:23.4778 filament:1 PWM:0
+19.03.2020 19:54:33.5433 INFO recive:S e -1 -1 1 0 245
+19.03.2020 19:54:33.5433 INFO recived endswitches: X:-1 Y:-1 Z:1 W:0
+19.03.2020 19:54:33.5433 INFO send:S a 0 0 0 0 -76
+19.03.2020 19:54:33.5433 INFO send command: a
+19.03.2020 19:54:33.5433 INFO recive:S m 0.55 2.57 0.09 0 149
+19.03.2020 19:54:33.5433 INFO recived set position: X:0.55 Y:2.57 Z:0.09 W:0
+19.03.2020 19:54:33.5433 INFO recive:S c -10.3 0.09 0.09 0 152
+19.03.2020 19:54:33.5433 INFO recived set position and ready for next command: X:-10.3 Y:0.09 Z:0.09 W:0
+19.03.2020 19:54:33.5433 INFO send:S a 0 0 0 0 -76
+19.03.2020 19:54:33.5433 INFO send command: a
+19.03.2020 19:54:34.5434 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:54:34.5434 INFO send command: r
+19.03.2020 19:54:34.5434 INFO recive:S s 50 23.4778 1 0 90
+19.03.2020 19:54:34.5434 INFO recived current setting: speed:50 temperatur:23.4778 filament:1 PWM:0
+19.03.2020 19:54:35.5435 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:54:35.5435 INFO send command: r
+19.03.2020 19:54:35.5435 INFO recive:S s 50 23.4778 1 0 90
+19.03.2020 19:54:35.5435 INFO recived current setting: speed:50 temperatur:23.4778 filament:1 PWM:0
+19.03.2020 19:54:36.5436 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:54:36.5436 INFO send command: r
+19.03.2020 19:54:36.5436 INFO recive:S s 50 23.4778 1 0 90
+19.03.2020 19:54:36.5436 INFO recived current setting: speed:50 temperatur:23.4778 filament:1 PWM:0
+19.03.2020 19:54:37.5437 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:54:37.5437 INFO send command: r
+19.03.2020 19:54:37.5437 INFO recive:S s 50 23.4778 1 0 90
+19.03.2020 19:54:37.5437 INFO recived current setting: speed:50 temperatur:23.4778 filament:1 PWM:0
+19.03.2020 19:54:38.5438 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:54:38.5438 INFO send command: r
+19.03.2020 19:54:38.5438 INFO recive:S s 50 23.4778 1 3521.67 191
+19.03.2020 19:54:38.5438 INFO recived current setting: speed:50 temperatur:23.4778 filament:1 PWM:3521.67
+19.03.2020 19:54:39.5439 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:54:39.5439 INFO send command: r
+19.03.2020 19:54:39.5439 INFO recive:S s 50 22.3817 1 3521.67 31
+19.03.2020 19:54:39.5439 INFO recived current setting: speed:50 temperatur:22.3817 filament:1 PWM:3521.67
+19.03.2020 19:54:40.5440 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:54:40.5440 INFO send command: r
+19.03.2020 19:54:40.5440 INFO recive:S s 50 21.29 1 3521.67 130
+19.03.2020 19:54:40.5440 INFO recived current setting: speed:50 temperatur:21.29 filament:1 PWM:3521.67
+19.03.2020 19:54:41.5441 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:54:41.5441 INFO send command: r
+19.03.2020 19:54:41.5441 INFO recive:S s 50 21.29 1 3521.67 130
+19.03.2020 19:54:41.5441 INFO recived current setting: speed:50 temperatur:21.29 filament:1 PWM:3521.67
+19.03.2020 19:54:42.5442 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:54:42.5442 INFO send command: r
+19.03.2020 19:54:42.5442 INFO recive:S s 50 21.29 1 3521.67 130
+19.03.2020 19:54:42.5442 INFO recived current setting: speed:50 temperatur:21.29 filament:1 PWM:3521.67
+19.03.2020 19:54:43.5443 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:54:43.5443 INFO send command: r
+19.03.2020 19:54:43.5443 INFO recive:S s 50 22.3817 1 78.7617 34
+19.03.2020 19:54:43.5443 INFO recived current setting: speed:50 temperatur:22.3817 filament:1 PWM:78.7617
+19.03.2020 19:54:44.5444 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:54:44.5444 INFO send command: r
+19.03.2020 19:54:44.5444 INFO recive:S s 50 22.3817 1 78.7617 34
+19.03.2020 19:54:44.5444 INFO recived current setting: speed:50 temperatur:22.3817 filament:1 PWM:78.7617
+19.03.2020 19:54:45.5445 INFO send:S r 0 0 0 0 -59
+19.03.2020 19:54:45.5445 INFO send command: r
+19.03.2020 19:54:45.5445 INFO recive:S s 50 22.3817 1 78.7617 34
+19.03.2020 19:54:45.5445 INFO recived current setting: speed:50 temperatur:22.3817 filament:1 PWM:78.7617

@@ -53,6 +53,7 @@ void Serial::serial_close()
 
 void Serial::error_handler()
 {
+<<<<<<< HEAD
     try {
         timer->stop();
         setting_timer->stop();
@@ -107,6 +108,19 @@ void Serial::error_handler()
     }catch(...){
         emit errorLog("ERROR error_handler() throw an error");
         m_database->FileLog("ERROR error_handler() throw an error");
+=======
+    QSerialPort serial;
+    serial.setPortName(m_portName);
+    serial.setParity(QSerialPort::Parity::NoParity);
+    serial.setDataBits(QSerialPort::Data8);
+    serial.setStopBits(QSerialPort::TwoStop);
+    serial.setBaudRate(QSerialPort::Baud9600);
+    m_mutex.lock();
+    m_cond.wakeAll();
+    if (!serial.open(QIODevice::ReadWrite)) {
+        m_quit = true;
+        emit errorLog("can`t open Serial");
+>>>>>>> parent of 08a1822... functional fersion with bug
     }
 }
 

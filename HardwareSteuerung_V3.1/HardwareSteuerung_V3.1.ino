@@ -203,15 +203,20 @@ void setup() {
   myPID.SetOutputLimits(0, WindowSize);
   myPID.SetSampleTime(WindowSize);
   myPID.SetMode(AUTOMATIC);
+<<<<<<< HEAD
 
   pinMode(22,OUTPUT);
   pinMode(24,OUTPUT);
   pinMode(26,OUTPUT);
   pinMode(28,OUTPUT);
+=======
+  
+>>>>>>> parent of 08a1822... functional fersion with bug
 }
 
 void loop() {
   time_now = micros();
+<<<<<<< HEAD
   if(time_now<old_time_now){
     digitalWrite(28,HIGH);
   }
@@ -226,6 +231,15 @@ void loop() {
     recive_msg();
   }
 
+=======
+  //if(digitalRead(23)==HIGH){
+  //  digitalWrite(temprelai,HIGH);
+  //}
+  
+  if(msg_available){
+    recive_msg();
+  }
+>>>>>>> parent of 08a1822... functional fersion with bug
   checkEndswitches();
   TempControle();
 
@@ -234,7 +248,11 @@ void loop() {
   treiberBig(Yachse);
   treiberBig(Zachse);
   treiberMedi(Wachse);
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> parent of 08a1822... functional fersion with bug
   if(Xachse.soll_step == Xachse.act_step){
     if(Yachse.soll_step == Yachse.act_step){
       if(Zachse.soll_step == Zachse.act_step){
@@ -249,12 +267,19 @@ void loop() {
     }
   }
 
+<<<<<<< HEAD
   //timeout
   if(cycle_time < time_now && wait_for_response)
   {
     wait_for_response = false;
     serieltimeouthandler();
     digitalWrite(22,HIGH);
+=======
+  //something to do everi 1000 ms
+  if(cycle_time<time_now){
+    cycle_time = time_now + 1000000;
+    sendsetting();
+>>>>>>> parent of 08a1822... functional fersion with bug
   }
   old_time_now = time_now;
 }

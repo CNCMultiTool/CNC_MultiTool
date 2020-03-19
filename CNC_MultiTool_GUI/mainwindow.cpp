@@ -91,8 +91,13 @@ void MainWindow::show_settings()
     ui->label_actSpeed->setText(QString::number(m_database->m_act_speed)+"/"+QString::number(m_database->m_soll_speed));
     ui->label_actTemperatur->setText(QString::number(m_database->m_act_temperatur)+"/"+QString::number(m_database->m_soll_temperatur));
     ui->label_actFilament->setText(QString::number(m_database->m_act_filament)+"/"+QString::number(m_database->m_soll_filament));
+<<<<<<< HEAD
     ui->label_actPower->setNum(m_database->m_output);
     if(m_database->m_HWisAtHeat)
+=======
+    //ui->label_actPower->setNum(value4);
+    if(m_database->m_is_heated)
+>>>>>>> parent of 08a1822... functional fersion with bug
         ui->label_actTemperatur->setStyleSheet("background-color: green");
     else
         ui->label_actTemperatur->setStyleSheet("background-color: red");
