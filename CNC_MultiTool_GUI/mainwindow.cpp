@@ -38,6 +38,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_basefunctions,SIGNAL(send(char,float,float,float,float)),m_serial,SLOT(send(char,float,float,float,float)));
     connect(m_basefunctions,SIGNAL(answer_repeatrequest()),m_serial,SLOT(answer_repeatrequest()));
 
+
     connect(m_database,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_database,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
     connect(m_database,SIGNAL(show_position()),this,SLOT(show_position()));

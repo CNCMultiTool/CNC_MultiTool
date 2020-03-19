@@ -199,7 +199,7 @@ void Serial::recive()
             LogText += QString::number(recive_telegram.Value[2])+" ";
             LogText += QString::number(recive_telegram.Value[3])+" ";
             LogText += QString::number(checkSumm);
-            //emit Log("INFO recive:"+LogText);
+            emit Log("INFO recive:"+LogText);
             //QString reciveTetxt;
             //for(int i = 0;i<19;i++)
             //{
@@ -258,6 +258,6 @@ void Serial::send(char command,float value1,float value2,float value3,float valu
     LogText += QString::number(send_telegram.Value[2])+" ";
     LogText += QString::number(send_telegram.Value[3])+" ";
     LogText += QString::number(sendData[18]);
-    //emit Log("INFO send:"+LogText);
+    emit Log("INFO send:"+LogText);
     m_database->FileLog("INFO send:"+LogText);
 }

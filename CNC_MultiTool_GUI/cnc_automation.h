@@ -29,7 +29,6 @@ public:
     void repeat_test();
     void Z_calib();
     void calib_size();
-
     void G_Code_Start(QString fileName);
 
 
@@ -44,10 +43,14 @@ private:
     QFile inputFile;
     QTextStream in;
 
+    QEventLoop m_loop;
+    QEventLoop m_heating_loop;
+
     void repeat_movement(float speed,float dist,int repeat);
     float probe_Z(float X,float Y);
 
     void getValue(const QString indent,const QString line,float *target);
+    void getValues(float *X,float *Y,float *Z,float *W,float *F,float *S,QString line);
     bool isCommand(const QString indent,const QString line);
 
     QString m_fileName;
@@ -66,8 +69,12 @@ private:
 signals:
     void Log(const QString &s);
     void errorLog(const QString &s);
+    void move(float X,float Y,float Z,float W);
+    void settings(float speed,float temperatur,float filament);
 
 public slots:
+    void move_wait(float X,float Y,float Z,float W);
+    void heat_wait();
     void G_Code_Parser();
     void G_Code_Pause();
     void G_Code_Stop();

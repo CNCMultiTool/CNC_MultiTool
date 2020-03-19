@@ -8,6 +8,7 @@
 #include <QDateTime>
 #include <QMutex>
 #include <QSerialPort>
+#include <QEventLoop>
 
 union tTelegram
 {
