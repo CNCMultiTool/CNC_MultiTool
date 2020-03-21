@@ -75,15 +75,20 @@ int Serial::serial_CheckTelegram()
         emit errorLog("serial: error in calcCheckSumm");
         return -3;
     }
-    if(checksumm != m_recivedBytes[m_TelegramLength-1]){
-        emit errorLog("serial: wrong checksumm (calc: "+QString::number(checksumm)+", recive: "+m_recivedBytes[m_TelegramLength-1]+")");
+    if(false)//checksumm != m_recivedBytes[m_TelegramLength-1]){
+    {
+        emit errorLog("serial: wrong checksumm (calc: "+
+                      QString::number(checksumm)+
+                      ", recive: "+m_recivedBytes[m_TelegramLength-1]+
+                        ") "+"total length: "+
+                        QString::number(m_recivedBytes.size()));
         QString debug_text = "";
         for(int i=0;i<m_recivedBytes.size();i++)
         {
             debug_text += m_recivedBytes[i];
         }
         emit Log(debug_text);
-        m_recivedBytes.remove(0,19);
+        m_recivedBytes.remove(0,m_recivedBytes.size());
 
         return -4;
     }
