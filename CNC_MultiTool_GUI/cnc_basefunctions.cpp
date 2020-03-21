@@ -70,8 +70,18 @@ void cnc_basefunctions::send_to_cnc(char command,float v1,float v2,float v3,floa
         emit trigger_send();
 }
 
+void cnc_basefunctions::process_command()
+{
+    cnc_command new_command = m_database->cnc_recive_commands[0];
+    m_database->cnc_recive_commands.pop_front();
+    execute_command(new_command.command,
+                    new_command.value1,
+                    new_command.value2,
+                    new_command.value3,
+                    new_command.value4);
+}
 
-void cnc_basefunctions::recived(char command,float value1,float value2,float value3,float value4)
+void cnc_basefunctions::execute_command(char command,float value1,float value2,float value3,float value4)
 {
     QString LogText;
     switch(command)

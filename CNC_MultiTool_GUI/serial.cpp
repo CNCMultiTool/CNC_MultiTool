@@ -129,7 +129,7 @@ void Serial::serial_read_command()
     new_command.value2 = m_recive_telegram.Value[1];
     new_command.value3 = m_recive_telegram.Value[2];
     new_command.value4 = m_recive_telegram.Value[3];
-    m_database->cnc_recive_commands.append(new_command);
+    m_database->append_command(new_command);
     //entvernen des gelesenene telegramms
     m_recivedBytes.remove(0,m_TelegramLength);
 }

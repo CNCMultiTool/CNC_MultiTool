@@ -44,6 +44,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_database,SIGNAL(show_endswitch(float,float,float)),this,SLOT(show_endswitch(float,float,float)));
     connect(m_database,SIGNAL(show_serial(bool)),this,SLOT(show_serial(bool)));
     connect(m_database,SIGNAL(show_status()),this,SLOT(show_status()));
+    connect(m_database,SIGNAL(recive_command()),m_basefunctions,SLOT(process_command()));
 
     connect(m_serial,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_serial,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));

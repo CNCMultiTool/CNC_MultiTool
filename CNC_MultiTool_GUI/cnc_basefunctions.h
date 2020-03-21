@@ -18,6 +18,8 @@ public:
 private:
     void send_to_cnc(char commmand,float v1,float v2,float v3,float v4,int action);
     cnc_data *m_database;
+    void execute_command(char command,float value1,float value2,float value3,float value4);
+
 
 signals:
     void Log(const QString &s);
@@ -31,7 +33,7 @@ public slots:
     void send_stop();
     void send_getPosition();
     void send_setPosition(float X,float Y,float Z,float W);
-    void recived(char command,float value1,float value2,float value3,float value4);
+    void process_command();
 };
 
 #endif // CNC_BASEFUNCTIONS_H

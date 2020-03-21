@@ -121,3 +121,12 @@ void cnc_data::set_HWisMoving(bool status)
     m_HWisMoving = status;
     emit show_status();
 }
+
+void cnc_data::append_command(cnc_command new_command)
+{
+    cnc_recive_commands.append(new_command);
+    emit recive_command();
+}
+
+
+
