@@ -27,6 +27,7 @@ signals:
     void trigger_send();
 
 public slots:
+    void send_init();
     void move_wait(float X,float Y,float Z,float W);
     void send_move(float X,float Y,float Z,float W);
     void send_settings(float speed,float temperatur,float filament);

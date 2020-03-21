@@ -126,6 +126,7 @@ void Serial::serial_read_command()
     LogText += QString::number(m_recive_telegram.Value[3])+" ";
     LogText += QString::number(checkSumm);
     m_database->FileLog("INFO recive:"+LogText);
+    emit Log("INFO recive:"+LogText);
 
     //empfangene daten in cnc_command verpacken und an empfangs queue packen
     cnc_command new_command;
@@ -144,7 +145,7 @@ void Serial::serial_read_command()
  */
 int Serial::serial_send_ifValid()
 {
-    if(m_database->cnc_send_commands.size()<1)
+    if(m_database->cnc_send_commands.length()<1)
         return -1;
     return 0;
 }

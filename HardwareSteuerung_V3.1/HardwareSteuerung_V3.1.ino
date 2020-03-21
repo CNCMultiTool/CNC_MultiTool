@@ -168,7 +168,7 @@ void setup() {
   Wachse.time_next_step = 0;
   Wachse.time_pstep = 0;
   Wachse.motor_step = 0;
-  Wachse.steps_pmm = 37;
+  Wachse.steps_pmm = 35;
   Wachse.pin1 = 29;
   Wachse.pin2 = 31;
   Wachse.pin3 = 33;
@@ -262,7 +262,7 @@ void loop() {
   {
     cycle_time = time_now + 1000000;
     digitalWrite(22,!digitalRead(22));
-    sendsetting();
+    //sendsetting();
   }
   old_time_now = time_now;
 }

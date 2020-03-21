@@ -17,7 +17,7 @@ void cnc_basefunctions::send_move(float X,float Y,float Z,float W)
 
 void cnc_basefunctions::move_wait(float X,float Y,float Z,float W)
 {
-    send_move(X,Y,Z,W);
+    send_to_cnc('m',X,Y,Z,W,2);
 }
 
 void cnc_basefunctions::send_settings(float speed,float temperatur,float filament)
@@ -38,6 +38,11 @@ void cnc_basefunctions::send_settings(float speed,float temperatur,float filamen
     m_database->set_soll_settings(s,t,f);
     //emit send('s',s,t,f,0);
     send_to_cnc('s',s,t,f,0,1);
+}
+
+void cnc_basefunctions::send_init()
+{
+    send_to_cnc('i',0,0,0,0,1);
 }
 
 void cnc_basefunctions::send_stop()
@@ -68,8 +73,14 @@ void cnc_basefunctions::send_to_cnc(char command,float v1,float v2,float v3,floa
     new_command.value4 = v4;
     //send sofot
     if(action == 1)
+    {
         m_database->cnc_send_commands.push_front(new_command);
         emit trigger_send();
+    }
+    else if(action == 2)
+    {
+        m_database->cnc_send_commands.push_back(new_command);
+    }
 }
 
 void cnc_basefunctions::process_command()
@@ -96,6 +107,8 @@ void cnc_basefunctions::execute_command(char command,float value1,float value2,f
         m_database->set_position(value1,value2,value3,value4);
         m_database->set_HWisMoving(false);
         m_database->FileLog("INFO recived set position and ready for next command: X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
+        if(m_database->cnc_send_commands.length()>0)
+            emit trigger_send();
         break;
     case 's'://set the actual settings
         m_database->set_settings(value1,value2,value3);

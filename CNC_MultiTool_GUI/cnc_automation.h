@@ -66,6 +66,7 @@ private:
 signals:
     void Log(const QString &s);
     void errorLog(const QString &s);
+    void trigger_send();
 
 public slots:
     void G_Code_Parser();

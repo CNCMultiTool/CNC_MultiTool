@@ -51,6 +51,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(m_automation,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_automation,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
+    connect(m_automation,SIGNAL(trigger_send()),m_serial,SLOT(serial_send_command()));
+
 }
 
 MainWindow::~MainWindow()
@@ -174,6 +176,7 @@ void MainWindow::on_pushButtonSerialConnect_clicked()
         Log("open serial");
         m_database->m_SerialPortName = ui->comboBoxComPortName->currentText();
         m_serial->serial_open();
+        m_basefunctions->send_init();
     }
 }
 
