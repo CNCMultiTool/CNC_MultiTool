@@ -14,15 +14,18 @@ class cnc_basefunctions: public QObject
 public:
     cnc_basefunctions(cnc_data *database = nullptr);
     void test();
+    QEventLoop m_loop;
+    void serial_send(char command,float value1,float value2,float value3,float value4);
 
 private:
-    void send_to_cnc(char commmand,float v1,float v2,float v3,float v4,int action);
     cnc_data *m_database;
+    void send_ConfirmAnswer();
 
 signals:
     void Log(const QString &s);
     void errorLog(const QString &s);
-    void trigger_send();
+    void send(char command,float value1,float value2,float value3,float value4);
+    void answer_repeatrequest();
 
 public slots:
     void move_wait(float X,float Y,float Z,float W);

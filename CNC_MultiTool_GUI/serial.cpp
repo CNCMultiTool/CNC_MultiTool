@@ -4,185 +4,260 @@
 Serial::Serial(cnc_data *database)
 {
     m_database = database;
+    const QMutexLocker locker(&m_mutex);
+    const QMutexLocker serial_locker(&m_serial_mutex);
+    //connect(&MySerial,SIGNAL(readyRead()),this,SLOT(recive()));
+    connect(send_timeout,SIGNAL(timeout()),this,SLOT(error_handler()));
+    connect(setting_timer,SIGNAL(timeout()),this,SLOT(request_settings()));
+    connect(timer,SIGNAL(timeout()),this,SLOT(recive()));
 }
-
 
 Serial::~Serial()
 {
-
+    m_database->m_Serial_quit = true;
+    timer->stop();
+    MySerial.close();
 }
 
-void Serial::serial_open()
+void Serial::serial_start()
 {
-    m_serial.setPortName(m_database->m_SerialPortName);
-    m_serial.setParity(QSerialPort::Parity::EvenParity);
-    m_serial.setDataBits(QSerialPort::Data8);
-    m_serial.setStopBits(QSerialPort::OneStop);
-    m_serial.setBaudRate(QSerialPort::Baud115200);
-    if (!m_serial.open(QIODevice::ReadWrite)) {
+    MySerial.setPortName(m_database->m_SerialPortName);
+    MySerial.setParity(QSerialPort::Parity::EvenParity);
+    MySerial.setDataBits(QSerialPort::Data8);
+    MySerial.setStopBits(QSerialPort::OneStop);
+    MySerial.setBaudRate(QSerialPort::Baud115200);
+    if (!MySerial.open(QIODevice::ReadWrite)) {
         emit errorLog("can`t start Serial");
+        m_database->set_serial(false);
+        m_database->m_Serial_quit = true;
         return;
     }
-    m_serial.clear();
+    m_database->m_Serial_quit = false;
+    MySerial.clear();
+    timer->start(10);
+    setting_timer->start(1000);
     m_database->set_serial(true);
-    //serial_send_command('i',0,0,0,0);
-    connect(&m_serial,SIGNAL(readyRead()),this,SLOT(serial_read_command()));
+    send('i',0,0,0,0);
 }
 
 void Serial::serial_close()
 {
     emit Log("serial_close");
     m_database->set_serial(false);
-    m_serial.close();
+    m_database->m_Serial_quit = true;
+    timer->stop();
+    setting_timer->stop();
+    send_timeout->stop();
+    MySerial.close();
 }
 
-/**
- * berechnet die checksumm aus dem gebenen bytarray
- */
-int Serial::serial_calcCheckSumm(QByteArray bytes,unsigned char *Checksumm)
+void Serial::error_handler()
 {
-    if(bytes.length() < m_TelegramLength-1)
-        return -1;
+    try {
+        timer->stop();
+        setting_timer->stop();
+        send_timeout->stop();
+        //emit Log("ERROR SerialTimeout occured");
+        emit errorLog("ERROR SerialTimeout occured");
+        m_database->FileLog("ERROR SerialTimeout occured");
+        //m_serial_mutex.lock();
+        if(MySerial.isOpen())
+        {
+            //emit Log("timeout_handler: serial is still open");
+            m_database->FileLog("ERROR timeout_handler: serial is still open");
+            MySerial.waitForBytesWritten(10);
+            MySerial.waitForReadyRead(10);
+            MySerial.close();
+            //emit Log("timeout_handler: close serial");
+            m_database->FileLog("ERROR timeout_handler: close serial");
+            if(MySerial.open(QIODevice::ReadWrite))
+            {
+                //emit Log("timeout_handler: open and clear serial");
+                m_database->FileLog("ERROR timeout_handler: open and clear serial");
+                MySerial.clear();
+            }
+            else
+            {
+                //emit Log("cant open serial in timeouthandling");
+                m_database->FileLog("ERROR cant open serial in timeouthandling");
+            }
+        }
+        else
+        {
+            //emit Log("timeout_handler: serial is already close");
+            m_database->FileLog("ERROR timeout_handler: serial is already close");
+            if(MySerial.open(QIODevice::ReadWrite))
+            {
+                //emit Log("timeout_handler: open and clear serial");
+                m_database->FileLog("ERROR timeout_handler: open and clear serial");
+                MySerial.clear();
+            }
+            else
+            {
+                //emit Log("cant open serial in timeouthandling");
+                m_database->FileLog("ERROR cant open serial in timeouthandling");
+            }
+        }
+        timer->start();
+        setting_timer->start();
+        QByteArray buffer = lastSendData;//speicere das zuletzt gesendete um es später erneut zu senden
+        send('i',0,0,0,0);//init sequenz of arduino
+        m_SendData.push_back(buffer);//resend last command
+        m_database->FileLog("ERROR add to resend: "+QString(char(buffer[1])));
+    }catch(...){
+        emit errorLog("ERROR error_handler() throw an error");
+        m_database->FileLog("ERROR error_handler() throw an error");
+    }
+}
 
-    Checksumm = 0;
-    for(int i=0;i<m_TelegramLength-1;i++)
+void Serial::answer_repeatrequest()
+{
+    QString reciveTetxt;
+    m_SendData.push_back(lastSendData);
+    for(int i = 0;i<19;i++)
     {
-        Checksumm += bytes[i];
+        reciveTetxt += QString(char(lastSendData[i]));
     }
-    return 0;
+    emit Log("INFO resend last:"+reciveTetxt);
 }
 
-/**
- * prüft ob das empfangene telegramm correkt ist
- * länge
- * checksumm
- * startcodon
- */
-int Serial::serial_CheckTelegram()
+void Serial::request_settings()
 {
-    //check if telegram is long enought
-    if(m_recivedBytes.length()<m_TelegramLength){
-        emit errorLog("serial: not enough bytes");
-        return -1;
-    }
-    //check if start index is presend
-    if(m_recivedBytes[0] != 'S'){
-        emit errorLog("serial: not Startcodon");
-        return -2;
-    }
-    //calculate Checksam and check if valid
-    unsigned char checksumm;
-    if(serial_calcCheckSumm(m_recivedBytes,&checksumm)<0){
-        emit errorLog("serial: error in calcCheckSumm");
-        return -3;
-    }
-    if(checksumm != m_recivedBytes[m_TelegramLength-1]){
-        emit errorLog("serial: wrong checksumm (calc: "+QString::number(checksumm)+", recive: "+m_recivedBytes[m_TelegramLength-1]+")");
-        return -4;
-    }
-    return 0;
+    send('r',0,0,0,0);
 }
 
-/**
- * liest daten vom serielen port
- * chekct ob ein telegramm empfangen
- * konvertiert das telegramm von bytes in comando und werte
- */
-void Serial::serial_read_command()
+void Serial::recive()
 {
-    char command = ' ';
-    unsigned char checkSumm = 0;
+    try {
+        int TelegramSize = 19;
+        char command = ' ';
+        unsigned char checkSumm = 0;
+        unsigned char newCheckSumm = 0;
+        tTelegram recive_telegram;
 
-    m_recivedBytes += m_serial.readAll();
-    m_serial.waitForReadyRead(10);
+        m_mutex.lock();
+        if(m_SendData.count()>0)
+        {
+            //emit Log("send something");
+            QByteArray sendByte = m_SendData[0];
+            m_SendData.pop_front();
+            m_serial_mutex.lock();
+            if(!MySerial.isOpen())
+            {
+                emit Log(" open in send");
+                m_database->FileLog("ERROR open in send");
+                error_handler();
+            }
+            MySerial.write(sendByte);
+            m_database->FileLog("INFO send command: "+QString(char(sendByte[1])));
+            lastSendData = sendByte;
+            MySerial.waitForBytesWritten(10);
+            m_serial_mutex.unlock();
+            if(char(sendByte[1]) != 'a')
+            {
+                send_timeout->start(100);
+            }
+        }
+        m_mutex.unlock();
 
-    //for(int i=0;i<m_recivedBytes.length();i++)
-    //    emit Log(QString::number(m_recivedBytes[i])+" "+m_recivedBytes[i]);
+        m_serial_mutex.lock();
+        if(!MySerial.isOpen())
+        {
+            emit Log("open in read");
+            m_database->FileLog("ERROR open in read");
+            error_handler();
+        }
+        responseData += MySerial.readAll();
+        MySerial.waitForReadyRead(10);
+        m_serial_mutex.unlock();
 
-    if(serial_CheckTelegram()<0)
-        return;
+        //a complite telegram was recived and now get processd
+        if(responseData.size()>=TelegramSize)
+        {
+            if(send_timeout->isActive())
+            {
+                send_timeout->stop();
+            }
+            //put bytes needet form (chars and floats)
+            command = char(responseData[1]);
+            for(int i=0;i<16;i++)
+            {
+                recive_telegram.Bytes[i] = responseData[i+2];
+            }
 
-    command = char(m_recivedBytes[1]);
-    for(int i=0;i<m_TelegramLength-2;i++)
-    {
-        m_recive_telegram.Bytes[i] = m_recivedBytes[i+2];
+            //check the checksumm
+            checkSumm = responseData[18];
+            newCheckSumm = 0;
+            for(int i=0;i<TelegramSize-1;i++)
+            {
+                newCheckSumm += responseData[i];
+            }
+            QString LogText = QString(char(responseData[0]))+" ";
+            LogText += QString(command)+" ";
+            LogText += QString::number(recive_telegram.Value[0])+" ";
+            LogText += QString::number(recive_telegram.Value[1])+" ";
+            LogText += QString::number(recive_telegram.Value[2])+" ";
+            LogText += QString::number(recive_telegram.Value[3])+" ";
+            LogText += QString::number(checkSumm);
+            //emit Log("INFO recive:"+LogText);
+            //QString reciveTetxt;
+            //for(int i = 0;i<19;i++)
+            //{
+            //    reciveTetxt += QString(char(responseData[i]));
+            //}
+            //emit Log("INFO recive:"+reciveTetxt);
+
+            m_database->FileLog("INFO recive:"+LogText);
+            if(newCheckSumm != checkSumm)
+            {
+                emit errorLog("check failt recive:"+QString::number(checkSumm)+" calc:"+QString::number(newCheckSumm));
+                m_database->FileLog("ERROR checksum failt :"+QString::number(checkSumm)+" calc:"+QString::number(newCheckSumm));
+                responseData.clear();
+                error_handler();
+            }
+            else
+            {
+                emit recived(command,recive_telegram.Value[0],recive_telegram.Value[1],recive_telegram.Value[2],recive_telegram.Value[3]);
+            }
+
+            responseData.remove(0,TelegramSize);
+        }
+    } catch (...) {
+        emit errorLog("recive() throw an error");
+        m_database->FileLog("ERROR recive() throw an error");
     }
-    checkSumm = m_recivedBytes[m_TelegramLength-1];
-
-    QString LogText = QString(char(m_recivedBytes[0]))+" ";
-    LogText += QString(command)+" ";
-    LogText += QString::number(m_recive_telegram.Value[0])+" ";
-    LogText += QString::number(m_recive_telegram.Value[1])+" ";
-    LogText += QString::number(m_recive_telegram.Value[2])+" ";
-    LogText += QString::number(m_recive_telegram.Value[3])+" ";
-    LogText += QString::number(checkSumm);
-    m_database->FileLog("INFO recive:"+LogText);
-
-    //empfangene daten in cnc_command verpacken und an empfangs queue packen
-    cnc_command new_command;
-    new_command.command = command;
-    new_command.value1 = m_recive_telegram.Value[0];
-    new_command.value2 = m_recive_telegram.Value[1];
-    new_command.value3 = m_recive_telegram.Value[2];
-    new_command.value4 = m_recive_telegram.Value[3];
-    m_database->cnc_recive_commands.append(new_command);
-    //entvernen des gelesenene telegramms
-    m_recivedBytes.remove(0,m_TelegramLength);
 }
 
-/**
- * checkt ob ein sende corgang gestartet werden kann
- */
-int Serial::serial_send_ifValid()
+void Serial::send(char command,float value1,float value2,float value3,float value4)
 {
-    if(m_database->cnc_send_commands.size()<1)
-        return -1;
-    return 0;
-}
-
-/**
- * holt dsas nächste kommando aus der queue
- * check ob das command valide ist
- * verpackt es in ein bytearray mit startcodon und checsumm
- * sendet es mittels serielem port
- */
-void Serial::serial_send_command()
-{
-    if(serial_send_ifValid()>0){
-        emit errorLog("serial send: no command to send");
-        return;
-    }
-
-    // read command and values to send
-    cnc_command new_command = m_database->cnc_send_commands[0];
-    m_database->cnc_send_commands.pop_front();
-
     unsigned char newCheckSumm = 0;
-    m_sendBytes = QString("S").toUtf8();
-    m_sendBytes += QString(new_command.command).toUtf8();
+    QByteArray sendData = QString("S").toUtf8();
+    sendData += QString(command).toUtf8();
     tTelegram send_telegram;
-    send_telegram.Value[0] = new_command.value1;
-    send_telegram.Value[1] = new_command.value2;
-    send_telegram.Value[2] = new_command.value3;
-    send_telegram.Value[3] = new_command.value4;
+    send_telegram.Value[0] = value1;
+    send_telegram.Value[1] = value2;
+    send_telegram.Value[2] = value3;
+    send_telegram.Value[3] = value4;
     for(int i=0;i<16;i++)
     {
-        m_sendBytes += send_telegram.Bytes[i];
+        sendData += send_telegram.Bytes[i];
     }
     newCheckSumm = 0;
-    serial_calcCheckSumm(m_sendBytes,&newCheckSumm);
-    m_sendBytes += newCheckSumm;
-
-    m_serial.write(m_sendBytes);
-    m_serial.waitForBytesWritten(10);
-
-    QString LogText = QString(char(m_sendBytes[0]))+" ";
-    LogText += QString(char(m_sendBytes[1]))+" ";
+    for(int i=0;i<18;i++)
+    {
+        newCheckSumm += sendData[i];
+    }
+    sendData += newCheckSumm;
+    m_mutex.lock();
+    m_SendData.push_back(sendData);
+    m_mutex.unlock();
+    QString LogText = QString(char(sendData[0]))+" ";
+    LogText += QString(char(sendData[1]))+" ";
     LogText += QString::number(send_telegram.Value[0])+" ";
     LogText += QString::number(send_telegram.Value[1])+" ";
     LogText += QString::number(send_telegram.Value[2])+" ";
     LogText += QString::number(send_telegram.Value[3])+" ";
-    LogText += QString::number(m_sendBytes[18]);
-    emit Log("INFO send:"+LogText);
+    LogText += QString::number(sendData[18]);
+    //emit Log("INFO send:"+LogText);
     m_database->FileLog("INFO send:"+LogText);
 }

@@ -109,17 +109,12 @@ int debug = 0;
 bool wait_for_response = false;
 
 void setup() {
-<<<<<<< HEAD
   Serial.begin(115200,SERIAL_8E1);//9600
   char dummy[1];
   while(Serial.available())
   {
     Serial.readBytes(dummy,1);
   }
-=======
-  Serial.begin(9600,SERIAL_8N2);//9600
-  
->>>>>>> parent of 015e97d... still bugy
   /*TODO
    * EndPins
    */
@@ -208,23 +203,15 @@ void setup() {
   myPID.SetOutputLimits(0, WindowSize);
   myPID.SetSampleTime(WindowSize);
   myPID.SetMode(AUTOMATIC);
-<<<<<<< HEAD
-<<<<<<< HEAD
 
   pinMode(22,OUTPUT);
   pinMode(24,OUTPUT);
   pinMode(26,OUTPUT);
   pinMode(28,OUTPUT);
-=======
-=======
->>>>>>> parent of 08a1822... functional fersion with bug
-  
->>>>>>> parent of 08a1822... functional fersion with bug
 }
 
 void loop() {
   time_now = micros();
-<<<<<<< HEAD
   if(time_now<old_time_now){
     digitalWrite(28,HIGH);
   }
@@ -239,50 +226,15 @@ void loop() {
     recive_msg();
   }
 
-=======
-  //if(digitalRead(23)==HIGH){
-  //  digitalWrite(temprelai,HIGH);
-  //}
-<<<<<<< HEAD
-  
-  if(msg_available){
-    recive_msg();
-  }
-<<<<<<< HEAD
->>>>>>> parent of 08a1822... functional fersion with bug
-=======
->>>>>>> parent of 08a1822... functional fersion with bug
-=======
-  digitalWrite(22,HIGH);
-  if(msg_available){
-    recive_msg();
-  }
-  digitalWrite(22,LOW);
-  digitalWrite(24,HIGH);
->>>>>>> parent of 015e97d... still bugy
   checkEndswitches();
   TempControle();
-  digitalWrite(24,LOW);
-  digitalWrite(26,HIGH);
+
   //motors drive
   treiberBig(Xachse);
   treiberBig(Yachse);
   treiberBig(Zachse);
   treiberMedi(Wachse);
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 
-=======
-  
->>>>>>> parent of 08a1822... functional fersion with bug
-=======
-  
->>>>>>> parent of 08a1822... functional fersion with bug
-=======
-  digitalWrite(26,LOW);
-  digitalWrite(28,HIGH);
->>>>>>> parent of 015e97d... still bugy
   if(Xachse.soll_step == Xachse.act_step){
     if(Yachse.soll_step == Yachse.act_step){
       if(Zachse.soll_step == Zachse.act_step){
@@ -296,27 +248,13 @@ void loop() {
       }
     }
   }
-<<<<<<< HEAD
 
-<<<<<<< HEAD
-<<<<<<< HEAD
   //timeout
   if(cycle_time < time_now && wait_for_response)
   {
     wait_for_response = false;
     serieltimeouthandler();
     digitalWrite(22,HIGH);
-=======
-=======
->>>>>>> parent of 08a1822... functional fersion with bug
-=======
-  digitalWrite(28,LOW);
->>>>>>> parent of 015e97d... still bugy
-  //something to do everi 1000 ms
-  if(cycle_time<time_now){
-    cycle_time = time_now + 1000000;
-    sendsetting();
->>>>>>> parent of 08a1822... functional fersion with bug
   }
   old_time_now = time_now;
 }
@@ -383,6 +321,9 @@ void recive_msg(){
       sendendswitch();
       break;
     case 'm'://move
+      if(sendPose == false){
+        send_debug(1,0,0,0);
+      }
       Xachse.soll_posi = Buf.tel.value[0];
       Yachse.soll_posi = Buf.tel.value[1];
       Zachse.soll_posi = Buf.tel.value[2];
@@ -430,14 +371,8 @@ void recive_msg(){
       //digitalWrite(28,HIGH);
       //stop_responstimer();
       break;
-<<<<<<< HEAD
     case 'a'://repetrquest error detection
       //stop_responstimer();
-=======
-    case 'N':
-      strncpy(Buf.buf,last_send_buf , 18);
-      send_tel();
->>>>>>> parent of 015e97d... still bugy
       break;
     default:
       //digitalWrite(24,HIGH);
@@ -497,7 +432,7 @@ void setPose(){
 void getMoveParams(){
   dist = sqrt(pow(Xachse.soll_posi-Xachse.act_posi,2)+pow(Yachse.soll_posi-Yachse.act_posi,2)+pow(Zachse.soll_posi-Zachse.act_posi,2)); //gesamtdistans
   if(dist == 0){
-    dist = abs(Wachse.soll_posi-Wachse.act_posi);
+    dist = abs(Wachse.soll_posi-Wachse.act_posi)*15;
   }
   ges_time = (dist/Speed)*1000000;
   
@@ -696,7 +631,6 @@ void serialEvent(){
   for(int i=0;i<18;i++){
     Buf.buf[i+1] = bufBig[i];
   }
-<<<<<<< HEAD
   
   if(Buf.buf[18]!=calc_checkbyte(Buf.buf)){
     //digitalWrite(26,HIGH);
@@ -708,10 +642,6 @@ void serialEvent(){
   }else{
     msg_available = true;
     //digitalWrite(24,HIGH);
-=======
-  for(int i = 0;i<19;i++){
-    Serial.write(send_buffer[i]);
->>>>>>> parent of 015e97d... still bugy
   }
 }
 void send_tel(){

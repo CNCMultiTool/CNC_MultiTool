@@ -4,7 +4,7 @@ cnc_data::cnc_data()
 {
     m_size_X = 269.89;
     m_size_Y = 231.68;
-    m_Zmax_nozzel = 170.95;
+    m_Zmax_nozzel = 171.0;
 
     m_X_angel = -0.00155619;
     m_Y_angel = 0.0023308;
@@ -39,11 +39,12 @@ cnc_data::cnc_data()
     m_HWisMoving = false;
 
     m_SerialIsOpen = false;
+    m_Serial_quit = true;
 
     m_LogFile = new QFile;
     m_LogFile->setFileName(m_LogFileName);
 
-    const QMutexLocker locker(&m_mutex);
+    const QMutexLocker file_locker(&m_file_mutex);
 }
 
 cnc_data::~cnc_data()
@@ -53,7 +54,7 @@ cnc_data::~cnc_data()
 
 void cnc_data::FileLog(QString value)
 {
-    m_mutex.lock();
+    m_file_mutex.lock();
     m_LogFile->open(QIODevice::Append | QIODevice::Text);
     value = QDateTime::currentDateTime().toString("dd.MM.yyyy hh:mm:ss.ms ") + value +"\n";
     QTextStream out(m_LogFile);
@@ -62,7 +63,7 @@ void cnc_data::FileLog(QString value)
       out << value;
     }
     m_LogFile->close();
-    m_mutex.unlock();
+    m_file_mutex.unlock();
 }
 
 void cnc_data::test()
@@ -80,11 +81,12 @@ void cnc_data::set_position(float X,float Y,float Z,float W)
     emit show_position();
 }
 
-void cnc_data::set_settings(float speed,float temperatur,float filament)
+void cnc_data::set_settings(float speed,float temperatur,float filament,float output)
 {
     m_act_speed = speed;
     m_act_temperatur = temperatur;
     m_act_filament = filament;
+    m_output = output;
     emit show_settings();
 }
 

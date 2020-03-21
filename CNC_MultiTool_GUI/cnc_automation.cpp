@@ -21,19 +21,16 @@ CNC_automation::~CNC_automation()
 
 void CNC_automation::move_home()
 {
-    return;
-    //m_basefunctions->send_settings(50,-1,-1);
-    //m_basefunctions->settings_wait(50,m_database->m_soll_temperatur,m_database->m_soll_filament);
-    //m_basefunctions->move_wait(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
-    //m_basefunctions->move_wait(-9999,-9999,m_database->m_act_Z,m_database->m_act_W);
+    m_basefunctions->send_settings(50,-1,-1);
+    m_basefunctions->move_wait(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
+    m_basefunctions->move_wait(-9999,-9999,m_database->m_act_Z,m_database->m_act_W);
 }
 
 void CNC_automation::move_restposi()
 {
-    return;
-    //m_basefunctions->send_settings(50,-1,-1);
-    //m_basefunctions->move_wait(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
-    //m_basefunctions->move_wait(9999,-9999,m_database->m_act_Z,m_database->m_act_W);
+    m_basefunctions->send_settings(50,-1,-1);
+    m_basefunctions->move_wait(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
+    m_basefunctions->move_wait(9999,-9999,m_database->m_act_Z,m_database->m_act_W);
 }
 
 void CNC_automation::calib_size()
@@ -195,34 +192,7 @@ void CNC_automation::G_Code_Parser()
     getValue("E",newLine,&m_W);
     getValue("S",newLine,&m_S);
     getValue("F",newLine,&m_F);
-        //if(m_pause)
-        //{
-        //  m_wait_loop.exec();
-        //}
-        newLine = in.readLine();
-        m_database->FileLog(newLine);
-        if(newLine.isNull())
-        {
-            emit Log("end of file");
-            m_aboard = true;
-            //continue;
-        }
-        rx.setPattern(";");
-        if(rx.indexIn(newLine)==0)
-        {
-            emit Log("Comment: "+newLine);
-            //continue;
-        }
-        if(newLine == "")
-        {
-            emit Log("emty line");
-        }
-        getValue("X",newLine,&m_X);
-        getValue("Y",newLine,&m_Y);
-        getValue("Z",newLine,&m_Z);
-        getValue("E",newLine,&m_W);
-        getValue("S",newLine,&m_S);
-        getValue("F",newLine,&m_F);
+
     if(isCommand("G0",newLine))//fast move
     {
         m_F = m_F_max*60;
@@ -233,73 +203,12 @@ void CNC_automation::G_Code_Parser()
     if(isCommand("G1",newLine))//normal move
     {
         if(m_F>m_F_max*60)
-        if(isCommand("G0",newLine))//fast move
-        {
-            m_F = m_F_max;
-            m_basefunctions->move_wait(m_X,m_Y,m_Z,m_W);
-            m_validCommand = true;
-        }
-        if(isCommand("G1",newLine))//normal move
-        {
-            if(0.001<abs(m_F-m_F_old))
-            {
-                //m_basefunctions->settings_wait(m_F/60,m_S,-1);
-            }
-            m_basefunctions->move_wait(m_X,m_Y,m_Z,m_W);
-            m_validCommand = true;
-        }
-        if(isCommand("G21",newLine))//use mm
-        {
-            emit Log("use mm");
-            m_database->FileLog("use mm");
-            m_validCommand = true;
-        }
-        if(isCommand("G28",newLine))//move home
-        {
-            move_home();
-            m_validCommand = true;
-        }
-        if(isCommand("G31",newLine))//move untile endswitch
-        {
-            //calib_size();
-            m_validCommand = true;
-        }
-        if(isCommand("G90",newLine))//absolute referenz
-        {
-            m_database->FileLog("find G90 (useless comand)");
-            m_validCommand = true;
-        }
-        if(isCommand("G91",newLine))//incrementel movement
-        {
-            m_database->FileLog("ERROR find G91 (useless comand)");
-            emit errorLog("use incrementel movement");
-            m_validCommand = true;
-        }
-        if(isCommand("G92",newLine))//set position
-        {
-           m_validCommand = true;
-        }
-        if(isCommand("M104",newLine))//set temperatur
-        {
-            //m_basefunctions->settings_wait(m_F/60,m_S,-1);
-            m_validCommand = true;
-        }
-        if(isCommand("M106",newLine))
-        {
-            m_database->FileLog("find M106 (useless comand)");
-            m_validCommand = true;
-        }
-        if(isCommand("M107",newLine))
         {
             m_F=m_F_max*60;
         }
         if(0.001>abs(m_F-m_F_old))
         {
-
-            emit Log("Wait for Nozzel to heat");
-
-            emit Log("Nozzel is heated");
-            m_validCommand = true;
+            m_basefunctions->send_settings(m_F/60,m_S,-1);
         }
         m_basefunctions->move_wait(m_X,m_Y,m_Z,m_W);
         m_validCommand = true;
@@ -393,4 +302,24 @@ void CNC_automation::getValue(const QString indent,const QString line,float *tar
         *target = resultStr.toFloat();
     }
 }
+/*
+void CNC_automation::calc_correctionangel(QList<float> Z_errors)
+{
+    //m_X_angel = atan(Z_errors[0]/m_size_X);
+    //m_Y_angel = atan(Z_errors[2]/m_size_Y);
+    //a = math.tan(alpha)*b
+    //float Xcorr = m_size_X * tan(m_X_angel);
+    //float Ycorr = m_size_Y * tan(m_Y_angel);
+    //emit Log("messuring error at end:"+QString::number(Z_errors[3]));
+    //emit Log("X_angel:"+QString::number(m_X_angel)+" Y_angel:"+QString::number(m_Y_angel));
+    //emit Log("Correction error:"+QString::number(Z_errors[1]-(Xcorr+Ycorr)));
+}
 
+//correction fallut
+float CNC_automation::calc_correction(float X,float Y)
+{
+    //float Xcorr = X * tan(m_Y_angel);
+    //float Ycorr = Y * tan(m_X_angel);
+    //return(Xcorr+Ycorr);
+}
+*/
