@@ -242,7 +242,6 @@ void loop() {
       if(Zachse.soll_step == Zachse.act_step){
         if(Wachse.soll_step == Wachse.act_step){
           if(sendPose == false){
-            act_steps_to_act_posi();
             sendconfirmpos();
             sendPose = true;
           }
@@ -283,9 +282,11 @@ float checkEndswitch(struct StepMotorBig &StepM){
   float switchID;
   if(digitalRead(StepM.pinNull)==HIGH&& StepM.soll_step <= StepM.act_step){
     StepM.soll_step = StepM.act_step;
+    StepM.act_posi = (double)StepM.act_step/StepM.steps_pmm;
     switchID = -1;
   }else if(digitalRead(StepM.pinPositiv)==HIGH&& StepM.soll_step >= StepM.act_step){
     StepM.soll_step = StepM.act_step;
+    StepM.act_posi = (double)StepM.act_step/StepM.steps_pmm;
     switchID = 1;
   }else{
     switchID = 0;
@@ -593,9 +594,11 @@ void sendendswitch(){
   start_responstimer();
 }
 void sendactposition(){
+  act_steps_to_act_posi();
   send_variabelTestCommand('m',Xachse.act_posi,Yachse.act_posi,Zachse.act_posi,Wachse.act_posi);
 }
 void sendconfirmpos(){
+  act_steps_to_act_posi();
   send_variabelTestCommand('c',Xachse.act_posi,Yachse.act_posi,Zachse.act_posi,Wachse.act_posi);
   start_responstimer();
 }
