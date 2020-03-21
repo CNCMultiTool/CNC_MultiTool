@@ -82,6 +82,9 @@ void cnc_basefunctions::recived(char command,float value1,float value2,float val
 =======
     case 'q'://set the actual settings
         m_database->set_settings(value1,value2,value3);
+<<<<<<< HEAD
+>>>>>>> parent of 08a1822... functional fersion with bug
+=======
 >>>>>>> parent of 08a1822... functional fersion with bug
         m_database->FileLog("INFO recived current setting: speed:"+QString::number(value1)+" temperatur:"+QString::number(value2)+" filament:"+QString::number(value3)+" PWM:"+QString::number(value4));
         if(5>abs(m_database->m_act_temperatur-m_database->m_soll_temperatur))

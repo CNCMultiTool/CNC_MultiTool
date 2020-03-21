@@ -204,12 +204,15 @@ void setup() {
   myPID.SetSampleTime(WindowSize);
   myPID.SetMode(AUTOMATIC);
 <<<<<<< HEAD
+<<<<<<< HEAD
 
   pinMode(22,OUTPUT);
   pinMode(24,OUTPUT);
   pinMode(26,OUTPUT);
   pinMode(28,OUTPUT);
 =======
+=======
+>>>>>>> parent of 08a1822... functional fersion with bug
   
 >>>>>>> parent of 08a1822... functional fersion with bug
 }
@@ -239,6 +242,9 @@ void loop() {
   if(msg_available){
     recive_msg();
   }
+<<<<<<< HEAD
+>>>>>>> parent of 08a1822... functional fersion with bug
+=======
 >>>>>>> parent of 08a1822... functional fersion with bug
   checkEndswitches();
   TempControle();
@@ -249,7 +255,11 @@ void loop() {
   treiberBig(Zachse);
   treiberMedi(Wachse);
 <<<<<<< HEAD
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> parent of 08a1822... functional fersion with bug
 =======
   
 >>>>>>> parent of 08a1822... functional fersion with bug
@@ -268,6 +278,7 @@ void loop() {
   }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   //timeout
   if(cycle_time < time_now && wait_for_response)
   {
@@ -275,6 +286,8 @@ void loop() {
     serieltimeouthandler();
     digitalWrite(22,HIGH);
 =======
+=======
+>>>>>>> parent of 08a1822... functional fersion with bug
   //something to do everi 1000 ms
   if(cycle_time<time_now){
     cycle_time = time_now + 1000000;
