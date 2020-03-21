@@ -8,13 +8,23 @@
 #include <QDateTime>
 #include <QMutex>
 #include <QSerialPort>
-#include <QEventLoop>
+#include <QList>
 
 union tTelegram
 {
     float Value[4];
     char Bytes[16];
 };
+
+typedef struct
+{
+    char command;
+    float value1;
+    float value2;
+    float value3;
+    float value4;
+    int action;
+}cnc_command;
 
 class cnc_data : public QObject
 {
@@ -24,7 +34,7 @@ public:
 
     void FileLog(QString value);
 
-    QString m_SerialPortName;
+
 
     bool m_HWisHeating;
     bool m_HWisAtHeat;
@@ -47,7 +57,6 @@ public:
     float m_act_speed;
     float m_act_filament;
     float m_act_temperatur;
-    float m_output;
 
     //status
     float m_endswitch_X;
@@ -70,7 +79,7 @@ public:
     float m_Zmax_nozzel;
 
     void set_position(float X,float Y,float Z,float W);
-    void set_settings(float speed,float temperatur,float filament,float output);
+    void set_settings(float speed,float temperatur,float filament);
     void set_soll_settings(float speed,float temperatur,float filament);
     void set_endswitch(int X,int Y,int Z);
     void set_serial(bool isOpen);
@@ -81,13 +90,14 @@ public:
     void set_HWisMoving(bool status);
 
     bool m_SerialIsOpen;
-    bool m_Serial_quit;
-    void serial_send(char command,float value1,float value2,float value3,float value4);
+    QString m_SerialPortName;
+    QList<cnc_command> cnc_send_commands;
+    QList<cnc_command> cnc_recive_commands;
 
 private:
     QString m_LogFileName = "CNC_Log.txt";
     QFile *m_LogFile;
-    QMutex m_file_mutex;
+    QMutex m_mutex;
     ~cnc_data();
 
 signals:

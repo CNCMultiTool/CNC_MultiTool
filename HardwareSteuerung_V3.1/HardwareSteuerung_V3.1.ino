@@ -208,6 +208,8 @@ void setup() {
   pinMode(24,OUTPUT);
   pinMode(26,OUTPUT);
   pinMode(28,OUTPUT);
+
+  cycle_time = 0;
 }
 
 void loop() {
@@ -250,11 +252,17 @@ void loop() {
   }
 
   //timeout
-  if(cycle_time < time_now && wait_for_response)
+  //if(cycle_time < time_now && wait_for_response)
+  //{
+   // wait_for_response = false;
+   // serieltimeouthandler();
+   // digitalWrite(22,HIGH);
+  //}
+  if(cycle_time < time_now)
   {
-    wait_for_response = false;
-    serieltimeouthandler();
-    digitalWrite(22,HIGH);
+    cycle_time = time_now + 1000000;
+    digitalWrite(22,!digitalRead(22));
+    sendsetting();
   }
   old_time_now = time_now;
 }
@@ -321,16 +329,17 @@ void recive_msg(){
       sendendswitch();
       break;
     case 'm'://move
-      if(sendPose == false){
-        send_debug(1,0,0,0);
-      }
+      //if(sendPose == false){
+      //  send_debug(1,0,0,0);
+      //}
+      digitalWrite(28,!digitalRead(28));
       Xachse.soll_posi = Buf.tel.value[0];
       Yachse.soll_posi = Buf.tel.value[1];
       Zachse.soll_posi = Buf.tel.value[2];
       Wachse.soll_posi = Buf.tel.value[3];
       getMoveParams();
       sendPose = false;
-      sendConfirmAnswer();
+      //sendConfirmAnswer();
       break;
     case 'p'://set new pose
       Xachse.act_posi = Buf.tel.value[0];
