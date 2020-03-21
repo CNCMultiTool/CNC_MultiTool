@@ -16,26 +16,13 @@ public:
     void test();
 
 private:
+    void send_to_cnc(char commmand,float v1,float v2,float v3,float v4,int action);
     cnc_data *m_database;
-    QEventLoop m_loop;
-<<<<<<< HEAD
-    void serial_send(char command,float value1,float value2,float value3,float value4);
-
-private:
-    cnc_data *m_database;
-    void send_ConfirmAnswer();
-=======
-    QEventLoop m_heat_loop;
-    QEventLoop m_setPos_loop;
-    QEventLoop m_setting_loop;
-    bool m_atPose;
->>>>>>> parent of 015e97d... still bugy
 
 signals:
     void Log(const QString &s);
     void errorLog(const QString &s);
-    void send(char command,float value1,float value2,float value3,float value4);
-    void answer_repeatrequest();
+    void trigger_send();
 
 public slots:
     void move_wait(float X,float Y,float Z,float W);

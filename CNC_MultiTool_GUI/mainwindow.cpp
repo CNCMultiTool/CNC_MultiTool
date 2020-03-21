@@ -35,8 +35,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(m_basefunctions,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_basefunctions,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
-    connect(m_basefunctions,SIGNAL(send(char,float,float,float,float)),m_serial,SLOT(send(char,float,float,float,float)));
-    connect(m_basefunctions,SIGNAL(answer_repeatrequest()),m_serial,SLOT(answer_repeatrequest()));
+    connect(m_basefunctions,SIGNAL(trigger_send()),m_serial,SLOT(serial_send_command()));
 
     connect(m_database,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_database,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
@@ -48,13 +47,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(m_serial,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_serial,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
-    connect(m_serial,SIGNAL(recived(char,float,float,float,float)),m_basefunctions,SLOT(recived(char,float,float,float,float)));
 
     connect(m_automation,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_automation,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
-
-    connect(this,SIGNAL(serial_start()),m_serial,SLOT(serial_start()));
-    connect(this,SIGNAL(serial_close()),m_serial,SLOT(serial_close()));
 }
 
 MainWindow::~MainWindow()
@@ -91,19 +86,6 @@ void MainWindow::show_settings()
     ui->label_actSpeed->setText(QString::number(m_database->m_act_speed)+"/"+QString::number(m_database->m_soll_speed));
     ui->label_actTemperatur->setText(QString::number(m_database->m_act_temperatur)+"/"+QString::number(m_database->m_soll_temperatur));
     ui->label_actFilament->setText(QString::number(m_database->m_act_filament)+"/"+QString::number(m_database->m_soll_filament));
-<<<<<<< HEAD
-<<<<<<< HEAD
-    ui->label_actPower->setNum(m_database->m_output);
-    if(m_database->m_HWisAtHeat)
-=======
-=======
->>>>>>> parent of 08a1822... functional fersion with bug
-    //ui->label_actPower->setNum(value4);
-    if(m_database->m_is_heated)
->>>>>>> parent of 08a1822... functional fersion with bug
-        ui->label_actTemperatur->setStyleSheet("background-color: green");
-    else
-        ui->label_actTemperatur->setStyleSheet("background-color: red");
 
     if(m_alive)
     {
@@ -139,7 +121,6 @@ void MainWindow::show_endswitch(float X, float Y, float Z)
     endswitchButtonColor(Z,ui->pushButtonMoveZPos,ui->pushButtonMoveZNeg);
 }
 
-<<<<<<< HEAD
 void MainWindow::show_status()
 {
     if(m_database->m_HWisMoving)
@@ -160,8 +141,6 @@ void MainWindow::show_status()
     }
 }
 
-=======
->>>>>>> parent of 015e97d... still bugy
 //paints the movebuttons red or green depending of the endswitches
 void MainWindow::endswitchButtonColor(float value,QPushButton *PosButton,QPushButton *NegButton)
 {
@@ -193,7 +172,7 @@ void MainWindow::on_pushButtonSerialConnect_clicked()
     {
         Log("open serial");
         m_database->m_SerialPortName = ui->comboBoxComPortName->currentText();
-        m_serial->serial_start();
+        m_serial->serial_open();
     }
 }
 

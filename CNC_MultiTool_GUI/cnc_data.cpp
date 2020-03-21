@@ -39,7 +39,6 @@ cnc_data::cnc_data()
     m_HWisMoving = false;
 
     m_SerialIsOpen = false;
-    m_Serial_quit = true;
 
     m_LogFile = new QFile;
     m_LogFile->setFileName(m_LogFileName);
