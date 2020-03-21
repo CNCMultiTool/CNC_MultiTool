@@ -21,14 +21,22 @@ CNC_automation::~CNC_automation()
 
 void CNC_automation::move_home()
 {
+<<<<<<< HEAD
     m_basefunctions->send_settings(50,-1,-1);
+=======
+    m_basefunctions->settings_wait(50,m_database->m_soll_temperatur,m_database->m_soll_filament);
+>>>>>>> parent of 015e97d... still bugy
     m_basefunctions->move_wait(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
     m_basefunctions->move_wait(-9999,-9999,m_database->m_act_Z,m_database->m_act_W);
 }
 
 void CNC_automation::move_restposi()
 {
+<<<<<<< HEAD
     m_basefunctions->send_settings(50,-1,-1);
+=======
+    m_basefunctions->settings_wait(50,m_database->m_soll_temperatur,m_database->m_soll_filament);
+>>>>>>> parent of 015e97d... still bugy
     m_basefunctions->move_wait(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
     m_basefunctions->move_wait(9999,-9999,m_database->m_act_Z,m_database->m_act_W);
 }
@@ -224,6 +232,7 @@ void CNC_automation::G_Code_Parser()
         getValue("F",newLine,&m_F);
 >>>>>>> parent of 08a1822... functional fersion with bug
 
+<<<<<<< HEAD
     if(isCommand("G0",newLine))//fast move
     {
         m_F = m_F_max*60;
@@ -234,12 +243,81 @@ void CNC_automation::G_Code_Parser()
     if(isCommand("G1",newLine))//normal move
     {
         if(m_F>m_F_max*60)
+=======
+        if(isCommand("G0",newLine))//fast move
+        {
+            m_F = m_F_max;
+            m_basefunctions->settings_wait(m_F/60,m_S,-1);
+            m_basefunctions->move_wait(m_X,m_Y,m_Z,m_W);
+            m_validCommand = true;
+        }
+        if(isCommand("G1",newLine))//normal move
+        {
+            if(0.001<abs(m_F-m_F_old))
+            {
+                m_basefunctions->settings_wait(m_F/60,m_S,-1);
+            }
+            m_basefunctions->move_wait(m_X,m_Y,m_Z,m_W);
+            m_validCommand = true;
+        }
+        if(isCommand("G21",newLine))//use mm
+        {
+            emit Log("use mm");
+            m_database->FileLog("use mm");
+            m_validCommand = true;
+        }
+        if(isCommand("G28",newLine))//move home
+        {
+            move_home();
+            m_validCommand = true;
+        }
+        if(isCommand("G31",newLine))//move untile endswitch
+        {
+            //calib_size();
+            m_validCommand = true;
+        }
+        if(isCommand("G90",newLine))//absolute referenz
+        {
+            m_database->FileLog("find G90 (useless comand)");
+            m_validCommand = true;
+        }
+        if(isCommand("G91",newLine))//incrementel movement
+        {
+            m_database->FileLog("ERROR find G91 (useless comand)");
+            emit errorLog("use incrementel movement");
+            m_validCommand = true;
+        }
+        if(isCommand("G92",newLine))//set position
+        {
+            m_basefunctions->setPosition_wait(m_X,m_Y,m_Z,m_W);
+            m_validCommand = true;
+        }
+        if(isCommand("M104",newLine))//set temperatur
+        {
+            m_basefunctions->settings_wait(m_F/60,m_S,-1);
+            m_validCommand = true;
+        }
+        if(isCommand("M106",newLine))
+        {
+            m_database->FileLog("find M106 (useless comand)");
+            m_validCommand = true;
+        }
+        if(isCommand("M107",newLine))
+>>>>>>> parent of 015e97d... still bugy
         {
             m_F=m_F_max*60;
         }
         if(0.001>abs(m_F-m_F_old))
         {
+<<<<<<< HEAD
             m_basefunctions->send_settings(m_F/60,m_S,-1);
+=======
+            m_basefunctions->settings_wait(m_F/60,m_S,-1);
+            emit Log("Wait for Nozzel to heat");
+            m_basefunctions->wait_heat();
+            emit Log("Nozzel is heated");
+            m_validCommand = true;
+>>>>>>> parent of 015e97d... still bugy
         }
         m_basefunctions->move_wait(m_X,m_Y,m_Z,m_W);
         m_validCommand = true;

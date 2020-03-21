@@ -996,6 +996,7 @@
      <string>alive</string>
     </property>
    </widget>
+<<<<<<< HEAD
    <widget class="QWidget" name="gridLayoutWidget_6">
     <property name="geometry">
      <rect>
@@ -1022,6 +1023,8 @@
      </item>
     </layout>
    </widget>
+=======
+>>>>>>> parent of 015e97d... still bugy
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">

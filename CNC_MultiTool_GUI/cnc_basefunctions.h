@@ -14,12 +14,22 @@ class cnc_basefunctions: public QObject
 public:
     cnc_basefunctions(cnc_data *database = nullptr);
     void test();
+
+private:
+    cnc_data *m_database;
     QEventLoop m_loop;
+<<<<<<< HEAD
     void serial_send(char command,float value1,float value2,float value3,float value4);
 
 private:
     cnc_data *m_database;
     void send_ConfirmAnswer();
+=======
+    QEventLoop m_heat_loop;
+    QEventLoop m_setPos_loop;
+    QEventLoop m_setting_loop;
+    bool m_atPose;
+>>>>>>> parent of 015e97d... still bugy
 
 signals:
     void Log(const QString &s);

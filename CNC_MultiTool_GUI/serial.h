@@ -21,6 +21,7 @@ public:
     //void send(char command,float value1,float value2,float value3,float value4);
 
 private:
+<<<<<<< HEAD
     QSerialPort MySerial;
     cnc_data *m_database;
     QMutex m_mutex;
@@ -31,11 +32,30 @@ private:
     QTimer *timer = new QTimer(this);
     QTimer *send_timeout = new QTimer(this);
     QTimer *setting_timer = new QTimer(this);
+=======
+    cnc_data *m_database;
+    void run() override;
+    QSerialPort *m_serial;
+    QString m_portName;
+    bool m_quit;
+    QMutex m_mutex;
+    QWaitCondition m_cond;
+    tTelegram m_recive_telegram;
+    tTelegram m_send_telegram;
+
+    QEventLoop m_wait_send_loop;
+    QByteArray m_SendData;
+    bool m_dataReadyToSend;
+>>>>>>> parent of 015e97d... still bugy
 
 signals:
     void Log(const QString &s);
     void errorLog(const QString &s);
     void recived(char command,float value1,float value2,float value3,float value4);
+<<<<<<< HEAD
+=======
+    void show_serial(bool isOpen);
+>>>>>>> parent of 015e97d... still bugy
 
 public slots:
     //void send(char command,float value1,float value2,float value3,float value4);

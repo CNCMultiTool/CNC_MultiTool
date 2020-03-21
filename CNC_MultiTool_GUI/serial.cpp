@@ -14,9 +14,17 @@ Serial::Serial(cnc_data *database)
 
 Serial::~Serial()
 {
+<<<<<<< HEAD
     m_database->m_Serial_quit = true;
     timer->stop();
     MySerial.close();
+=======
+    m_mutex.lock();
+    m_quit = true;
+    m_cond.wakeOne();
+    m_mutex.unlock();
+    wait();
+>>>>>>> parent of 015e97d... still bugy
 }
 
 void Serial::serial_start()
@@ -40,6 +48,7 @@ void Serial::serial_start()
     send('i',0,0,0,0);
 }
 
+<<<<<<< HEAD
 void Serial::serial_close()
 {
     emit Log("serial_close");
@@ -49,6 +58,14 @@ void Serial::serial_close()
     setting_timer->stop();
     send_timeout->stop();
     MySerial.close();
+=======
+    m_quit = false;
+
+    if (!isRunning())
+        start();
+    else
+        m_cond.wakeOne();
+>>>>>>> parent of 015e97d... still bugy
 }
 
 void Serial::error_handler()
@@ -140,6 +157,7 @@ void Serial::request_settings()
     send('r',0,0,0,0);
 }
 
+<<<<<<< HEAD
 void Serial::recive()
 {
     try {
@@ -168,6 +186,46 @@ void Serial::recive()
             MySerial.waitForBytesWritten(10);
             m_serial_mutex.unlock();
             if(char(sendByte[1]) != 'a')
+=======
+    emit show_serial(true);
+    m_dataReadyToSend = false;
+    //emit Log("serial open");
+    send('i',0,0,0,0);
+    m_database->FileLog("INFO recquest settings");
+    while(!m_quit)
+    {
+        //send data if some available
+        m_mutex.lock();
+        if(m_dataReadyToSend == true)
+        {
+            //m_database->FileLog("DEBUG start sending");
+            serial.write(m_SendData);
+            if(!serial.waitForBytesWritten())
+            {
+                emit Log("timeout durring sending");
+                m_database->FileLog("ERROR timeout durring sending");
+            }
+            m_dataReadyToSend = false;
+            //m_wait_send_loop.exit();
+            //m_database->FileLog("DEBUG finish sending");
+        }
+        m_mutex.unlock();
+
+        //read byts from serial
+        m_mutex.lock();
+        //m_database->FileLog("DEBUG start reciving");
+        while(serial.waitForReadyRead(10))
+        {
+            responseData += serial.readAll();
+        }
+        //m_database->FileLog("DEBUG end reciving");
+        m_mutex.unlock();
+
+        //check if Start codon is present
+        for(int i = 0;i<responseData.size();i++)
+        {
+            if(responseData[i]== 'S')
+>>>>>>> parent of 015e97d... still bugy
             {
                 send_timeout->start(100);
             }
@@ -177,9 +235,15 @@ void Serial::recive()
         m_serial_mutex.lock();
         if(!MySerial.isOpen())
         {
+<<<<<<< HEAD
             emit Log("open in read");
             m_database->FileLog("ERROR open in read");
             error_handler();
+=======
+            responseData.remove(0,StartIndex);
+            emit errorLog("delete "+QString::number(StartIndex));
+            m_database->FileLog("ERROR delete "+QString::number(StartIndex));
+>>>>>>> parent of 015e97d... still bugy
         }
         responseData += MySerial.readAll();
         MySerial.waitForReadyRead(10);
@@ -188,19 +252,23 @@ void Serial::recive()
         //a complite telegram was recived and now get processd
         if(responseData.size()>=TelegramSize)
         {
+<<<<<<< HEAD
             if(send_timeout->isActive())
             {
                 send_timeout->stop();
             }
+=======
+            //m_database->FileLog("DEBUG enter processing telegram");
+>>>>>>> parent of 015e97d... still bugy
             //put bytes needet form (chars and floats)
             command = char(responseData[1]);
             for(int i=0;i<16;i++)
             {
                 recive_telegram.Bytes[i] = responseData[i+2];
             }
-
-            //check the checksumm
             checkSumm = responseData[18];
+            //m_database->FileLog("DEBUG checksumm check");
+            //check the checksumm
             newCheckSumm = 0;
             for(int i=0;i<TelegramSize-1;i++)
             {
@@ -232,6 +300,7 @@ void Serial::recive()
             else
             {
                 emit recived(command,recive_telegram.Value[0],recive_telegram.Value[1],recive_telegram.Value[2],recive_telegram.Value[3]);
+<<<<<<< HEAD
             }
 
             responseData.remove(0,TelegramSize);
@@ -239,6 +308,13 @@ void Serial::recive()
     } catch (...) {
         emit errorLog("recive() throw an error");
         m_database->FileLog("ERROR recive() throw an error");
+=======
+                m_database->FileLog("INFO recived:"+QString(command)+" A:"+QString::number(recive_telegram.Value[0])+" B:"+QString::number(recive_telegram.Value[1])+" C:"+QString::number(recive_telegram.Value[2])+" D:"+QString::number(recive_telegram.Value[3]));
+            }
+            //m_database->FileLog("DEBUG end Telegramm process");
+            responseData.remove(0,TelegramSize);
+        }
+>>>>>>> parent of 015e97d... still bugy
     }
 }
 
@@ -262,6 +338,7 @@ void Serial::send(char command,float value1,float value2,float value3,float valu
         newCheckSumm += sendData[i];
     }
     sendData += newCheckSumm;
+<<<<<<< HEAD
     m_mutex.lock();
     m_SendData.push_back(sendData);
     m_mutex.unlock();
@@ -274,4 +351,11 @@ void Serial::send(char command,float value1,float value2,float value3,float valu
     LogText += QString::number(sendData[18]);
     //emit Log("INFO send:"+LogText);
     m_database->FileLog("INFO send:"+LogText);
+=======
+    m_database->FileLog("INFO send:"+QString(command)+" A:"+QString::number(value1)+" B:"+QString::number(value2)+" C:"+QString::number(value3)+" D:"+QString::number(value4));
+    m_mutex.lock();
+    m_SendData = sendData;
+    m_dataReadyToSend = true;
+    m_mutex.unlock();
+>>>>>>> parent of 015e97d... still bugy
 }

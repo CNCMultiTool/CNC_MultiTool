@@ -139,6 +139,7 @@ void MainWindow::show_endswitch(float X, float Y, float Z)
     endswitchButtonColor(Z,ui->pushButtonMoveZPos,ui->pushButtonMoveZNeg);
 }
 
+<<<<<<< HEAD
 void MainWindow::show_status()
 {
     if(m_database->m_HWisMoving)
@@ -159,6 +160,8 @@ void MainWindow::show_status()
     }
 }
 
+=======
+>>>>>>> parent of 015e97d... still bugy
 //paints the movebuttons red or green depending of the endswitches
 void MainWindow::endswitchButtonColor(float value,QPushButton *PosButton,QPushButton *NegButton)
 {

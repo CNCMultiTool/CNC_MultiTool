@@ -44,7 +44,7 @@ cnc_data::cnc_data()
     m_LogFile = new QFile;
     m_LogFile->setFileName(m_LogFileName);
 
-    const QMutexLocker file_locker(&m_file_mutex);
+    const QMutexLocker locker(&m_mutex);
 }
 
 cnc_data::~cnc_data()
@@ -54,7 +54,7 @@ cnc_data::~cnc_data()
 
 void cnc_data::FileLog(QString value)
 {
-    m_file_mutex.lock();
+    m_mutex.lock();
     m_LogFile->open(QIODevice::Append | QIODevice::Text);
     value = QDateTime::currentDateTime().toString("dd.MM.yyyy hh:mm:ss.ms ") + value +"\n";
     QTextStream out(m_LogFile);
@@ -63,7 +63,7 @@ void cnc_data::FileLog(QString value)
       out << value;
     }
     m_LogFile->close();
-    m_file_mutex.unlock();
+    m_mutex.unlock();
 }
 
 void cnc_data::test()
