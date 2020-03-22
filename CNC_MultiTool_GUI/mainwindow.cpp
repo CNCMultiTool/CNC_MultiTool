@@ -71,7 +71,8 @@ void MainWindow::Log(const QString &s)
 void MainWindow::test()
 {
     ui->textEditLog->append("trigger sending manuel");
-    m_serial->serial_send_command();
+    //m_serial->serial_send_command();
+    m_basefunctions->trigger_next_command();
 }
 
 void MainWindow::errorLog(const QString &s)

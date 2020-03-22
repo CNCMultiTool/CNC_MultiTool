@@ -24,29 +24,32 @@ void CNC_automation::move_home()
     m_basefunctions->settings_inQ(50,-1,35);
     m_basefunctions->move_inQ(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
     m_basefunctions->move_inQ(-9999,-9999,9999,m_database->m_act_W);
-    m_basefunctions->setPosition_inQ(0,0,0,0);
-    emit trigger_send();
+    m_basefunctions->setPosition_inQ(0,0,m_database->m_Zmax_nozzel,0);
+    m_basefunctions->trigger_next_command();
 }
 
 void CNC_automation::move_restposi()
 {
-    return;
-    //m_basefunctions->send_settings(50,-1,-1);
-    //m_basefunctions->move_wait(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
-    //m_basefunctions->move_wait(9999,-9999,m_database->m_act_Z,m_database->m_act_W);
+    m_basefunctions->settings_inQ(50,-1,35);
+    m_basefunctions->move_inQ(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
+    m_basefunctions->move_inQ(9999,-9999,9999,m_database->m_act_W);
+    m_basefunctions->setPosition_inQ(0,0,m_database->m_Zmax_nozzel,0);
+    m_basefunctions->trigger_next_command();
 }
 
 void CNC_automation::calib_size()
 {
     emit Log("calib size (do not use manuel move)");
-    move_home();
-    m_basefunctions->send_setPosition(0,0,0,0);
-    m_basefunctions->move_inQ(9999,9999,0,0);
-    m_database->m_size_X = m_database->m_act_X;
-    m_database->m_size_Y = m_database->m_act_Y;
-    emit Log("result of Size calib is: X="+QString::number(m_database->m_size_X)+" Y="+QString::number(m_database->m_size_Y));
-    move_home();
-    emit Log("error of Size calib is: X="+QString::number(m_database->m_act_X)+" Y="+QString::number(m_database->m_act_Y));
+    m_basefunctions->settings_inQ(50,-1,35);
+    m_basefunctions->move_inQ(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
+    m_basefunctions->move_inQ(-9999,-9999,9999,m_database->m_act_W);
+
+    m_basefunctions->setPosition_inQ(0,0,m_database->m_Zmax_nozzel,0);
+    m_basefunctions->move_inQ(9999,9999,9999,0);
+    m_basefunctions->calib_size_safe();
+    m_basefunctions->move_inQ(-9999,-9999,9999,m_database->m_act_W);
+    m_basefunctions->calib_size_results();
+    m_basefunctions->trigger_next_command();
 }
 
 void CNC_automation::repeat_test()

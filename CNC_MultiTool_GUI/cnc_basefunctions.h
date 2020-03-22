@@ -14,11 +14,15 @@ class cnc_basefunctions: public QObject
 public:
     cnc_basefunctions(cnc_data *database = nullptr);
     void test();
+    void calib_size_safe();
+    void calib_size_results();
+    void trigger_next_command();
 
 private:
     void send_to_cnc(char commmand,float v1,float v2,float v3,float v4,int action);
     cnc_data *m_database;
     void execute_command(char command,float value1,float value2,float value3,float value4);
+    bool HW_is_working;
 
 
 signals:

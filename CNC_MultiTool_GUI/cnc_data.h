@@ -34,8 +34,6 @@ public:
 
     void FileLog(QString value);
 
-
-
     bool m_HWisHeating;
     bool m_HWisAtHeat;
     bool m_HWisMoving;

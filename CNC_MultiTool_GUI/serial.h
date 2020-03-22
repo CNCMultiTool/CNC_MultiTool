@@ -32,6 +32,7 @@ private:
     QByteArray m_recivedBytes;
     QByteArray m_sendBytes;
 
+
     int m_TelegramLength = 19;
 
     int serial_CheckTelegram();
