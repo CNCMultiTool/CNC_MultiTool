@@ -89,7 +89,7 @@ public:
     void set_HWisHeating(bool status);
     void set_HWisMoving(bool status);
     
-    void append_command(cnc_command new_command);
+    void append_recive_command(cnc_command new_command);
 
     bool m_SerialIsOpen;
     QString m_SerialPortName;
@@ -111,6 +111,7 @@ signals:
     void show_serial(bool isOpen);
     void show_status();
     void recive_command();
+
 
 //private slots:
 

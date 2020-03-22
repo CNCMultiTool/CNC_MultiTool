@@ -36,6 +36,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_basefunctions,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_basefunctions,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
     connect(m_basefunctions,SIGNAL(trigger_send()),m_serial,SLOT(serial_send_command()));
+    connect(m_basefunctions,SIGNAL(show_send_queue()),this,SLOT(show_send_queue()));
 
     connect(m_database,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_database,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
@@ -48,6 +49,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(m_serial,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_serial,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
+    connect(m_serial,SIGNAL(show_send_queue()),this,SLOT(show_send_queue()));
 
     connect(m_automation,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_automation,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
@@ -68,12 +70,25 @@ void MainWindow::Log(const QString &s)
 
 void MainWindow::test()
 {
-    ui->textEditLog->append("test");
+    ui->textEditLog->append("trigger sending manuel");
+    m_serial->serial_send_command();
 }
 
 void MainWindow::errorLog(const QString &s)
 {
     ui->textEditLog_error->append(s);
+}
+
+
+void MainWindow::show_send_queue()
+{
+    if(m_database->cnc_send_commands.size()==0)
+    {
+        ui->label_heating->setStyleSheet("background-color: red");
+    }else{
+        ui->label_heating->setStyleSheet("background-color: green");
+    }
+    ui->label_heating->setText("Send_Queue_count: "+QString::number(m_database->cnc_send_commands.size()));
 }
 
 void MainWindow::show_position()
@@ -347,7 +362,8 @@ void MainWindow::on_pushButton_AboardGCode_pressed()
 
 void MainWindow::on_pushButton_test_pressed()
 {
-    m_database->test();
+    //m_database->test();
+    test();
 }
 
 void MainWindow::on_pushButton_rest_pressed()

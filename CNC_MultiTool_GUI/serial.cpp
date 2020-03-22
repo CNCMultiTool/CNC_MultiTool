@@ -102,42 +102,45 @@ int Serial::serial_CheckTelegram()
  */
 void Serial::serial_read_command()
 {
-    char command = ' ';
-    unsigned char checkSumm = 0;
-
-    m_recivedBytes += m_serial.readAll();
-    m_serial.waitForReadyRead(10);
-
-    if(serial_CheckTelegram()<0)
-        return;
-
-    command = char(m_recivedBytes[1]);
-    for(int i=0;i<m_TelegramLength-2;i++)
+    while(true)
     {
-        m_recive_telegram.Bytes[i] = m_recivedBytes[i+2];
+        char command = ' ';
+        unsigned char checkSumm = 0;
+
+        m_recivedBytes += m_serial.readAll();
+        m_serial.waitForReadyRead(50);
+
+        if(serial_CheckTelegram()<0)
+            return;
+
+        command = char(m_recivedBytes[1]);
+        for(int i=0;i<m_TelegramLength-2;i++)
+        {
+            m_recive_telegram.Bytes[i] = m_recivedBytes[i+2];
+        }
+        checkSumm = m_recivedBytes[m_TelegramLength-1];
+
+        QString LogText = QString(char(m_recivedBytes[0]))+" ";
+        LogText += QString(command)+" ";
+        LogText += QString::number(m_recive_telegram.Value[0])+" ";
+        LogText += QString::number(m_recive_telegram.Value[1])+" ";
+        LogText += QString::number(m_recive_telegram.Value[2])+" ";
+        LogText += QString::number(m_recive_telegram.Value[3])+" ";
+        LogText += QString::number(checkSumm);
+        m_database->FileLog("INFO recive:"+LogText);
+        emit Log("INFO recive:"+LogText);
+
+        //empfangene daten in cnc_command verpacken und an empfangs queue packen
+        cnc_command new_command;
+        new_command.command = command;
+        new_command.value1 = m_recive_telegram.Value[0];
+        new_command.value2 = m_recive_telegram.Value[1];
+        new_command.value3 = m_recive_telegram.Value[2];
+        new_command.value4 = m_recive_telegram.Value[3];
+        m_database->append_recive_command(new_command);
+        //entvernen des gelesenene telegramms
+        m_recivedBytes.remove(0,m_TelegramLength);
     }
-    checkSumm = m_recivedBytes[m_TelegramLength-1];
-
-    QString LogText = QString(char(m_recivedBytes[0]))+" ";
-    LogText += QString(command)+" ";
-    LogText += QString::number(m_recive_telegram.Value[0])+" ";
-    LogText += QString::number(m_recive_telegram.Value[1])+" ";
-    LogText += QString::number(m_recive_telegram.Value[2])+" ";
-    LogText += QString::number(m_recive_telegram.Value[3])+" ";
-    LogText += QString::number(checkSumm);
-    m_database->FileLog("INFO recive:"+LogText);
-    emit Log("INFO recive:"+LogText);
-
-    //empfangene daten in cnc_command verpacken und an empfangs queue packen
-    cnc_command new_command;
-    new_command.command = command;
-    new_command.value1 = m_recive_telegram.Value[0];
-    new_command.value2 = m_recive_telegram.Value[1];
-    new_command.value3 = m_recive_telegram.Value[2];
-    new_command.value4 = m_recive_telegram.Value[3];
-    m_database->append_command(new_command);
-    //entvernen des gelesenene telegramms
-    m_recivedBytes.remove(0,m_TelegramLength);
 }
 
 /**
@@ -158,14 +161,19 @@ int Serial::serial_send_ifValid()
  */
 void Serial::serial_send_command()
 {
-    if(serial_send_ifValid()>0){
+    if(!(m_database->cnc_send_commands.length()>0)){
         emit errorLog("serial send: no command to send");
         return;
     }
+    //if(serial_send_ifValid()>0){
+    //    emit errorLog("serial send: no command to send");
+    //    return;
+    //}
 
     // read command and values to send
     cnc_command new_command = m_database->cnc_send_commands[0];
     m_database->cnc_send_commands.pop_front();
+    emit show_send_queue();
 
     unsigned char newCheckSumm = 0;
     m_sendBytes = QString("S").toUtf8();
@@ -184,7 +192,7 @@ void Serial::serial_send_command()
     m_sendBytes += newCheckSumm;
 
     m_serial.write(m_sendBytes);
-    m_serial.waitForBytesWritten(10);
+    m_serial.waitForBytesWritten(50);
 
     QString LogText = QString(char(m_sendBytes[0]))+" ";
     LogText += QString(char(m_sendBytes[1]))+" ";

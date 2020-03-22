@@ -25,15 +25,19 @@ signals:
     void Log(const QString &s);
     void errorLog(const QString &s);
     void trigger_send();
+    void show_send_queue();
 
 public slots:
     void send_init();
-    void move_wait(float X,float Y,float Z,float W);
+
     void send_move(float X,float Y,float Z,float W);
     void send_settings(float speed,float temperatur,float filament);
     void send_stop();
     void send_getPosition();
     void send_setPosition(float X,float Y,float Z,float W);
+    void setPosition_inQ(float X,float Y,float Z,float W);
+    void move_inQ(float X,float Y,float Z,float W);
+    void settings_inQ(float speed,float temperatur,float filament);
     void process_command();
 };
 

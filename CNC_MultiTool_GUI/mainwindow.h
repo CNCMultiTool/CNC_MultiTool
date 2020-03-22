@@ -48,6 +48,7 @@ private:
     void Z_calib();
     void show_status();
 
+
     bool m_alive;
 
 signals:
@@ -63,6 +64,7 @@ private slots:
     void show_settings();
     void show_endswitch(float X,float Y,float Z);
     void show_serial(bool isOpen);
+    void show_send_queue();
 
     void sendStopMoving();
 

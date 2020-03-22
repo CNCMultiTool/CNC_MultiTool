@@ -21,16 +21,10 @@ CNC_automation::~CNC_automation()
 
 void CNC_automation::move_home()
 {
-    m_basefunctions->send_settings(50,-1,35);
-    //fill Queue
-    //m_basefunctions->move_wait(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
-    //m_basefunctions->move_wait(-9999,-9999,m_database->m_act_Z,m_database->m_act_W);
-    m_basefunctions->move_wait(10,0,0,0);
-    m_basefunctions->move_wait(10,10,0,0);
-    m_basefunctions->move_wait(10,10,10,0);
-    m_basefunctions->move_wait(0,10,10,0);
-    m_basefunctions->move_wait(0,0,10,0);
-    m_basefunctions->move_wait(0,0,0,0);
+    m_basefunctions->settings_inQ(50,-1,35);
+    m_basefunctions->move_inQ(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
+    m_basefunctions->move_inQ(-9999,-9999,9999,m_database->m_act_W);
+    m_basefunctions->setPosition_inQ(0,0,0,0);
     emit trigger_send();
 }
 
@@ -47,7 +41,7 @@ void CNC_automation::calib_size()
     emit Log("calib size (do not use manuel move)");
     move_home();
     m_basefunctions->send_setPosition(0,0,0,0);
-    m_basefunctions->move_wait(9999,9999,0,0);
+    m_basefunctions->move_inQ(9999,9999,0,0);
     m_database->m_size_X = m_database->m_act_X;
     m_database->m_size_Y = m_database->m_act_Y;
     emit Log("result of Size calib is: X="+QString::number(m_database->m_size_X)+" Y="+QString::number(m_database->m_size_Y));
@@ -66,12 +60,12 @@ void CNC_automation::repeat_movement(float speed,float dist,int repeat)
 {
     emit Log("settings speed: "+QString::number(speed)+"  trafel distans: "+QString::number(dist)+"  repeat`s: "+QString::number(repeat));
     move_home();
-    m_basefunctions->send_setPosition(0,0,0,0);
-    m_basefunctions->send_settings(speed,-1,-1);
+    //m_basefunctions->send_setPosition(0,0,0,0);
+    //m_basefunctions->send_settings(speed,-1,-1);
     for(int i=0;i<repeat;i++)
     {
-        m_basefunctions->move_wait(10,10,-10,0);
-        m_basefunctions->move_wait(10+dist,10+dist,-1*(10+dist),0);
+        //m_basefunctions->move_wait(10,10,-10,0);
+        //m_basefunctions->move_wait(10+dist,10+dist,-1*(10+dist),0);
     }
     move_home();
     emit Log("result Xerror: "+QString::number(m_database->m_act_X)+"  Yerror: "+QString::number(m_database->m_act_Y)+"  Zerror: "+QString::number(m_database->m_act_Z));
@@ -82,10 +76,10 @@ void CNC_automation::Z_calib()
     emit Log("Z angel calib (do not use manuel move)");
     move_home();
     //messure origion Z
-    m_basefunctions->move_wait(m_database->m_act_X,m_database->m_act_Y,-999,0);//move in home to z = 0
+    //m_basefunctions->move_wait(m_database->m_act_X,m_database->m_act_Y,-999,0);//move in home to z = 0
     m_basefunctions->send_setPosition(0,0,0,0);// set origon
     m_basefunctions->send_settings(20,-1,-1);//slower test speed
-    m_basefunctions->move_wait(m_database->m_act_X,m_database->m_act_Y,10,0);//lift TCP
+    //m_basefunctions->move_wait(m_database->m_act_X,m_database->m_act_Y,10,0);//lift TCP
     m_database->m_error_X_max_Y_null = probe_Z(m_database->m_size_X,0);
     m_database->m_error_X_max_Y_max = probe_Z(m_database->m_size_X,m_database->m_size_Y);
     m_database->m_error_X_null_Y_max = probe_Z(0,m_database->m_size_Y);
@@ -97,12 +91,12 @@ void CNC_automation::Z_calib()
 float CNC_automation::probe_Z(float X,float Y)
 {
     m_basefunctions->send_settings(50,-1,-1);//fast traffel speed
-    m_basefunctions->move_wait(X,Y,10,0);//move to test point
+    //m_basefunctions->move_wait(X,Y,10,0);//move to test point
     m_basefunctions->send_settings(20,-1,-1);//slower test speed
-    m_basefunctions->move_wait(X,Y,-999,0);//lower TCP
+    //m_basefunctions->move_wait(X,Y,-999,0);//lower TCP
     float Zerror = m_database->m_act_Z;
     emit Log("Zerror: "+QString::number(m_database->m_act_Z)+" at X:"+QString::number(m_database->m_act_X)+" Y:"+QString::number(m_database->m_act_Y));
-    m_basefunctions->move_wait(X,Y,10,0);//lift TCP
+    //m_basefunctions->move_wait(X,Y,10,0);//lift TCP
     return Zerror;
 }
 
@@ -142,7 +136,7 @@ void CNC_automation::G_Code_Pause()
     if(m_pause)
     {
         m_pause = false;
-        m_basefunctions->move_wait(m_X,m_Y,m_Z,m_W);
+        //m_basefunctions->move_wait(m_X,m_Y,m_Z,m_W);
         if(!timer->isActive())
             timer->start();
     }
@@ -233,7 +227,7 @@ void CNC_automation::G_Code_Parser()
     {
         m_F = m_F_max*60;
         m_basefunctions->send_settings(m_F/60,m_S,-1);
-        m_basefunctions->move_wait(m_X,m_Y,m_Z,m_W);
+        //m_basefunctions->move_wait(m_X,m_Y,m_Z,m_W);
         m_validCommand = true;
     }
     if(isCommand("G1",newLine))//normal move
@@ -242,7 +236,7 @@ void CNC_automation::G_Code_Parser()
         if(isCommand("G0",newLine))//fast move
         {
             m_F = m_F_max;
-            m_basefunctions->move_wait(m_X,m_Y,m_Z,m_W);
+            //m_basefunctions->move_wait(m_X,m_Y,m_Z,m_W);
             m_validCommand = true;
         }
         if(isCommand("G1",newLine))//normal move
@@ -251,7 +245,7 @@ void CNC_automation::G_Code_Parser()
             {
                 //m_basefunctions->settings_wait(m_F/60,m_S,-1);
             }
-            m_basefunctions->move_wait(m_X,m_Y,m_Z,m_W);
+            //m_basefunctions->move_wait(m_X,m_Y,m_Z,m_W);
             m_validCommand = true;
         }
         if(isCommand("G21",newLine))//use mm
@@ -307,7 +301,7 @@ void CNC_automation::G_Code_Parser()
             emit Log("Nozzel is heated");
             m_validCommand = true;
         }
-        m_basefunctions->move_wait(m_X,m_Y,m_Z,m_W);
+        //m_basefunctions->move_wait(m_X,m_Y,m_Z,m_W);
         m_validCommand = true;
     }
     if(isCommand("G21",newLine))//use mm

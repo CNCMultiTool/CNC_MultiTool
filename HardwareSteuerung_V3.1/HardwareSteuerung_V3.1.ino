@@ -214,15 +214,6 @@ void setup() {
 
 void loop() {
   time_now = micros();
-  if(time_now<old_time_now){
-    digitalWrite(28,HIGH);
-  }
-//  if(digitalRead(23)==HIGH){
-//    digitalWrite(22,LOW);
-//    digitalWrite(24,LOW);
-//    digitalWrite(26,LOW);
-//    digitalWrite(28,LOW);
-//  }
 
   if(msg_available){
     recive_msg();
@@ -244,28 +235,21 @@ void loop() {
           if(sendPose == false){
             sendconfirmpos();
             sendPose = true;
+            digitalWrite(24,!digitalRead(24));
           }
         }
       }
     }
   }
 
-  //timeout
-  //if(cycle_time < time_now && wait_for_response)
-  //{
-   // wait_for_response = false;
-   // serieltimeouthandler();
-   // digitalWrite(22,HIGH);
-  //}
   if(cycle_time < time_now)
   {
     cycle_time = time_now + 1000000;
     digitalWrite(22,!digitalRead(22));
-    //sendsetting();
   }
-  old_time_now = time_now;
 }
 
+//check if one endswitch had changed
 float checkEndswitches(){
   float newXSwitchID = checkEndswitch(Xachse);
   float newYSwitchID = checkEndswitch(Yachse);
@@ -278,6 +262,7 @@ float checkEndswitches(){
     sendactposition();
   }
 }
+
 float checkEndswitch(struct StepMotorBig &StepM){
   float switchID;
   if(digitalRead(StepM.pinNull)==HIGH&& StepM.soll_step <= StepM.act_step){
@@ -329,11 +314,8 @@ void recive_msg(){
       sendconfirmpos();
       sendendswitch();
       break;
-    case 'm'://move
-      //if(sendPose == false){
-      //  send_debug(1,0,0,0);
-      //}
-      digitalWrite(28,!digitalRead(28));
+    case 'm'://move to
+      digitalWrite(26,!digitalRead(26));
       Xachse.soll_posi = Buf.tel.value[0];
       Yachse.soll_posi = Buf.tel.value[1];
       Zachse.soll_posi = Buf.tel.value[2];
@@ -348,45 +330,24 @@ void recive_msg(){
       Zachse.act_posi = Buf.tel.value[2];
       Wachse.act_posi = Buf.tel.value[3];
       setPose();
-      sendactposition();
+      sendconfirmpos();
       break;
     case 't'://send pose
       sendactposition();
       break;
-    case 's': //set speed
+    case 's': //set speed temperatur and filament
       Speed = Buf.tel.value[0];
       soll_T = Buf.tel.value[1];
       Wachse.steps_pmm = Buf.tel.value[2];
       sendsetting();
       break;
-    case 'r'://send setting (request settings)
-      sendsetting();
-      if(alavie)
-      {
-        alavie = false;
-        //digitalWrite(28,LOW);
-      }
-      else
-      {
-        alavie = true;
-        //digitalWrite(28,HIGH);
-      }
-      break;
     case 'b'://send stop
       act_equal_soll();
-      sendconfirmpos();
-      break;
-    case 'N'://repetrquest error detection
-      Serial.write(lastSend,19);
-      //digitalWrite(28,HIGH);
-      //stop_responstimer();
-      break;
-    case 'a'://repetrquest error detection
-      //stop_responstimer();
+      sendPose = true;
+      sendactposition();
       break;
     default:
-      //digitalWrite(24,HIGH);
-      //stop_responstimer();
+      digitalWrite(22,HIGH);
       break;
   }
 }
@@ -653,7 +614,6 @@ void serialEvent(){
     //digitalWrite(22,HIGH);
   }else{
     msg_available = true;
-    //digitalWrite(24,HIGH);
   }
 }
 void send_tel(){
