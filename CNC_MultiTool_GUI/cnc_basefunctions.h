@@ -16,6 +16,7 @@ public:
     void test();
     void calib_size_safe();
     void calib_size_results();
+    void repeattest_results();
     void trigger_next_command();
 
 private:

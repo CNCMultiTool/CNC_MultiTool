@@ -61,7 +61,7 @@ int Serial::serial_CheckTelegram()
 {
     //check if telegram is long enought
     if(m_recivedBytes.size()<m_TelegramLength){
-        emit errorLog("serial: not enough bytes");
+        //emit errorLog("serial: not enough bytes");
         return -1;
     }
     //check if start index is presend
@@ -102,8 +102,9 @@ int Serial::serial_CheckTelegram()
  */
 void Serial::serial_read_command()
 {
-    while(true)
+    for(int i = 0;i<10;i++)
     {
+        //emit Log("in recive loop");
         char command = ' ';
         unsigned char checkSumm = 0;
 
@@ -141,6 +142,7 @@ void Serial::serial_read_command()
         //entvernen des gelesenene telegramms
         m_recivedBytes.remove(0,m_TelegramLength);
     }
+    emit Log("exit recive loop");
 }
 
 /**

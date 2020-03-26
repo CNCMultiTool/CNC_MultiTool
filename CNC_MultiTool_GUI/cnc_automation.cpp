@@ -22,10 +22,18 @@ CNC_automation::~CNC_automation()
 void CNC_automation::move_home()
 {
     m_basefunctions->settings_inQ(50,-1,35);
-    m_basefunctions->move_inQ(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
-    m_basefunctions->move_inQ(-9999,-9999,9999,m_database->m_act_W);
+    //m_basefunctions->move_inQ(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
+    //m_basefunctions->move_inQ(-9999,-9999,9999,m_database->m_act_W);
+    move_home_inQ();
     m_basefunctions->setPosition_inQ(0,0,m_database->m_Zmax_nozzel,0);
     m_basefunctions->trigger_next_command();
+}
+
+void CNC_automation::move_home_inQ()
+{
+    m_basefunctions->move_inQ(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
+    m_basefunctions->move_inQ(-9999,-9999,9999,m_database->m_act_W);
+
 }
 
 void CNC_automation::move_restposi()
@@ -43,11 +51,10 @@ void CNC_automation::calib_size()
     m_basefunctions->settings_inQ(50,-1,35);
     m_basefunctions->move_inQ(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
     m_basefunctions->move_inQ(-9999,-9999,9999,m_database->m_act_W);
-
-    m_basefunctions->setPosition_inQ(0,0,m_database->m_Zmax_nozzel,0);
-    m_basefunctions->move_inQ(9999,9999,9999,0);
+    m_basefunctions->setPosition_inQ(0,0,m_database->m_Zmax_nozzel,m_database->m_act_W);
+    m_basefunctions->move_inQ(9999,9999,m_database->m_Zmax_nozzel,m_database->m_act_W);
     m_basefunctions->calib_size_safe();
-    m_basefunctions->move_inQ(-9999,-9999,9999,m_database->m_act_W);
+    m_basefunctions->move_inQ(-9999,-9999,m_database->m_Zmax_nozzel,m_database->m_act_W);
     m_basefunctions->calib_size_results();
     m_basefunctions->trigger_next_command();
 }
@@ -55,23 +62,26 @@ void CNC_automation::calib_size()
 void CNC_automation::repeat_test()
 {
     emit Log("repeat test (do not use manuel move)");
-    move_home();
-    repeat_movement(50,1,10);
-}
-
-void CNC_automation::repeat_movement(float speed,float dist,int repeat)
-{
-    emit Log("settings speed: "+QString::number(speed)+"  trafel distans: "+QString::number(dist)+"  repeat`s: "+QString::number(repeat));
-    move_home();
-    //m_basefunctions->send_setPosition(0,0,0,0);
-    //m_basefunctions->send_settings(speed,-1,-1);
-    for(int i=0;i<repeat;i++)
+    m_basefunctions->settings_inQ(50,-1,35);
+    m_basefunctions->move_inQ(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
+    m_basefunctions->move_inQ(-9999,-9999,9999,m_database->m_act_W);
+    m_basefunctions->setPosition_inQ(0,0,0,m_database->m_act_W);
+    m_basefunctions->settings_inQ(30,-1,35);
+    m_basefunctions->move_inQ(10,10,-10,m_database->m_act_W);
+    for(int i = 0;i<2;i++)
     {
-        //m_basefunctions->move_wait(10,10,-10,0);
-        //m_basefunctions->move_wait(10+dist,10+dist,-1*(10+dist),0);
+        m_basefunctions->move_inQ(20,20,-20,m_database->m_act_W);
+        m_basefunctions->move_inQ(10,10,-10,m_database->m_act_W);
     }
-    move_home();
-    emit Log("result Xerror: "+QString::number(m_database->m_act_X)+"  Yerror: "+QString::number(m_database->m_act_Y)+"  Zerror: "+QString::number(m_database->m_act_Z));
+    m_basefunctions->settings_inQ(50,-1,35);
+    for(int i = 0;i<2;i++)
+    {
+        m_basefunctions->move_inQ(30,30,-30,m_database->m_act_W);
+        m_basefunctions->move_inQ(10,10,-10,m_database->m_act_W);
+    }
+    m_basefunctions->move_inQ(-9999,-9999,9999,m_database->m_act_W);
+    m_basefunctions->repeattest_results();
+    m_basefunctions->trigger_next_command();
 }
 
 void CNC_automation::Z_calib()

@@ -31,6 +31,11 @@ void cnc_basefunctions::calib_size_results()
     send_to_cnc(' ',0,0,0,0,5);
 }
 
+void cnc_basefunctions::repeattest_results()
+{
+    send_to_cnc(' ',0,0,0,0,6);
+}
+
 void cnc_basefunctions::send_settings(float speed,float temperatur,float filament)
 {
     float s = speed;
@@ -108,13 +113,13 @@ void cnc_basefunctions::send_to_cnc(char command,float v1,float v2,float v3,floa
     new_command.value4 = v4;
     new_command.action = action;
     //send sofot
-    if(action == 1||action == 4)// sofort ausführen
+    if(action == 1||action == 4)// an den anfang der queue stellen um es sofort auszuführen
     {
         m_database->cnc_send_commands.push_front(new_command);
         emit show_send_queue();
         trigger_next_command();
     }
-    else// if(action == 2||action == 3)// zur queue hinzufügen um es später aus zu führen
+    else// ans ende der queue stellen um später aus zu führen
     {
         m_database->cnc_send_commands.push_back(new_command);
         emit show_send_queue();
@@ -123,38 +128,55 @@ void cnc_basefunctions::send_to_cnc(char command,float v1,float v2,float v3,floa
 
 void cnc_basefunctions::trigger_next_command()
 {
-
-    if(m_database->cnc_send_commands.size()<1)
-    {
-        emit Log("trigger_next_command: nothing in queue");
-        return;
-    }
-    int action = m_database->cnc_send_commands[0].action;
-    emit Log("trigger_next_command (action: "+QString::number(m_database->cnc_send_commands[0].action)+")");
-    if(action == 1||action == 2)
-    {
-        if(HW_is_working)
+        if(m_database->cnc_send_commands.size()==0)
+        {
+            emit Log("trigger_next_command: nothing in queue");
             return;
-        emit trigger_send();
-        HW_is_working = true;
-    }
-    if(action == 3)//calib size safe max posi
-    {
-        m_database->cnc_send_commands.pop_front();
-        m_database->m_size_X = m_database->m_act_X;
-        m_database->m_size_Y = m_database->m_act_Y;
-        trigger_next_command();
-    }
-    if(action == 4)//ignore hw is working send sofort
-    {
-        emit trigger_send();
-    }
-    if(action == 5)//show results of size calib
-    {
-        emit Log("Calib_Size size_x: "+QString::number(m_database->m_size_X)+", size_y: "+QString::number(m_database->m_size_Y));
-        emit Log("Calib_Size error_x: "+QString::number(m_database->m_size_X)+", error_y: "+QString::number(m_database->m_size_Y));
-        trigger_next_command();
-    }
+        }
+        int action = m_database->cnc_send_commands[0].action;
+
+        emit Log("trigger_next_command (action: "+
+                 QString::number(m_database->cnc_send_commands[0].action)+
+                ", command: "+QString(m_database->cnc_send_commands[0].command)+")");
+
+        if(action == 1||action == 2)
+        {
+            if(HW_is_working)//did not send next command while HW is working
+            {
+                emit Log("Hardware is Working");
+                return;
+            }
+            emit trigger_send();
+            HW_is_working = true;
+        }
+        if(action == 3)//calib size safe max posi
+        {
+            m_database->cnc_send_commands.pop_front();
+            m_database->m_size_X = m_database->m_act_X;
+            m_database->m_size_Y = m_database->m_act_Y;
+            trigger_next_command();
+        }
+        if(action == 4)//ignore hw is working send sofort
+        {
+            emit trigger_send();
+        }
+        if(action == 5)//show results of size calib
+        {
+            m_database->cnc_send_commands.pop_front();
+            emit Log("Calib_Size size_x: "+QString::number(m_database->m_size_X)+
+                     ", size_y: "+QString::number(m_database->m_size_Y));
+            emit Log("Calib_Size error_x: "+QString::number(m_database->m_act_X)+
+                     ", error_y: "+QString::number(m_database->m_act_Y));
+            trigger_next_command();
+        }
+        if(action == 6)
+        {
+            m_database->cnc_send_commands.pop_front();
+            emit Log("result Xerror: "+QString::number(m_database->m_act_X)+"  Yerror: "+QString::number(m_database->m_act_Y)+"  Zerror: "+QString::number(m_database->m_act_Z));
+            trigger_next_command();
+        }
+
+        emit show_send_queue();
 }
 
 void cnc_basefunctions::process_command()
