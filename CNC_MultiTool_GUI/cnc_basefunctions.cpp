@@ -36,6 +36,16 @@ void cnc_basefunctions::repeattest_results()
     send_to_cnc(' ',0,0,0,0,6);
 }
 
+void cnc_basefunctions::z_calib_safePos()
+{
+    send_to_cnc(' ',0,0,0,0,7);
+}
+
+void cnc_basefunctions::z_calib_results()
+{
+    send_to_cnc(' ',0,0,0,0,8);
+}
+
 void cnc_basefunctions::send_settings(float speed,float temperatur,float filament)
 {
     float s = speed;
@@ -169,10 +179,33 @@ void cnc_basefunctions::trigger_next_command()
                      ", error_y: "+QString::number(m_database->m_act_Y));
             trigger_next_command();
         }
-        if(action == 6)
+        if(action == 6)//repeattest_results
         {
             m_database->cnc_send_commands.pop_front();
             emit Log("result Xerror: "+QString::number(m_database->m_act_X)+"  Yerror: "+QString::number(m_database->m_act_Y)+"  Zerror: "+QString::number(m_database->m_act_Z));
+            trigger_next_command();
+        }
+        if(action == 7)//z_calib_safePos
+        {
+            m_database->cnc_send_commands.pop_front();
+            point temp_point = {m_database->m_act_X,m_database->m_act_Y,m_database->m_act_Z};
+            m_pointList.append(temp_point);
+            emit Log("calib_Z at X:"+QString::number(m_database->m_act_X)+
+                     " Y:"+QString::number(m_database->m_act_Y)+
+                     " Z:"+QString::number(m_database->m_act_Z));
+            trigger_next_command();
+        }
+        if(action == 8)//z_calib_results
+        {
+            m_database->cnc_send_commands.pop_front();
+            point temp_point;
+            for(int i=0;i<m_pointList.size();i++)
+            {
+                temp_point = m_pointList[i];
+                emit Log("calib_Z_result X:"+QString::number(temp_point.X)+
+                         " Y:"+QString::number(temp_point.Y)+
+                         " Z:"+QString::number(temp_point.Z));
+            }
             trigger_next_command();
         }
 
@@ -207,10 +240,14 @@ void cnc_basefunctions::execute_command(char command,float value1,float value2,f
         trigger_next_command();
         break;
     case 's'://set the actual settings
-        m_database->set_settings(value1,value2,value3);
+        m_database->set_settings(value1,value2,value3,value4);
         m_database->FileLog("INFO recived current setting: speed:"+QString::number(value1)+" temperatur:"+QString::number(value2)+" filament:"+QString::number(value3)+" PWM:"+QString::number(value4));
         HW_is_working = false;
         trigger_next_command();
+        break;
+    case 'j'://set the actual settings
+        m_database->set_settings(value1,value2,value3,value4);
+        m_database->FileLog("INFO recived current setting: speed:"+QString::number(value1)+" temperatur:"+QString::number(value2)+" filament:"+QString::number(value3)+" PWM:"+QString::number(value4));
         break;
     case 'e':
         m_database->set_endswitch(value1,value2,value3);

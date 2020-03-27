@@ -77,7 +77,7 @@ public:
     float m_Zmax_nozzel;
 
     void set_position(float X,float Y,float Z,float W);
-    void set_settings(float speed,float temperatur,float filament);
+    void set_settings(float speed,float temperatur,float filament,float soll_temperatur);
     void set_soll_settings(float speed,float temperatur,float filament);
     void set_endswitch(int X,int Y,int Z);
     void set_serial(bool isOpen);

@@ -8,6 +8,12 @@
 #include <QObject>
 #include <QEventLoop>
 #include <QThread>
+typedef struct{
+    float X;
+    float Y;
+    float Z;
+}point;
+
 class cnc_basefunctions: public QObject
 {
     Q_OBJECT
@@ -17,7 +23,10 @@ public:
     void calib_size_safe();
     void calib_size_results();
     void repeattest_results();
+    void z_calib_safePos();
+    void z_calib_results();
     void trigger_next_command();
+    QList<point> m_pointList;
 
 private:
     void send_to_cnc(char commmand,float v1,float v2,float v3,float v4,int action);

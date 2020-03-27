@@ -22,18 +22,10 @@ CNC_automation::~CNC_automation()
 void CNC_automation::move_home()
 {
     m_basefunctions->settings_inQ(50,-1,35);
-    //m_basefunctions->move_inQ(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
-    //m_basefunctions->move_inQ(-9999,-9999,9999,m_database->m_act_W);
-    move_home_inQ();
-    m_basefunctions->setPosition_inQ(0,0,m_database->m_Zmax_nozzel,0);
-    m_basefunctions->trigger_next_command();
-}
-
-void CNC_automation::move_home_inQ()
-{
     m_basefunctions->move_inQ(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
     m_basefunctions->move_inQ(-9999,-9999,9999,m_database->m_act_W);
-
+    m_basefunctions->setPosition_inQ(0,0,m_database->m_Zmax_nozzel,0);
+    m_basefunctions->trigger_next_command();
 }
 
 void CNC_automation::move_restposi()
@@ -41,7 +33,7 @@ void CNC_automation::move_restposi()
     m_basefunctions->settings_inQ(50,-1,35);
     m_basefunctions->move_inQ(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
     m_basefunctions->move_inQ(9999,-9999,9999,m_database->m_act_W);
-    m_basefunctions->setPosition_inQ(0,0,m_database->m_Zmax_nozzel,0);
+    m_basefunctions->setPosition_inQ(m_database->m_size_X,0,m_database->m_Zmax_nozzel,0);
     m_basefunctions->trigger_next_command();
 }
 
@@ -87,56 +79,60 @@ void CNC_automation::repeat_test()
 void CNC_automation::Z_calib()
 {
     emit Log("Z angel calib (do not use manuel move)");
-    move_home();
+    m_basefunctions->m_pointList.clear();
+    //first move home
+    m_basefunctions->settings_inQ(50,-1,35);
+    m_basefunctions->setPosition_inQ(0,0,0,0);
+    m_basefunctions->move_inQ(-9999,-9999,9999,0);
+    m_basefunctions->setPosition_inQ(0,0,0,0);
     //messure origion Z
-    //m_basefunctions->move_wait(m_database->m_act_X,m_database->m_act_Y,-999,0);//move in home to z = 0
-    m_basefunctions->send_setPosition(0,0,0,0);// set origon
-    m_basefunctions->send_settings(20,-1,-1);//slower test speed
-    //m_basefunctions->move_wait(m_database->m_act_X,m_database->m_act_Y,10,0);//lift TCP
-    m_database->m_error_X_max_Y_null = probe_Z(m_database->m_size_X,0);
-    m_database->m_error_X_max_Y_max = probe_Z(m_database->m_size_X,m_database->m_size_Y);
-    m_database->m_error_X_null_Y_max = probe_Z(0,m_database->m_size_Y);
-    m_database->m_error_X_null_Y_null = probe_Z(0,0);
-    move_home();
-    emit Log("end of Z calib");
+    m_basefunctions->move_inQ(0,0,-9999,0);
+    m_basefunctions->setPosition_inQ(0,0,0,0);
+    probe_Z(0,0);
+    probe_Z(m_database->m_size_X,0);
+    probe_Z(m_database->m_size_X,m_database->m_size_X);
+    probe_Z(0,m_database->m_size_X);
+    probe_Z(0,0);
+    // movbe home
+    m_basefunctions->move_inQ(m_database->m_act_X,m_database->m_act_Y,9999,0);
+    m_basefunctions->z_calib_results();
+    m_basefunctions->trigger_next_command();
 }
 
-float CNC_automation::probe_Z(float X,float Y)
+void CNC_automation::probe_Z(float X,float Y)
 {
-    m_basefunctions->send_settings(50,-1,-1);//fast traffel speed
-    //m_basefunctions->move_wait(X,Y,10,0);//move to test point
-    m_basefunctions->send_settings(20,-1,-1);//slower test speed
-    //m_basefunctions->move_wait(X,Y,-999,0);//lower TCP
-    float Zerror = m_database->m_act_Z;
-    emit Log("Zerror: "+QString::number(m_database->m_act_Z)+" at X:"+QString::number(m_database->m_act_X)+" Y:"+QString::number(m_database->m_act_Y));
-    //m_basefunctions->move_wait(X,Y,10,0);//lift TCP
-    return Zerror;
+    //move to test point
+    m_basefunctions->settings_inQ(50,-1,35);
+    m_basefunctions->move_inQ(X,Y,10,0);
+    //make slow probe
+    m_basefunctions->settings_inQ(20,-1,35);
+    m_basefunctions->move_inQ(X,Y,-10,0);
+    m_basefunctions->z_calib_safePos();
+    m_basefunctions->move_inQ(X,Y,10,0);
+    m_basefunctions->settings_inQ(50,-1,35);
 }
 
 
 void CNC_automation::G_Code_Start(QString fileName)
 {
-    if(timer->isActive())
-        timer->stop();
     emit Log("start g-code: "+fileName);
     m_database->FileLog("start g-code: "+fileName);
     m_fileName = fileName;
-    m_aboard = false;
-    m_pause = false;
-    move_home();
-    m_basefunctions->send_setPosition(0,0,m_database->m_Zmax_nozzel,0);
-    //if(!isRunning())
-    //{
-    //    start();
-    //}
+    //m_basefunctions->send_setPosition(0,0,m_database->m_Zmax_nozzel,0);
 
-    inputFile.setFileName(m_fileName);
-    inputFile.open(QIODevice::ReadOnly);
-    in.setDevice(&inputFile);
-    in.setCodec("UTF-8");
-
-    timer->start(1);
-    connect(timer,SIGNAL(timeout()),this,SLOT(G_Code_Parser()));
+    if(!inputFile.isOpen())
+    {
+        inputFile.setFileName(m_fileName);
+        inputFile.open(QIODevice::ReadOnly);
+        in.setDevice(&inputFile);
+        in.setCodec("UTF-8");
+    }else{
+        emit errorLog("start g-code FAILD file is already open");
+    }
+    if(!isRunning())
+    {
+        this->start();
+    }
 }
 
 void CNC_automation::run()
@@ -171,64 +167,24 @@ void CNC_automation::G_Code_Stop()
 }
 
 void CNC_automation::G_Code_Parser()
-{
-    //emit Log("g-code parser");
+{/*
     QString newLine;
     QRegExp rx;
-    if(m_database->m_HWisMoving)
-        return;
-    if(m_database->m_HWisHeating)
-        return;
-    newLine = in.readLine();
-    m_database->FileLog(newLine);
-    if(newLine.isNull())
-    {
-        emit Log("end of file");
-        m_aboard = true;
-        inputFile.close();
-        if(timer->isActive())
-            timer->stop();
-        emit Log("G-Code is finishd");
-        return;// /////////////////////////////////testing
-    }
-    rx.setPattern(";");
-    if(rx.indexIn(newLine)==0)
-    {
-        emit Log("Comment: "+newLine);
-        return;
-    }
-    if(newLine=="")
-    {
-        emit Log("emty line");
-        return;
-    }
-    getValue("X",newLine,&m_X);
-    getValue("Y",newLine,&m_Y);
-    getValue("Z",newLine,&m_Z);
-    getValue("E",newLine,&m_W);
-    getValue("S",newLine,&m_S);
-    getValue("F",newLine,&m_F);
-        //if(m_pause)
-        //{
-        //  m_wait_loop.exec();
-        //}
+
+    do{
         newLine = in.readLine();
         m_database->FileLog(newLine);
-        if(newLine.isNull())
-        {
-            emit Log("end of file");
-            m_aboard = true;
-            //continue;
-        }
+
         rx.setPattern(";");
         if(rx.indexIn(newLine)==0)
         {
             emit Log("Comment: "+newLine);
-            //continue;
+            return;
         }
-        if(newLine == "")
+        if(newLine=="")
         {
             emit Log("emty line");
+            return;
         }
         getValue("X",newLine,&m_X);
         getValue("Y",newLine,&m_Y);
@@ -236,19 +192,11 @@ void CNC_automation::G_Code_Parser()
         getValue("E",newLine,&m_W);
         getValue("S",newLine,&m_S);
         getValue("F",newLine,&m_F);
-    if(isCommand("G0",newLine))//fast move
-    {
-        m_F = m_F_max*60;
-        m_basefunctions->send_settings(m_F/60,m_S,-1);
-        //m_basefunctions->move_wait(m_X,m_Y,m_Z,m_W);
-        m_validCommand = true;
-    }
-    if(isCommand("G1",newLine))//normal move
-    {
-        if(m_F>m_F_max*60)
+
         if(isCommand("G0",newLine))//fast move
         {
-            m_F = m_F_max;
+            m_F = m_F_max*60;
+            m_basefunctions->send_settings(m_F/60,m_S,-1);
             //m_basefunctions->move_wait(m_X,m_Y,m_Z,m_W);
             m_validCommand = true;
         }
@@ -377,6 +325,13 @@ void CNC_automation::G_Code_Parser()
         emit Log("Line not Known:"+newLine);
         m_database->FileLog("Line not Known:"+newLine);
     }
+
+
+
+    }
+    emit Log("end of file");
+    inputFile.close();
+    emit Log("G-Code is finishd");*/
 }
 
 bool CNC_automation::isCommand(const QString indent,const QString line)

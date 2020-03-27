@@ -72,6 +72,9 @@ double ges_time;
 
 unsigned long time_now = micros();
 unsigned long cycle_time = micros();
+unsigned long cycle_time1 = micros();
+unsigned long cycle_time2 = micros();
+unsigned long cycle_time3 = micros();
 unsigned long old_time_now = micros();
 
 bool sendPose = true;
@@ -210,6 +213,9 @@ void setup() {
   pinMode(28,OUTPUT);
 
   cycle_time = 0;
+  cycle_time1 = 0;
+  cycle_time2 = 0;
+  cycle_time3 = 0;
 }
 
 void loop() {
@@ -246,6 +252,11 @@ void loop() {
   {
     cycle_time = time_now + 1000000;
     digitalWrite(22,!digitalRead(22));
+  }
+  if(abs(T-soll_T)>5 && cycle_time1 < time_now && soll_T != 0)
+  {
+    cycle_time1 = time_now + 5000000;
+    sendsettinginfo();
   }
 }
 
@@ -571,8 +582,13 @@ void sendConfirmAnswer(){
   send_variabelTestCommand('a',0,0,0,0);
 }
 void sendsetting(){
-  send_variabelTestCommand('s',Speed,T,Wachse.steps_pmm,Output);
+  send_variabelTestCommand('s',Speed,T,Wachse.steps_pmm,soll_T);
 }
+
+void sendsettinginfo(){
+  send_variabelTestCommand('j',Speed,T,Wachse.steps_pmm,soll_T);
+}
+
 void send_variabelTestCommand(char C, float val1, float val2, float val3, float val4){
   SenBuf.tel.comand = C;
   SenBuf.tel.value[0] = val1;
