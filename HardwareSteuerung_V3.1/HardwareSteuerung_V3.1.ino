@@ -221,6 +221,11 @@ void setup() {
 void loop() {
   time_now = micros();
 
+  if(Serial.available())
+  {
+    read_Telegram();
+  }
+
   if(msg_available){
     recive_msg();
   }
@@ -584,11 +589,9 @@ void sendConfirmAnswer(){
 void sendsetting(){
   send_variabelTestCommand('s',Speed,T,Wachse.steps_pmm,soll_T);
 }
-
 void sendsettinginfo(){
   send_variabelTestCommand('j',Speed,T,Wachse.steps_pmm,soll_T);
 }
-
 void send_variabelTestCommand(char C, float val1, float val2, float val3, float val4){
   SenBuf.tel.comand = C;
   SenBuf.tel.value[0] = val1;
@@ -604,32 +607,29 @@ void start_responstimer(){
 void stop_responstimer(){
   wait_for_response = false;
 }
-void serialEvent(){
+
+//void serialEvent(){
+void read_Telegram(){
   char bufS[1];
-  char bufBig[18];
+  char bufBig[19];
   bool wrong_telegram = false;
-  stop_responstimer();
-  Serial.readBytes(bufS,1);
-  while(bufS[0] != 'S'){
+  if(Serial.peek() == 'T'){
     Serial.readBytes(bufS,1);
-    //digitalWrite(28,HIGH);
-  }
-  
-  Serial.readBytes(bufBig,18);
-  Buf.buf[0] = bufS[0];
-  for(int i=0;i<18;i++){
-    Buf.buf[i+1] = bufBig[i];
-  }
-  
-  if(Buf.buf[18]!=calc_checkbyte(Buf.buf)){
-    //digitalWrite(26,HIGH);
-    wrong_telegram = true;
-  }
-  if(wrong_telegram == true){
-    sendRepeatRequest();
-    //digitalWrite(22,HIGH);
-  }else{
+    //stop respons timer
+    return;
+  }else if(Serial.peek() == 'S'){
+    Serial.readBytes(Buf.buf,19);
+    //check checksumm
+    if(Buf.buf[18]!=calc_checkbyte(Buf.buf)){
+      digitalWrite(28,HIGH);
+      return;
+    }
+    bufS[0] = 'T';
+    Serial.write(bufS,1);
     msg_available = true;
+  }else{
+    digitalWrite(26,HIGH);
+    return;
   }
 }
 void send_tel(){

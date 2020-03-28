@@ -44,7 +44,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_database,SIGNAL(show_settings()),this,SLOT(show_settings()));
     connect(m_database,SIGNAL(show_endswitch(float,float,float)),this,SLOT(show_endswitch(float,float,float)));
     connect(m_database,SIGNAL(show_serial(bool)),this,SLOT(show_serial(bool)));
-    connect(m_database,SIGNAL(show_status()),this,SLOT(show_status()));
+    //connect(m_database,SIGNAL(show_status()),this,SLOT(show_status()));
     connect(m_database,SIGNAL(recive_command()),m_basefunctions,SLOT(process_command()));
 
     connect(m_serial,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
@@ -190,6 +190,7 @@ void MainWindow::on_pushButtonSerialConnect_clicked()
     else
     {
         Log("open serial");
+        m_basefunctions->HW_is_working = false;
         m_database->m_SerialPortName = ui->comboBoxComPortName->currentText();
         m_serial->serial_open();
         m_basefunctions->send_init();

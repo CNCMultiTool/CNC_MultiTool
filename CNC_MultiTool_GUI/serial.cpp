@@ -4,12 +4,30 @@
 Serial::Serial(cnc_data *database)
 {
     m_database = database;
+    connect(&serial_timeout, SIGNAL(timeout()), this, SLOT(serial_timeout_handler()));
 }
 
 
 Serial::~Serial()
 {
 
+}
+
+void Serial::serial_timeout_handler()
+{
+    serial_timeout.stop();
+    emit errorLog("Seerial TimeoutHandler called after: " +QString::number(debug_time.elapsed()));
+    emit Log("Seerial TimeoutHandler called after: " +QString::number(debug_time.elapsed()));
+    m_recivedBytes.clear();
+    m_sendBytes.clear();
+    m_serial.close();
+    if (!m_serial.open(QIODevice::ReadWrite)) {
+        emit errorLog("can`t start Serial");
+        return;
+    }
+    m_serial.clearError();
+    m_serial.clear();
+    m_serial.flush();
 }
 
 void Serial::serial_open()
@@ -59,6 +77,10 @@ int Serial::serial_calcCheckSumm(QByteArray bytes,unsigned char *Checksumm)
  */
 int Serial::serial_CheckTelegram()
 {
+    if(m_recivedBytes[0] == 'T')
+    {
+        return 0;
+    }
     //check if telegram is long enought
     if(m_recivedBytes.size()<m_TelegramLength){
         //emit errorLog("serial: not enough bytes");
@@ -109,10 +131,25 @@ void Serial::serial_read_command()
         unsigned char checkSumm = 0;
 
         m_recivedBytes += m_serial.readAll();
-        m_serial.waitForReadyRead(50);
+        m_serial.waitForReadyRead(5);
+
+        //emit errorLog(QString(m_recivedBytes));
 
         if(serial_CheckTelegram()<0)
             return;
+
+        if(m_recivedBytes[0] == 'T'){
+            serial_timeout.stop();
+            m_recivedBytes.remove(0,1);
+            debug_time.elapsed();
+            //emit Log("recive respons quitirung ms:"+QString::number(debug_time.elapsed()));
+            continue;
+        }
+
+        QByteArray respose = QString("T").toUtf8();
+        m_serial.write(respose);
+        m_serial.waitForBytesWritten(1);
+        //emit Log("send respons quittung");
 
         command = char(m_recivedBytes[1]);
         for(int i=0;i<m_TelegramLength-2;i++)
@@ -120,7 +157,7 @@ void Serial::serial_read_command()
             m_recive_telegram.Bytes[i] = m_recivedBytes[i+2];
         }
         checkSumm = m_recivedBytes[m_TelegramLength-1];
-
+/*
         QString LogText = QString(char(m_recivedBytes[0]))+" ";
         LogText += QString(command)+" ";
         LogText += QString::number(m_recive_telegram.Value[0])+" ";
@@ -130,6 +167,7 @@ void Serial::serial_read_command()
         LogText += QString::number(checkSumm);
         m_database->FileLog("INFO recive:"+LogText);
         emit Log("INFO recive:"+LogText);
+*/
 
         //empfangene daten in cnc_command verpacken und an empfangs queue packen
         cnc_command new_command;
@@ -142,21 +180,12 @@ void Serial::serial_read_command()
         //entvernen des gelesenene telegramms
         m_recivedBytes.remove(0,m_TelegramLength);
     }
-    emit Log("exit recive loop");
+    //emit Log("exit recive loop");
 }
 
-/**
- * checkt ob ein sende corgang gestartet werden kann
- */
-int Serial::serial_send_ifValid()
-{
-    if(m_database->cnc_send_commands.length()<1)
-        return -1;
-    return 0;
-}
 
 /**
- * holt dsas nächste kommando aus der queue
+ * holt das nächste kommando aus der queue
  * check ob das command valide ist
  * verpackt es in ein bytearray mit startcodon und checsumm
  * sendet es mittels serielem port
@@ -167,10 +196,6 @@ void Serial::serial_send_command()
         emit errorLog("serial send: no command to send");
         return;
     }
-    //if(serial_send_ifValid()>0){
-    //    emit errorLog("serial send: no command to send");
-    //    return;
-    //}
 
     // read command and values to send
     cnc_command new_command = m_database->cnc_send_commands[0];
@@ -194,8 +219,12 @@ void Serial::serial_send_command()
     m_sendBytes += newCheckSumm;
 
     m_serial.write(m_sendBytes);
-    m_serial.waitForBytesWritten(50);
+    m_serial.waitForBytesWritten(5);
+    //emit Log("Serial timeout startet");
+    serial_timeout.start(150);
+    debug_time.restart();
 
+/*
     QString LogText = QString(char(m_sendBytes[0]))+" ";
     LogText += QString(char(m_sendBytes[1]))+" ";
     LogText += QString::number(send_telegram.Value[0])+" ";
@@ -205,4 +234,6 @@ void Serial::serial_send_command()
     LogText += QString::number(m_sendBytes[18]);
     emit Log("INFO send:"+LogText);
     m_database->FileLog("INFO send:"+LogText);
+*/
+
 }

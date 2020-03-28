@@ -140,7 +140,7 @@ void cnc_basefunctions::trigger_next_command()
 {
         if(m_database->cnc_send_commands.size()==0)
         {
-            emit Log("trigger_next_command: nothing in queue");
+            //emit Log("trigger_next_command: nothing in queue");
             return;
         }
         int action = m_database->cnc_send_commands[0].action;

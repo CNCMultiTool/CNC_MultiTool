@@ -36,10 +36,11 @@ private:
 
     int m_TelegramLength = 19;
 
+    QTimer serial_timeout;
+    QTime debug_time;
     int serial_CheckTelegram();
     int serial_calcCheckSumm(QByteArray bytes,unsigned char *Checksumm);
 
-    int serial_send_ifValid();
 signals:
     void Log(const QString &s);
     void errorLog(const QString &s);
@@ -48,6 +49,7 @@ signals:
 public slots:
     void serial_read_command();
     void serial_send_command();
+    void serial_timeout_handler();
 
 };
 
