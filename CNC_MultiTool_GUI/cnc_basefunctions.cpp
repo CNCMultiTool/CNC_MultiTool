@@ -55,14 +55,12 @@ void cnc_basefunctions::send_settings(float speed,float temperatur,float filamen
         s = m_database->m_soll_speed;
     if(t<0)
         t = m_database->m_soll_temperatur;
-    if(f<1)
-        f = 1;
     if(f<0)
         f = m_database->m_soll_filament;
-
+    if(f<1)
+        f = 1;
 
     m_database->set_soll_settings(s,t,f);
-    //emit send('s',s,t,f,0);
     send_to_cnc('s',s,t,f,0,1);
 }
 
@@ -75,13 +73,13 @@ void cnc_basefunctions::settings_inQ(float speed,float temperatur,float filament
         s = m_database->m_soll_speed;
     if(t<0)
         t = m_database->m_soll_temperatur;
-    if(f<1)
-        f = 1;
     if(f<0)
         f = m_database->m_soll_filament;
+    if(f<1)
+        f = 1;
+
 
     m_database->set_soll_settings(s,t,f);
-
     send_to_cnc('s',s,t,f,0,2);
 }
 
@@ -98,13 +96,11 @@ void cnc_basefunctions::send_stop()
 
 void cnc_basefunctions::send_getPosition()
 {
-    //emit send('t',0,0,0,0);
     send_to_cnc('t',0,0,0,0,1);
 }
 
 void cnc_basefunctions::send_setPosition(float X,float Y,float Z,float W)
 {
-    //emit send('p',X,Y,Z,W);
     send_to_cnc('p',X,Y,Z,W,1);
 }
 
@@ -126,8 +122,8 @@ void cnc_basefunctions::send_to_cnc(char command,float v1,float v2,float v3,floa
     if(action == 1||action == 4)// an den anfang der queue stellen um es sofort auszuführen
     {
         m_database->cnc_send_commands.push_front(new_command);
-        emit show_send_queue();
         trigger_next_command();
+        emit show_send_queue();
     }
     else// ans ende der queue stellen um später aus zu führen
     {
@@ -169,6 +165,7 @@ void cnc_basefunctions::trigger_next_command()
         if(action == 4)//ignore hw is working send sofort
         {
             emit trigger_send();
+            HW_is_working = false;
         }
         if(action == 5)//show results of size calib
         {
@@ -208,7 +205,6 @@ void cnc_basefunctions::trigger_next_command()
             }
             trigger_next_command();
         }
-
         emit show_send_queue();
 }
 

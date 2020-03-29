@@ -23,6 +23,9 @@ public:
     void serial_close();
 
 private:
+    int m_send_timeout = 5;
+    int m_recive_timeout = 5;
+
     QSerialPort m_serial;
     cnc_data *m_database;
 
@@ -38,6 +41,7 @@ private:
     int m_TelegramLength = 19;
 
     QTimer serial_timeout;
+    QTimer serial_fast_timeout;
     QTime debug_time;
     int serial_CheckTelegram();
     int serial_calcCheckSumm(QByteArray bytes,unsigned char *Checksumm);

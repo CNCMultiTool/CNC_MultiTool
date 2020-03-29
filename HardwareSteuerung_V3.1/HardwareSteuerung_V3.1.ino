@@ -246,7 +246,6 @@ void loop() {
           if(sendPose == false){
             sendconfirmpos();
             sendPose = true;
-            digitalWrite(24,!digitalRead(24));
           }
         }
       }
@@ -255,17 +254,23 @@ void loop() {
 
   if(cycle_time < time_now && wait_for_response == true)
   {
+    digitalWrite(28,!digitalRead(28));
     serieltimeouthandler();
     wait_for_response = false;
   }
-  if(abs(T-soll_T)>5 && cycle_time1 < time_now && soll_T != 0)
+  if(abs(T-soll_T)>5 && cycle_time1 < time_now)
   {
-    cycle_time1 = time_now + 5000000;
+    cycle_time1 = time_now + 1000000;
     sendsettinginfo();
     digitalWrite(22,!digitalRead(22));
   }
+ /* if(cycle_time2 < time_now)
+  {
+    char bufS[1] = {'Q'};
+    Serial.write(bufS,1);
+    cycle_time2 = time_now + 50000;
+  }*/
 }
-
 //check if one endswitch had changed
 float checkEndswitches(){
   float newXSwitchID = checkEndswitch(Xachse);
@@ -279,7 +284,6 @@ float checkEndswitches(){
     sendactposition();
   }
 }
-
 float checkEndswitch(struct StepMotorBig &StepM){
   float switchID;
   if(digitalRead(StepM.pinNull)==HIGH&& StepM.soll_step <= StepM.act_step){
@@ -332,7 +336,6 @@ void recive_msg(){
       sendendswitch();
       break;
     case 'm'://move to
-      digitalWrite(26,!digitalRead(26));
       Xachse.soll_posi = Buf.tel.value[0];
       Yachse.soll_posi = Buf.tel.value[1];
       Zachse.soll_posi = Buf.tel.value[2];
@@ -364,20 +367,18 @@ void recive_msg(){
       sendactposition();
       break;
     default:
-      digitalWrite(22,HIGH);
       break;
   }
 }
 void serieltimeouthandler(){
-      //digitalWrite(22,HIGH);
       Serial.flush();
-      Serial.end();
-      Serial.begin(115200,SERIAL_8E1);//9600
       char dummy[1];
       while(Serial.available())
       {
         Serial.readBytes(dummy,1);
       }
+      Serial.end();
+      Serial.begin(115200,SERIAL_8E1);//9600
       Serial.write(lastSend,19);      
 }
 //strops the movement (set soll pos equal act pos)
@@ -440,7 +441,6 @@ void MediM_move_params(struct StepMotorMedi &StepM){
   StepM.time_pstep = ges_time/abs(StepM.soll_step-StepM.act_step);
   StepM.time_next_step = micros();
 }
-
 unsigned long calc_steptime(struct StepMotorBig &StepM){
   unsigned long curr_step = StepM.step_div-abs(StepM.soll_step-StepM.act_step);
   unsigned long ist_time_pstep = StepM.time_pstep;
@@ -565,7 +565,6 @@ void send_debug(float a,float b,float c,float d){
   send_variabelTestCommand('d',a,b,c,d);
   start_responstimer();
 }
-
 void sendendswitch(){
   send_variabelTestCommand('e',Xachse.SwitchID,Yachse.SwitchID,Zachse.SwitchID,0);
   start_responstimer();
@@ -609,8 +608,6 @@ void start_responstimer(){
 void stop_responstimer(){
   wait_for_response = false;
 }
-
-//void serialEvent(){
 void read_Telegram(){
   char bufS[1];
   char bufBig[19];
@@ -623,14 +620,14 @@ void read_Telegram(){
     Serial.readBytes(Buf.buf,19);
     //check checksumm
     if(Buf.buf[18]!=calc_checkbyte(Buf.buf)){
-      digitalWrite(28,HIGH);
+      digitalWrite(24,!digitalRead(24));
       return;
     }
     bufS[0] = 'T';
     Serial.write(bufS,1);
     msg_available = true;
   }else{
-    digitalWrite(26,HIGH);
+    digitalWrite(26,!digitalRead(26));
     return;
   }
 }

@@ -15,22 +15,20 @@ Serial::~Serial()
 
 void Serial::serial_timeout_handler()
 {
+    serial_fast_timeout.stop();
     serial_timeout.stop();
     emit errorLog("Seerial TimeoutHandler called after: " +QString::number(debug_time.elapsed())+" "+QString(m_recivedBytes));
     emit Log("Seerial TimeoutHandler called after: " +QString::number(debug_time.elapsed()));
     m_recivedBytes.clear();
     m_sendBytes.clear();
-    m_serial.close();
-    if (!m_serial.open(QIODevice::ReadWrite)) {
-        emit errorLog("can`t start Serial");
-        return;
-    }
     m_serial.clearError();
     m_serial.flush();
     m_serial.clear();
+    serial_close();
+    serial_open();
     //resend the last command
     m_serial.write(m_sendBytesLast);
-    m_serial.waitForBytesWritten(5);
+    m_serial.waitForBytesWritten(m_send_timeout);
 }
 
 void Serial::serial_open()
@@ -51,7 +49,7 @@ void Serial::serial_open()
 
 void Serial::serial_close()
 {
-    emit Log("serial_close");
+    //emit Log("serial_close");
     m_database->set_serial(false);
     m_serial.close();
 }
@@ -80,6 +78,10 @@ int Serial::serial_calcCheckSumm(QByteArray bytes,unsigned char *Checksumm)
  */
 int Serial::serial_CheckTelegram()
 {
+    if(m_recivedBytes[0] == 'Q')
+    {
+        return 0;
+    }
     if(m_recivedBytes[0] == 'T')
     {
         return 0;
@@ -134,7 +136,7 @@ void Serial::serial_read_command()
         unsigned char checkSumm = 0;
 
         m_recivedBytes += m_serial.readAll();
-        m_serial.waitForReadyRead(5);
+        m_serial.waitForReadyRead(m_recive_timeout);
 
         //emit errorLog(QString(m_recivedBytes));
 
@@ -151,7 +153,7 @@ void Serial::serial_read_command()
 
         QByteArray respose = QString("T").toUtf8();
         m_serial.write(respose);
-        m_serial.waitForBytesWritten(1);
+        m_serial.waitForBytesWritten(m_send_timeout);
         //emit Log("send respons quittung");
 
         command = char(m_recivedBytes[1]);
@@ -222,7 +224,7 @@ void Serial::serial_send_command()
     m_sendBytes += newCheckSumm;
     m_sendBytesLast = m_sendBytes;//save last sended
     m_serial.write(m_sendBytes);
-    m_serial.waitForBytesWritten(5);
+    m_serial.waitForBytesWritten(m_send_timeout);
     //emit Log("Serial timeout startet");
     serial_timeout.start(150);
     debug_time.restart();
