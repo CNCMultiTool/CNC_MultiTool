@@ -10,8 +10,8 @@ MainWindow::MainWindow(QWidget *parent)
     ui->textEditLog->setReadOnly(true);
     ui->textEditLog_error->setReadOnly(true);
 
-    ui->spinBoxSpeed->setValue(50);
-    ui->spinBoxFilament->setValue(35);
+    ui->spinBoxSpeed->setValue(m_database->m_max_speed);
+    ui->spinBoxFilament->setValue(m_database->m_soll_filament);
 
     m_database->m_soll_speed = ui->spinBoxSpeed->value();
     m_database->m_soll_temperatur = ui->spinBoxTemperatur->value();
@@ -54,6 +54,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_automation,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_automation,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
     connect(m_automation,SIGNAL(trigger_send()),m_serial,SLOT(serial_send_command()));
+    connect(m_automation,SIGNAL(resend_last()),m_serial,SLOT(send_last()));
 
 }
 
@@ -71,7 +72,6 @@ void MainWindow::Log(const QString &s)
 void MainWindow::test()
 {
     ui->textEditLog->append("trigger sending manuel");
-    m_basefunctions->HW_is_working = false;
     m_basefunctions->trigger_next_command();
 }
 
@@ -190,8 +190,8 @@ void MainWindow::on_pushButtonSerialConnect_clicked()
     else
     {
         Log("open serial");
-        m_basefunctions->HW_is_working = false;
         m_database->m_SerialPortName = ui->comboBoxComPortName->currentText();
+        m_database->m_HWisMoving = false;
         m_serial->serial_open();
         m_basefunctions->send_init();
     }
@@ -397,7 +397,7 @@ void MainWindow::on_pushButton_clear_queue_clicked()
 void MainWindow::on_pushButton_trigger_next_clicked()
 {
     ui->textEditLog->append("trigger sending manuel");
-    m_basefunctions->HW_is_working = false;
+    m_database->m_HWisMoving = false;
     m_basefunctions->trigger_next_command();
     show_send_queue();
 }

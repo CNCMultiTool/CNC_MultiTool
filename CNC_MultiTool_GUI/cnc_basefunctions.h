@@ -25,9 +25,9 @@ public:
     void repeattest_results();
     void z_calib_safePos();
     void z_calib_results();
+    void wait_for_heating();
     void trigger_next_command();
     QList<point> m_pointList;
-    bool HW_is_working;
 
 private:
     void send_to_cnc(char commmand,float v1,float v2,float v3,float v4,int action);

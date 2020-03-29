@@ -91,6 +91,7 @@ double B = -5.775*pow(10,-7);
 double C = -4.183*pow(10,-4);
 double T;
 double soll_T;
+double old_T;
 
 int temprelai = 27;
 
@@ -258,9 +259,10 @@ void loop() {
     serieltimeouthandler();
     wait_for_response = false;
   }
-  if(abs(T-soll_T)>5 && cycle_time1 < time_now)
+  if(2 < abs(old_T - T) && cycle_time1 < time_now)
   {
-    cycle_time1 = time_now + 1000000;
+    old_T = T;
+    cycle_time1 = time_now + 5000000;
     sendsettinginfo();
     digitalWrite(22,!digitalRead(22));
   }

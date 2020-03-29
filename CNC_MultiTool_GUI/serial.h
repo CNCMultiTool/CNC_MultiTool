@@ -22,6 +22,7 @@ public:
     void serial_open();
     void serial_close();
 
+
 private:
     int m_send_timeout = 5;
     int m_recive_timeout = 5;
@@ -55,6 +56,7 @@ public slots:
     void serial_read_command();
     void serial_send_command();
     void serial_timeout_handler();
+    void send_last();
 
 };
 

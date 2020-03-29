@@ -2,6 +2,7 @@
 
 CNC_automation::CNC_automation(cnc_data *database,cnc_basefunctions *basefunctions)
 {
+    m_pause = false;
     m_database = database;
     m_basefunctions = basefunctions;
     m_F_max = 50;
@@ -21,7 +22,7 @@ CNC_automation::~CNC_automation()
 
 void CNC_automation::move_home()
 {
-    m_basefunctions->settings_inQ(50,-1,35);
+    m_basefunctions->settings_inQ(50,-1,-1);
     m_basefunctions->move_inQ(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
     m_basefunctions->move_inQ(-9999,-9999,9999,m_database->m_act_W);
     m_basefunctions->setPosition_inQ(0,0,m_database->m_Zmax_nozzel,0);
@@ -30,7 +31,7 @@ void CNC_automation::move_home()
 
 void CNC_automation::move_restposi()
 {
-    m_basefunctions->settings_inQ(50,-1,35);
+    m_basefunctions->settings_inQ(50,-1,-1);
     m_basefunctions->move_inQ(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
     m_basefunctions->move_inQ(9999,-9999,9999,m_database->m_act_W);
     m_basefunctions->setPosition_inQ(m_database->m_size_X,0,m_database->m_Zmax_nozzel,0);
@@ -40,7 +41,7 @@ void CNC_automation::move_restposi()
 void CNC_automation::calib_size()
 {
     emit Log("calib size (do not use manuel move)");
-    m_basefunctions->settings_inQ(50,-1,35);
+    m_basefunctions->settings_inQ(50,-1,-1);
     m_basefunctions->move_inQ(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
     m_basefunctions->move_inQ(-9999,-9999,9999,m_database->m_act_W);
     m_basefunctions->setPosition_inQ(0,0,m_database->m_Zmax_nozzel,m_database->m_act_W);
@@ -54,18 +55,18 @@ void CNC_automation::calib_size()
 void CNC_automation::repeat_test()
 {
     emit Log("repeat test (do not use manuel move)");
-    m_basefunctions->settings_inQ(50,-1,35);
+    m_basefunctions->settings_inQ(50,-1,-1);
     m_basefunctions->move_inQ(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
     m_basefunctions->move_inQ(-9999,-9999,9999,m_database->m_act_W);
     m_basefunctions->setPosition_inQ(0,0,0,m_database->m_act_W);
-    m_basefunctions->settings_inQ(30,-1,35);
+    m_basefunctions->settings_inQ(30,-1,-1);
     m_basefunctions->move_inQ(10,10,-10,m_database->m_act_W);
     for(int i = 0;i<2;i++)
     {
         m_basefunctions->move_inQ(20,20,-20,m_database->m_act_W);
         m_basefunctions->move_inQ(10,10,-10,m_database->m_act_W);
     }
-    m_basefunctions->settings_inQ(50,-1,35);
+    m_basefunctions->settings_inQ(50,-1,-1);
     for(int i = 0;i<2;i++)
     {
         m_basefunctions->move_inQ(30,30,-30,m_database->m_act_W);
@@ -81,7 +82,7 @@ void CNC_automation::Z_calib()
     emit Log("Z angel calib (do not use manuel move)");
     m_basefunctions->m_pointList.clear();
     //first move home
-    m_basefunctions->settings_inQ(50,-1,35);
+    m_basefunctions->settings_inQ(50,-1,-1);
     m_basefunctions->setPosition_inQ(0,0,0,0);
     m_basefunctions->move_inQ(-9999,-9999,9999,0);
     m_basefunctions->setPosition_inQ(0,0,0,0);
@@ -102,14 +103,14 @@ void CNC_automation::Z_calib()
 void CNC_automation::probe_Z(float X,float Y)
 {
     //move to test point
-    m_basefunctions->settings_inQ(50,-1,35);
+    m_basefunctions->settings_inQ(50,-1,-1);
     m_basefunctions->move_inQ(X,Y,10,0);
     //make slow probe
-    m_basefunctions->settings_inQ(20,-1,35);
+    m_basefunctions->settings_inQ(20,-1,-1);
     m_basefunctions->move_inQ(X,Y,-10,0);
     m_basefunctions->z_calib_safePos();
     m_basefunctions->move_inQ(X,Y,10,0);
-    m_basefunctions->settings_inQ(50,-1,35);
+    m_basefunctions->settings_inQ(50,-1,-1);
 }
 
 
@@ -144,17 +145,15 @@ void CNC_automation::G_Code_Pause()
 {
     if(m_pause)
     {
+        //emit Log("end pause");
+        emit resend_last();
         m_pause = false;
-        //m_basefunctions->move_wait(m_X,m_Y,m_Z,m_W);
-        if(!timer->isActive())
-            timer->start();
     }
     else
     {
-        m_pause = true;
-        if(timer->isActive())
-            timer->stop();
+        //emit Log("start pause");
         m_basefunctions->send_stop();
+        m_pause = true;
     }
 }
 
@@ -171,7 +170,13 @@ void CNC_automation::G_Code_Parser()
     QString newLine;
     QRegExp rx;
 
+    //clear Queue
+    m_database->cnc_send_commands.clear();
+    m_database->m_HWisHeating = false;
+    m_database->m_HWisMoving = false;
+
     //move home and set position
+    m_basefunctions->settings_inQ(50,-1,-1);
     m_basefunctions->setPosition_inQ(0,0,0,0);
     m_basefunctions->move_inQ(0, 0,9999,0);
     m_basefunctions->setPosition_inQ(0,0,0,0);
@@ -222,10 +227,12 @@ void CNC_automation::G_Code_Parser()
         }
         if(isCommand("G28",newLine))//move home
         {
-            m_basefunctions->move_inQ(m_database->m_act_X, m_database->m_act_Y,
-                                      9999,m_database->m_act_W);
-            m_basefunctions->move_inQ(-9999, -9999,
-                                      m_database->m_act_Z,m_database->m_act_W);
+            m_basefunctions->settings_inQ(50,-1,-1);
+            m_basefunctions->setPosition_inQ(0,0,0,0);
+            m_basefunctions->move_inQ(0, 0,9999,0);
+            m_basefunctions->setPosition_inQ(0,0,0,0);
+            m_basefunctions->move_inQ(-9999, -9999, 0, 0);
+            m_basefunctions->setPosition_inQ(0,0,m_database->m_Zmax_nozzel,0);
             m_validCommand = true;
         }
         if(isCommand("G31",newLine))//move untile endswitch
@@ -265,6 +272,7 @@ void CNC_automation::G_Code_Parser()
         if(isCommand("M109",newLine))//wait for reaching temperatur
         {
             m_basefunctions->settings_inQ(m_F/60,m_S,-1);
+            m_basefunctions->wait_for_heating();
             m_validCommand = true;
         }
         if(!m_validCommand)

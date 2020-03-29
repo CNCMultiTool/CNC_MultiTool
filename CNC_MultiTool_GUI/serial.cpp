@@ -13,6 +13,13 @@ Serial::~Serial()
 
 }
 
+void Serial::send_last()
+{
+    //emit Log("resend last");
+    m_serial.write(m_sendBytesLast);
+    m_serial.waitForBytesWritten(m_send_timeout);
+}
+
 void Serial::serial_timeout_handler()
 {
     serial_fast_timeout.stop();
@@ -222,7 +229,9 @@ void Serial::serial_send_command()
     newCheckSumm = 0;
     serial_calcCheckSumm(m_sendBytes,&newCheckSumm);
     m_sendBytes += newCheckSumm;
-    m_sendBytesLast = m_sendBytes;//save last sended
+    if(new_command.command != 'b')
+        m_sendBytesLast = m_sendBytes;//save last sended
+
     m_serial.write(m_sendBytes);
     m_serial.waitForBytesWritten(m_send_timeout);
     //emit Log("Serial timeout startet");

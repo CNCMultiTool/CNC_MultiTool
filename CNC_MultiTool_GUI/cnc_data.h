@@ -35,7 +35,6 @@ public:
     void FileLog(QString value);
 
     bool m_HWisHeating;
-    bool m_HWisAtHeat;
     bool m_HWisMoving;
 
 
@@ -75,6 +74,9 @@ public:
     float m_Y_angel;
     //TCP hight in home
     float m_Zmax_nozzel;
+
+    //max values
+    float m_max_speed; //mm per sec
 
     void set_position(float X,float Y,float Z,float W);
     void set_settings(float speed,float temperatur,float filament,float soll_temperatur);

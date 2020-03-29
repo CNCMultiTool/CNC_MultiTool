@@ -3,7 +3,7 @@
 cnc_basefunctions::cnc_basefunctions(cnc_data *database)
 {
     m_database = database;
-    HW_is_working = false;
+    m_database->m_HWisMoving = false;
 }
 
 void cnc_basefunctions::test()
@@ -44,6 +44,11 @@ void cnc_basefunctions::z_calib_safePos()
 void cnc_basefunctions::z_calib_results()
 {
     send_to_cnc(' ',0,0,0,0,8);
+}
+
+void cnc_basefunctions::wait_for_heating()
+{
+    send_to_cnc(' ',0,0,0,0,9);
 }
 
 void cnc_basefunctions::send_settings(float speed,float temperatur,float filament)
@@ -91,7 +96,7 @@ void cnc_basefunctions::send_init()
 void cnc_basefunctions::send_stop()
 {
     send_to_cnc('b',0,0,0,0,4);
-    HW_is_working = false;
+    m_database->m_HWisMoving = false;
 }
 
 void cnc_basefunctions::send_getPosition()
@@ -147,13 +152,13 @@ void cnc_basefunctions::trigger_next_command()
 
         if(action == 1||action == 2)
         {
-            if(HW_is_working)//did not send next command while HW is working
+            if(m_database->m_HWisMoving)//did not send next command while HW is working
             {
                 emit Log("Hardware is Working");
                 return;
             }
             emit trigger_send();
-            HW_is_working = true;
+            m_database->m_HWisMoving = true;
         }
         if(action == 3)//calib size safe max posi
         {
@@ -165,7 +170,7 @@ void cnc_basefunctions::trigger_next_command()
         if(action == 4)//ignore hw is working send sofort
         {
             emit trigger_send();
-            HW_is_working = false;
+            m_database->m_HWisMoving = false;
         }
         if(action == 5)//show results of size calib
         {
@@ -205,6 +210,12 @@ void cnc_basefunctions::trigger_next_command()
             }
             trigger_next_command();
         }
+        if(action == 9)//wait for heating
+        {
+            emit Log("wait for heating");
+            m_database->cnc_send_commands.pop_front();
+            m_database->m_HWisHeating = true;
+        }
         emit show_send_queue();
 }
 
@@ -232,18 +243,31 @@ void cnc_basefunctions::execute_command(char command,float value1,float value2,f
         m_database->set_position(value1,value2,value3,value4);
         m_database->set_HWisMoving(false);
         m_database->FileLog("INFO recived set position and ready for next command: X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
-        HW_is_working = false;
+        m_database->m_HWisMoving = false;
         trigger_next_command();
         break;
     case 's'://set the actual settings
         m_database->set_settings(value1,value2,value3,value4);
         m_database->FileLog("INFO recived current setting: speed:"+QString::number(value1)+" temperatur:"+QString::number(value2)+" filament:"+QString::number(value3)+" PWM:"+QString::number(value4));
-        HW_is_working = false;
+        m_database->m_HWisMoving = false;
         trigger_next_command();
         break;
     case 'j'://set the actual settings
         m_database->set_settings(value1,value2,value3,value4);
         m_database->FileLog("INFO recived current setting: speed:"+QString::number(value1)+" temperatur:"+QString::number(value2)+" filament:"+QString::number(value3)+" PWM:"+QString::number(value4));
+        if(m_database->m_HWisHeating == true)
+        {
+            float temp_dif = abs(m_database->m_act_temperatur - m_database->m_soll_temperatur);
+            emit Log("temperature soll:"+QString::number(m_database->m_soll_temperatur)
+                     +", ist:"+QString::number(m_database->m_act_temperatur)
+                     +", dif:"+QString::number(temp_dif));
+            if(3 > temp_dif)
+            {
+                emit Log("end of the heating");
+                trigger_next_command();
+                m_database->m_HWisHeating = false;
+            }
+        }
         break;
     case 'e':
         m_database->set_endswitch(value1,value2,value3);
