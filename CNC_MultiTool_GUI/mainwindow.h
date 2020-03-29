@@ -5,7 +5,6 @@
 #include <QPushButton>
 #include <QFileDialog>
 #include <QTime>
-#include <QLabel>
 #include <QString>
 #include <QThread>
 #include <cnc_basefunctions.h>
@@ -47,6 +46,8 @@ private:
     void calib_size();
     void repeat_test();
     void Z_calib();
+    void show_status();
+
 
     bool m_alive;
 
@@ -63,30 +64,52 @@ private slots:
     void show_settings();
     void show_endswitch(float X,float Y,float Z);
     void show_serial(bool isOpen);
-    void show_status();
+    void show_send_queue();
 
     void sendStopMoving();
+
     void on_pushButtonSerialConnect_clicked();
+
     void on_pushButtonMoveXPos_pressed();
+
     void on_pushButtonMoveXNeg_pressed();
+
     void on_pushButtonMoveYPos_pressed();
+
     void on_pushButtonMoveYNeg_pressed();
+
     void on_pushButtonMoveZPos_pressed();
+
     void on_pushButtonMoveWNeg_pressed();
+
     void on_pushButtonMoveZNeg_pressed();
+
     void on_pushButtonMoveWPos_pressed();
+
     void on_pushButtonCopyToMoveTo_pressed();
+
     void on_pushButtonCopyToSetPosition_pressed();
+
     void on_pushButtonGetPosition_pressed();
+
     void on_pushButtonMoveTo_pressed();
+
     void on_pushButtonSetPosition_pressed();
+
     void on_pushButtonSetSettings_pressed();
+
     void on_pushButton_browseGCode_pressed();
+
     void on_pushButton_startGCode_pressed();
+
     void on_pushButton_Zcalib_pressed();
+
     void on_pushButton_home_pressed();
+
     void on_pushButton_sizecalib_pressed();
+
     void on_pushButton_repeattest_pressed();
+
     void on_pushButton_pauseGCode_pressed();
     void on_pushButton_AboardGCode_pressed();
     void on_pushButton_test_pressed();
@@ -94,5 +117,7 @@ private slots:
     void on_spinBoxSpeed_valueChanged(int arg1);
     void on_spinBoxTemperatur_valueChanged(int arg1);
     void on_spinBoxFilament_valueChanged(int arg1);
+    void on_pushButton_clear_queue_clicked();
+    void on_pushButton_trigger_next_clicked();
 };
 #endif // MAINWINDOW_H

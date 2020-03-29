@@ -72,6 +72,9 @@ double ges_time;
 
 unsigned long time_now = micros();
 unsigned long cycle_time = micros();
+unsigned long cycle_time1 = micros();
+unsigned long cycle_time2 = micros();
+unsigned long cycle_time3 = micros();
 unsigned long old_time_now = micros();
 
 bool sendPose = true;
@@ -88,6 +91,7 @@ double B = -5.775*pow(10,-7);
 double C = -4.183*pow(10,-4);
 double T;
 double soll_T;
+double old_T;
 
 int temprelai = 27;
 
@@ -168,7 +172,7 @@ void setup() {
   Wachse.time_next_step = 0;
   Wachse.time_pstep = 0;
   Wachse.motor_step = 0;
-  Wachse.steps_pmm = 37;
+  Wachse.steps_pmm = 35;
   Wachse.pin1 = 29;
   Wachse.pin2 = 31;
   Wachse.pin3 = 33;
@@ -208,19 +212,20 @@ void setup() {
   pinMode(24,OUTPUT);
   pinMode(26,OUTPUT);
   pinMode(28,OUTPUT);
+
+  cycle_time = 0;
+  cycle_time1 = 0;
+  cycle_time2 = 0;
+  cycle_time3 = 0;
 }
 
 void loop() {
   time_now = micros();
-  if(time_now<old_time_now){
-    digitalWrite(28,HIGH);
+
+  if(Serial.available())
+  {
+    read_Telegram();
   }
-//  if(digitalRead(23)==HIGH){
-//    digitalWrite(22,LOW);
-//    digitalWrite(24,LOW);
-//    digitalWrite(26,LOW);
-//    digitalWrite(28,LOW);
-//  }
 
   if(msg_available){
     recive_msg();
@@ -240,7 +245,6 @@ void loop() {
       if(Zachse.soll_step == Zachse.act_step){
         if(Wachse.soll_step == Wachse.act_step){
           if(sendPose == false){
-            act_steps_to_act_posi();
             sendconfirmpos();
             sendPose = true;
           }
@@ -249,16 +253,27 @@ void loop() {
     }
   }
 
-  //timeout
-  if(cycle_time < time_now && wait_for_response)
+  if(cycle_time < time_now && wait_for_response == true)
   {
-    wait_for_response = false;
+    digitalWrite(28,!digitalRead(28));
     serieltimeouthandler();
-    digitalWrite(22,HIGH);
+    wait_for_response = false;
   }
-  old_time_now = time_now;
+  if(2 < abs(old_T - T) && cycle_time1 < time_now)
+  {
+    old_T = T;
+    cycle_time1 = time_now + 5000000;
+    sendsettinginfo();
+    digitalWrite(22,!digitalRead(22));
+  }
+ /* if(cycle_time2 < time_now)
+  {
+    char bufS[1] = {'Q'};
+    Serial.write(bufS,1);
+    cycle_time2 = time_now + 50000;
+  }*/
 }
-
+//check if one endswitch had changed
 float checkEndswitches(){
   float newXSwitchID = checkEndswitch(Xachse);
   float newYSwitchID = checkEndswitch(Yachse);
@@ -275,9 +290,11 @@ float checkEndswitch(struct StepMotorBig &StepM){
   float switchID;
   if(digitalRead(StepM.pinNull)==HIGH&& StepM.soll_step <= StepM.act_step){
     StepM.soll_step = StepM.act_step;
+    StepM.act_posi = (double)StepM.act_step/StepM.steps_pmm;
     switchID = -1;
   }else if(digitalRead(StepM.pinPositiv)==HIGH&& StepM.soll_step >= StepM.act_step){
     StepM.soll_step = StepM.act_step;
+    StepM.act_posi = (double)StepM.act_step/StepM.steps_pmm;
     switchID = 1;
   }else{
     switchID = 0;
@@ -320,17 +337,14 @@ void recive_msg(){
       sendconfirmpos();
       sendendswitch();
       break;
-    case 'm'://move
-      if(sendPose == false){
-        send_debug(1,0,0,0);
-      }
+    case 'm'://move to
       Xachse.soll_posi = Buf.tel.value[0];
       Yachse.soll_posi = Buf.tel.value[1];
       Zachse.soll_posi = Buf.tel.value[2];
       Wachse.soll_posi = Buf.tel.value[3];
       getMoveParams();
       sendPose = false;
-      sendConfirmAnswer();
+      //sendConfirmAnswer();
       break;
     case 'p'://set new pose
       Xachse.act_posi = Buf.tel.value[0];
@@ -338,60 +352,36 @@ void recive_msg(){
       Zachse.act_posi = Buf.tel.value[2];
       Wachse.act_posi = Buf.tel.value[3];
       setPose();
-      sendactposition();
+      sendconfirmpos();
       break;
     case 't'://send pose
       sendactposition();
       break;
-    case 's': //set speed
+    case 's': //set speed temperatur and filament
       Speed = Buf.tel.value[0];
       soll_T = Buf.tel.value[1];
       Wachse.steps_pmm = Buf.tel.value[2];
       sendsetting();
       break;
-    case 'r'://send setting (request settings)
-      sendsetting();
-      if(alavie)
-      {
-        alavie = false;
-        //digitalWrite(28,LOW);
-      }
-      else
-      {
-        alavie = true;
-        //digitalWrite(28,HIGH);
-      }
-      break;
     case 'b'://send stop
       act_equal_soll();
-      sendconfirmpos();
-      break;
-    case 'N'://repetrquest error detection
-      Serial.write(lastSend,19);
-      //digitalWrite(28,HIGH);
-      //stop_responstimer();
-      break;
-    case 'a'://repetrquest error detection
-      //stop_responstimer();
+      sendPose = true;
+      sendactposition();
       break;
     default:
-      //digitalWrite(24,HIGH);
-      //stop_responstimer();
       break;
   }
 }
 void serieltimeouthandler(){
-      //digitalWrite(22,HIGH);
       Serial.flush();
-      Serial.end();
-      Serial.begin(115200,SERIAL_8E1);//9600
       char dummy[1];
       while(Serial.available())
       {
         Serial.readBytes(dummy,1);
       }
-      Serial.write(lastSend,19);
-      //sendRepeatRequest();      
+      Serial.end();
+      Serial.begin(115200,SERIAL_8E1);//9600
+      Serial.write(lastSend,19);      
 }
 //strops the movement (set soll pos equal act pos)
 void act_equal_soll(){
@@ -453,7 +443,6 @@ void MediM_move_params(struct StepMotorMedi &StepM){
   StepM.time_pstep = ges_time/abs(StepM.soll_step-StepM.act_step);
   StepM.time_next_step = micros();
 }
-
 unsigned long calc_steptime(struct StepMotorBig &StepM){
   unsigned long curr_step = StepM.step_div-abs(StepM.soll_step-StepM.act_step);
   unsigned long ist_time_pstep = StepM.time_pstep;
@@ -578,15 +567,16 @@ void send_debug(float a,float b,float c,float d){
   send_variabelTestCommand('d',a,b,c,d);
   start_responstimer();
 }
-
 void sendendswitch(){
   send_variabelTestCommand('e',Xachse.SwitchID,Yachse.SwitchID,Zachse.SwitchID,0);
   start_responstimer();
 }
 void sendactposition(){
+  act_steps_to_act_posi();
   send_variabelTestCommand('m',Xachse.act_posi,Yachse.act_posi,Zachse.act_posi,Wachse.act_posi);
 }
 void sendconfirmpos(){
+  act_steps_to_act_posi();
   send_variabelTestCommand('c',Xachse.act_posi,Yachse.act_posi,Zachse.act_posi,Wachse.act_posi);
   start_responstimer();
 }
@@ -598,7 +588,10 @@ void sendConfirmAnswer(){
   send_variabelTestCommand('a',0,0,0,0);
 }
 void sendsetting(){
-  send_variabelTestCommand('s',Speed,T,Wachse.steps_pmm,Output);
+  send_variabelTestCommand('s',Speed,T,Wachse.steps_pmm,soll_T);
+}
+void sendsettinginfo(){
+  send_variabelTestCommand('j',Speed,T,Wachse.steps_pmm,soll_T);
 }
 void send_variabelTestCommand(char C, float val1, float val2, float val3, float val4){
   SenBuf.tel.comand = C;
@@ -606,42 +599,38 @@ void send_variabelTestCommand(char C, float val1, float val2, float val3, float 
   SenBuf.tel.value[1] = val2;
   SenBuf.tel.value[2] = val3;
   SenBuf.tel.value[3] = val4;
+  
   send_tel();
+  start_responstimer();
 }
 void start_responstimer(){
   wait_for_response = true;
-  cycle_time = time_now + 50000;
+  cycle_time = micros() + 150000;
 }
 void stop_responstimer(){
   wait_for_response = false;
 }
-void serialEvent(){
+void read_Telegram(){
   char bufS[1];
-  char bufBig[18];
-  bool wrong_telegram = false;
-  stop_responstimer();
-  Serial.readBytes(bufS,1);
-  while(bufS[0] != 'S'){
+  char bufBig[19];
+  if(Serial.peek() == 'T'){
     Serial.readBytes(bufS,1);
-    //digitalWrite(28,HIGH);
-  }
-  
-  Serial.readBytes(bufBig,18);
-  Buf.buf[0] = bufS[0];
-  for(int i=0;i<18;i++){
-    Buf.buf[i+1] = bufBig[i];
-  }
-  
-  if(Buf.buf[18]!=calc_checkbyte(Buf.buf)){
-    //digitalWrite(26,HIGH);
-    wrong_telegram = true;
-  }
-  if(wrong_telegram == true){
-    sendRepeatRequest();
-    //digitalWrite(22,HIGH);
-  }else{
+    //stop respons timer
+    stop_responstimer();
+    return;
+  }else if(Serial.peek() == 'S'){
+    Serial.readBytes(Buf.buf,19);
+    //check checksumm
+    if(Buf.buf[18]!=calc_checkbyte(Buf.buf)){
+      digitalWrite(24,!digitalRead(24));
+      return;
+    }
+    bufS[0] = 'T';
+    Serial.write(bufS,1);
     msg_available = true;
-    //digitalWrite(24,HIGH);
+  }else{
+    digitalWrite(26,!digitalRead(26));
+    return;
   }
 }
 void send_tel(){

@@ -43,10 +43,7 @@ private:
     QTimer *timer = new QTimer(this);
     QFile inputFile;
     QTextStream in;
-
-    void repeat_movement(float speed,float dist,int repeat);
-    float probe_Z(float X,float Y);
-
+    void probe_Z(float X,float Y);
     void getValue(const QString indent,const QString line,float *target);
     bool isCommand(const QString indent,const QString line);
 
@@ -66,6 +63,8 @@ private:
 signals:
     void Log(const QString &s);
     void errorLog(const QString &s);
+    void trigger_send();
+    void resend_last();
 
 public slots:
     void G_Code_Parser();

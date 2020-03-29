@@ -4,13 +4,13 @@ cnc_data::cnc_data()
 {
     m_size_X = 269.89;
     m_size_Y = 231.68;
-    m_Zmax_nozzel = 171.0;
+    m_Zmax_nozzel = 170.95;
 
     m_X_angel = -0.00155619;
     m_Y_angel = 0.0023308;
 
     m_soll_speed = 0;
-    m_soll_filament = 37;
+    m_soll_filament = 30;
     m_soll_temperatur = 0;
 
     //values recived
@@ -21,7 +21,7 @@ cnc_data::cnc_data()
     m_act_W = 0;
     //settings
     m_act_speed = 0;
-    m_act_filament = 37;
+    m_act_filament = m_soll_filament;
     m_act_temperatur = 0;
 
     //status
@@ -35,16 +35,17 @@ cnc_data::cnc_data()
     m_error_X_null_Y_max = 0;
     m_error_X_null_Y_null = 0;
 
+    m_max_speed = 50;
+
     m_HWisHeating = false;
     m_HWisMoving = false;
 
     m_SerialIsOpen = false;
-    m_Serial_quit = true;
 
     m_LogFile = new QFile;
     m_LogFile->setFileName(m_LogFileName);
 
-    const QMutexLocker file_locker(&m_file_mutex);
+    const QMutexLocker locker(&m_mutex);
 }
 
 cnc_data::~cnc_data()
@@ -54,7 +55,7 @@ cnc_data::~cnc_data()
 
 void cnc_data::FileLog(QString value)
 {
-    m_file_mutex.lock();
+    m_mutex.lock();
     m_LogFile->open(QIODevice::Append | QIODevice::Text);
     value = QDateTime::currentDateTime().toString("dd.MM.yyyy hh:mm:ss.ms ") + value +"\n";
     QTextStream out(m_LogFile);
@@ -63,7 +64,7 @@ void cnc_data::FileLog(QString value)
       out << value;
     }
     m_LogFile->close();
-    m_file_mutex.unlock();
+    m_mutex.unlock();
 }
 
 void cnc_data::test()
@@ -81,12 +82,12 @@ void cnc_data::set_position(float X,float Y,float Z,float W)
     emit show_position();
 }
 
-void cnc_data::set_settings(float speed,float temperatur,float filament,float output)
+void cnc_data::set_settings(float speed,float temperatur,float filament,float soll_temperatur)
 {
     m_act_speed = speed;
     m_act_temperatur = temperatur;
     m_act_filament = filament;
-    m_output = output;
+    m_soll_temperatur = soll_temperatur;
     emit show_settings();
 }
 
@@ -123,3 +124,12 @@ void cnc_data::set_HWisMoving(bool status)
     m_HWisMoving = status;
     emit show_status();
 }
+
+void cnc_data::append_recive_command(cnc_command new_command)
+{
+    cnc_recive_commands.append(new_command);
+    emit recive_command();
+}
+
+
+

@@ -18,34 +18,45 @@ class Serial : public QObject
 public:
     Serial(cnc_data *database = nullptr);
     ~Serial();
-    //void send(char command,float value1,float value2,float value3,float value4);
+
+    void serial_open();
+    void serial_close();
+
 
 private:
-    QSerialPort MySerial;
+    int m_send_timeout = 5;
+    int m_recive_timeout = 5;
+
+    QSerialPort m_serial;
     cnc_data *m_database;
-    QMutex m_mutex;
-    QMutex m_serial_mutex;
-    QByteArray responseData;
-    QByteArray lastSendData;
-    QList<QByteArray> m_SendData;
-    QTimer *timer = new QTimer(this);
-    QTimer *send_timeout = new QTimer(this);
-    QTimer *setting_timer = new QTimer(this);
+
+    tTelegram m_recive_telegram;
+    tTelegram m_send_telegram;
+
+    QByteArray m_recivedBytes;
+    QByteArray m_sendBytes;
+    QByteArray m_sendBytesLast;
+
+    bool m_serial_running;
+
+    int m_TelegramLength = 19;
+
+    QTimer serial_timeout;
+    QTimer serial_fast_timeout;
+    QTime debug_time;
+    int serial_CheckTelegram();
+    int serial_calcCheckSumm(QByteArray bytes,unsigned char *Checksumm);
 
 signals:
     void Log(const QString &s);
     void errorLog(const QString &s);
-    void recived(char command,float value1,float value2,float value3,float value4);
+    void show_send_queue();
 
 public slots:
-    //void send(char command,float value1,float value2,float value3,float value4);
-    void recive();
-    void serial_start();
-    void serial_close();
-    void send(char command,float value1,float value2,float value3,float value4);
-    void error_handler();
-    void request_settings();
-    void answer_repeatrequest();
+    void serial_read_command();
+    void serial_send_command();
+    void serial_timeout_handler();
+    void send_last();
 
 };
 
