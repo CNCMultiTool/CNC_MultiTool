@@ -349,16 +349,19 @@ void MainWindow::on_pushButton_browseGCode_pressed()
 
 void MainWindow::on_pushButton_startGCode_pressed()
 {
+    ui->pushButton_startGCode->setStyleSheet("background-color: green");
     m_automation->G_Code_Start(ui->lineEdit_fileGCode->text());
 }
 
 void MainWindow::on_pushButton_pauseGCode_pressed()
 {
+    ui->pushButton_startGCode->setStyleSheet("background-color: yellow");
     m_automation->G_Code_Pause();
 }
 
 void MainWindow::on_pushButton_AboardGCode_pressed()
 {
+    ui->pushButton_startGCode->setStyleSheet("background-color: red");
     m_automation->G_Code_Stop();
 }
 

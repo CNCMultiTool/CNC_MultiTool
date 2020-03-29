@@ -159,10 +159,8 @@ void CNC_automation::G_Code_Pause()
 
 void CNC_automation::G_Code_Stop()
 {
-    m_aboard = true;
-    if(timer->isActive())
-        timer->stop();
     m_basefunctions->send_stop();
+    m_database->cnc_send_commands.clear();
 }
 
 void CNC_automation::G_Code_Parser()
@@ -286,7 +284,8 @@ void CNC_automation::G_Code_Parser()
     }while(!newLine.isNull());
     emit Log("end of file");
     inputFile.close();
-    emit Log("G-Code is finishd");
+    emit Log("read G-Code is finishd");
+    m_basefunctions->trigger_next_command();
 }
 
 bool CNC_automation::isCommand(const QString indent,const QString line)
