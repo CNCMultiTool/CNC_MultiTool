@@ -253,15 +253,16 @@ void loop() {
     }
   }
 
-  if(cycle_time < time_now)
+  if(cycle_time < time_now && wait_for_response == true)
   {
-    cycle_time = time_now + 1000000;
-    digitalWrite(22,!digitalRead(22));
+    serieltimeouthandler();
+    wait_for_response = false;
   }
   if(abs(T-soll_T)>5 && cycle_time1 < time_now && soll_T != 0)
   {
     cycle_time1 = time_now + 5000000;
     sendsettinginfo();
+    digitalWrite(22,!digitalRead(22));
   }
 }
 
@@ -377,8 +378,7 @@ void serieltimeouthandler(){
       {
         Serial.readBytes(dummy,1);
       }
-      Serial.write(lastSend,19);
-      //sendRepeatRequest();      
+      Serial.write(lastSend,19);      
 }
 //strops the movement (set soll pos equal act pos)
 void act_equal_soll(){
@@ -598,11 +598,13 @@ void send_variabelTestCommand(char C, float val1, float val2, float val3, float 
   SenBuf.tel.value[1] = val2;
   SenBuf.tel.value[2] = val3;
   SenBuf.tel.value[3] = val4;
+  
   send_tel();
+  start_responstimer();
 }
 void start_responstimer(){
   wait_for_response = true;
-  cycle_time = time_now + 50000;
+  cycle_time = micros() + 150000;
 }
 void stop_responstimer(){
   wait_for_response = false;
@@ -612,10 +614,10 @@ void stop_responstimer(){
 void read_Telegram(){
   char bufS[1];
   char bufBig[19];
-  bool wrong_telegram = false;
   if(Serial.peek() == 'T'){
     Serial.readBytes(bufS,1);
     //stop respons timer
+    stop_responstimer();
     return;
   }else if(Serial.peek() == 'S'){
     Serial.readBytes(Buf.buf,19);

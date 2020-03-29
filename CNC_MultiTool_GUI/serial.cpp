@@ -16,7 +16,7 @@ Serial::~Serial()
 void Serial::serial_timeout_handler()
 {
     serial_timeout.stop();
-    emit errorLog("Seerial TimeoutHandler called after: " +QString::number(debug_time.elapsed()));
+    emit errorLog("Seerial TimeoutHandler called after: " +QString::number(debug_time.elapsed())+" "+QString(m_recivedBytes));
     emit Log("Seerial TimeoutHandler called after: " +QString::number(debug_time.elapsed()));
     m_recivedBytes.clear();
     m_sendBytes.clear();
@@ -26,8 +26,11 @@ void Serial::serial_timeout_handler()
         return;
     }
     m_serial.clearError();
-    m_serial.clear();
     m_serial.flush();
+    m_serial.clear();
+    //resend the last command
+    m_serial.write(m_sendBytesLast);
+    m_serial.waitForBytesWritten(5);
 }
 
 void Serial::serial_open()
@@ -217,7 +220,7 @@ void Serial::serial_send_command()
     newCheckSumm = 0;
     serial_calcCheckSumm(m_sendBytes,&newCheckSumm);
     m_sendBytes += newCheckSumm;
-
+    m_sendBytesLast = m_sendBytes;//save last sended
     m_serial.write(m_sendBytes);
     m_serial.waitForBytesWritten(5);
     //emit Log("Serial timeout startet");

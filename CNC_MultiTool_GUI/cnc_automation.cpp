@@ -185,12 +185,12 @@ void CNC_automation::G_Code_Parser()
         rx.setPattern(";");
         if(rx.indexIn(newLine)==0)
         {
-            emit Log("Comment: "+newLine);
+            //emit Log("Comment: "+newLine);
             continue;
         }
         if(newLine=="")
         {
-            emit Log("emty line");
+            //emit Log("emty line");
             continue;
         }
         getValue("X",newLine,&m_X);
@@ -209,7 +209,7 @@ void CNC_automation::G_Code_Parser()
         }
         if(isCommand("G1",newLine))//normal move
         {
-            if(0.001<abs(m_F-m_F_old))
+            if(0.001>abs(m_F-m_F_old))
             {
                 m_basefunctions->settings_inQ(m_F/60,m_S,-1);
             }
@@ -272,6 +272,8 @@ void CNC_automation::G_Code_Parser()
             emit errorLog("Line not Known:"+newLine);
             emit Log("Line not Known:"+newLine);
             m_database->FileLog("Line not Known:"+newLine);
+        }else{
+            emit Log("Command: "+newLine);
         }
     }while(!newLine.isNull());
     emit Log("end of file");
@@ -285,7 +287,7 @@ bool CNC_automation::isCommand(const QString indent,const QString line)
     rx.setPattern(indent);
     if(rx.indexIn(line)!=-1)
     {
-        emit Log(indent+" X"+QString::number(m_X)+" Y"+QString::number(m_Y)+" Z"+QString::number(m_Z)+" W"+QString::number(m_W)+" S"+QString::number(m_S)+" F"+QString::number(m_F));
+        //emit Log(indent+" X"+QString::number(m_X)+" Y"+QString::number(m_Y)+" Z"+QString::number(m_Z)+" W"+QString::number(m_W)+" S"+QString::number(m_S)+" F"+QString::number(m_F));
         return(true);
     }
     return(false);

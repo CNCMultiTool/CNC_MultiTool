@@ -31,6 +31,7 @@ private:
 
     QByteArray m_recivedBytes;
     QByteArray m_sendBytes;
+    QByteArray m_sendBytesLast;
 
     bool m_serial_running;
 

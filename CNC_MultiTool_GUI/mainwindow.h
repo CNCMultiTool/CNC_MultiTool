@@ -117,5 +117,7 @@ private slots:
     void on_spinBoxSpeed_valueChanged(int arg1);
     void on_spinBoxTemperatur_valueChanged(int arg1);
     void on_spinBoxFilament_valueChanged(int arg1);
+    void on_pushButton_clear_queue_clicked();
+    void on_pushButton_trigger_next_clicked();
 };
 #endif // MAINWINDOW_H

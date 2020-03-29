@@ -967,13 +967,6 @@
        </property>
       </widget>
      </item>
-     <item row="1" column="3">
-      <widget class="QPushButton" name="pushButton_test">
-       <property name="text">
-        <string>TEST</string>
-       </property>
-      </widget>
-     </item>
      <item row="1" column="0">
       <widget class="QPushButton" name="pushButton_rest">
        <property name="text">
@@ -1001,22 +994,36 @@
      <rect>
       <x>630</x>
       <y>630</y>
-      <width>160</width>
+      <width>311</width>
       <height>80</height>
      </rect>
     </property>
     <layout class="QGridLayout" name="gridLayout_3">
-     <item row="1" column="0">
-      <widget class="QLabel" name="label_heating">
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_Queue_3">
        <property name="text">
-        <string>heating</string>
+        <string>QueueStatusd</string>
        </property>
       </widget>
      </item>
-     <item row="0" column="0">
-      <widget class="QLabel" name="label_moveing">
+     <item row="1" column="0">
+      <widget class="QLabel" name="label_Queue">
        <property name="text">
-        <string>moveing</string>
+        <string>queue:0</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QPushButton" name="pushButton_clear_queue">
+       <property name="text">
+        <string>ClearQueue</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QPushButton" name="pushButton_trigger_next">
+       <property name="text">
+        <string>TriggerNext</string>
        </property>
       </widget>
      </item>

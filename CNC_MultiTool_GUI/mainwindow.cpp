@@ -71,7 +71,7 @@ void MainWindow::Log(const QString &s)
 void MainWindow::test()
 {
     ui->textEditLog->append("trigger sending manuel");
-    //m_serial->serial_send_command();
+    m_basefunctions->HW_is_working = false;
     m_basefunctions->trigger_next_command();
 }
 
@@ -85,11 +85,11 @@ void MainWindow::show_send_queue()
 {
     if(m_database->cnc_send_commands.size()==0)
     {
-        ui->label_heating->setStyleSheet("background-color: red");
+        ui->label_Queue->setStyleSheet("background-color: red");
     }else{
-        ui->label_heating->setStyleSheet("background-color: green");
+        ui->label_Queue->setStyleSheet("background-color: green");
     }
-    ui->label_heating->setText("Send_Queue_count: "+QString::number(m_database->cnc_send_commands.size()));
+    ui->label_Queue->setText("Queue_count: "+QString::number(m_database->cnc_send_commands.size()));
 }
 
 void MainWindow::show_position()
@@ -144,19 +144,19 @@ void MainWindow::show_status()
 {
     if(m_database->m_HWisMoving)
     {
-        ui->label_moveing->setStyleSheet("background-color: green");
+        ui->label_Queue->setStyleSheet("background-color: green");
     }
     else
     {
-        ui->label_moveing->setStyleSheet("background-color: red");
+        ui->label_Queue->setStyleSheet("background-color: red");
     }
     if(m_database->m_HWisHeating)
     {
-        ui->label_heating->setStyleSheet("background-color: green");
+        ui->label_Queue->setStyleSheet("background-color: green");
     }
     else
     {
-        ui->label_heating->setStyleSheet("background-color: red");
+        ui->label_Queue->setStyleSheet("background-color: red");
     }
 }
 
@@ -386,4 +386,18 @@ void MainWindow::on_spinBoxTemperatur_valueChanged(int arg1)
 void MainWindow::on_spinBoxFilament_valueChanged(int arg1)
 {
     m_database->m_soll_filament = arg1;
+}
+
+void MainWindow::on_pushButton_clear_queue_clicked()
+{
+    m_database->cnc_send_commands.clear();
+    show_send_queue();
+}
+
+void MainWindow::on_pushButton_trigger_next_clicked()
+{
+    ui->textEditLog->append("trigger sending manuel");
+    m_basefunctions->HW_is_working = false;
+    m_basefunctions->trigger_next_command();
+    show_send_queue();
 }
