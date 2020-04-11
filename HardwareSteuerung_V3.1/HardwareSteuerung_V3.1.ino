@@ -55,7 +55,7 @@ struct StepMotorBig {
   unsigned long step_div;
   unsigned long ramp_step; 
 };
-int acceleration_steps = 20;
+int acceleration_steps = 10;
 
 struct StepMotorMedi Wachse;
 struct StepMotorBig Xachse;

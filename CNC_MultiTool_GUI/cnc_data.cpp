@@ -2,12 +2,7 @@
 
 cnc_data::cnc_data()
 {
-    m_size_X = 269.89;
-    m_size_Y = 231.68;
-    m_Zmax_nozzel = 170.95;
 
-    m_X_angel = -0.00155619;
-    m_Y_angel = 0.0023308;
 
     m_soll_speed = 0;
     m_soll_filament = 30;
@@ -28,6 +23,13 @@ cnc_data::cnc_data()
     m_endswitch_X = 0;
     m_endswitch_Y = 0;
     m_endswitch_Z = 0;
+
+    m_size_X = 269.89;
+    m_size_Y = 231.68;
+    m_Zmax_nozzel = 170.95;
+
+    m_X_angel = -0.00155619;
+    m_Y_angel = 0.0023308;
 
     //kalibration results
     m_error_X_max_Y_null = 0;
@@ -131,5 +133,41 @@ void cnc_data::append_recive_command(cnc_command new_command)
     emit recive_command();
 }
 
+void cnc_data::loadSettings()
+{
+    QSettings settings("CNC_settings.ini", QSettings::IniFormat);
+    m_size_X = settings.value("m_size_X").toDouble();
+    m_size_Y = settings.value("m_size_Y").toDouble();
+    m_Zmax_nozzel = settings.value("m_Zmax_nozzel").toDouble();
 
+    m_X_angel = settings.value("m_X_angel").toDouble();
+    m_Y_angel = settings.value("m_Y_angel").toDouble();
 
+    //kalibration results
+    m_error_X_max_Y_null = settings.value("m_error_X_max_Y_null").toDouble();
+    m_error_X_max_Y_max = settings.value("m_error_X_max_Y_max").toDouble();
+    m_error_X_null_Y_max = settings.value("m_error_X_null_Y_max").toDouble();
+    m_error_X_null_Y_null = settings.value("m_error_X_null_Y_null").toDouble();
+
+    m_max_speed = settings.value("m_max_speed").toDouble();
+
+}
+
+void cnc_data::saveSettings()
+{
+    QSettings settings("CNC_settings.ini", QSettings::IniFormat);
+    settings.setValue("m_size_X",m_size_X);
+    settings.setValue("m_size_Y",m_size_Y);
+    settings.setValue("m_Zmax_nozzel",m_Zmax_nozzel);
+
+    settings.setValue("m_X_angel",m_X_angel);
+    settings.setValue("m_Y_angel",m_Y_angel);
+
+    //kalibration results
+    settings.setValue("m_error_X_max_Y_null",m_error_X_max_Y_null);
+    settings.setValue("m_error_X_max_Y_max",m_error_X_max_Y_max);
+    settings.setValue("m_error_X_null_Y_max", m_error_X_null_Y_max);
+    settings.setValue("m_error_X_null_Y_null",m_error_X_null_Y_null);
+
+    settings.setValue("m_max_speed",m_max_speed);
+}

@@ -17,6 +17,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_database->m_soll_temperatur = ui->spinBoxTemperatur->value();
     m_database->m_soll_filament = ui->spinBoxFilament->value();
 
+    m_database->loadSettings();
     //chek availabal port add to the comboBox
     const auto infos = QSerialPortInfo::availablePorts();
     for (const QSerialPortInfo &info : infos)
@@ -56,6 +57,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_automation,SIGNAL(trigger_send()),m_serial,SLOT(serial_send_command()));
     connect(m_automation,SIGNAL(resend_last()),m_serial,SLOT(send_last()));
 
+    connect(ui->actionValues,SIGNAL(triggered()),this,SLOT(calibratenValueBox()));
 }
 
 MainWindow::~MainWindow()
@@ -403,4 +405,94 @@ void MainWindow::on_pushButton_trigger_next_clicked()
     m_database->m_HWisMoving = false;
     m_basefunctions->trigger_next_command();
     show_send_queue();
+}
+
+void MainWindow::calibratenValueBox()
+{
+    Log("show checkbox");
+    QDialog dialog(this);
+    // Use a layout allowing to have a label next to each field
+    QFormLayout form(&dialog);
+
+    // Add the lineEdits with their respective label
+    QDoubleSpinBox *DSpinBox_size_X = new QDoubleSpinBox(&dialog);
+    DSpinBox_size_X->setRange(-9999999,999999);
+    DSpinBox_size_X->setValue(m_database->m_size_X);
+    form.addRow("X Size", DSpinBox_size_X);
+
+    QDoubleSpinBox *DSpinBox_size_Y = new QDoubleSpinBox(&dialog);
+    DSpinBox_size_Y->setRange(-9999999,999999);
+    DSpinBox_size_Y->setValue(m_database->m_size_Y);
+    form.addRow("Y Size", DSpinBox_size_Y);
+
+    //auto level values
+    QDoubleSpinBox *DSpinBox_X_max_Y_null = new QDoubleSpinBox(&dialog);
+    DSpinBox_X_max_Y_null->setRange(-9999999,999999);
+    DSpinBox_X_max_Y_null->setValue(m_database->m_error_X_max_Y_null);
+    form.addRow("Z error at X:max Y:0", DSpinBox_X_max_Y_null);
+
+    QDoubleSpinBox *DSpinBox_X_max_Y_max = new QDoubleSpinBox(&dialog);
+    DSpinBox_X_max_Y_max->setRange(-9999999,999999);
+    DSpinBox_X_max_Y_max->setValue(m_database->m_error_X_max_Y_max);
+    form.addRow("Z error at X:max Y:max", DSpinBox_X_max_Y_max);
+
+    QDoubleSpinBox *DSpinBox_X_null_Y_max = new QDoubleSpinBox(&dialog);
+    DSpinBox_X_null_Y_max->setRange(-9999999,999999);
+    DSpinBox_X_null_Y_max->setValue(m_database->m_error_X_null_Y_max);
+    form.addRow("Z error at X:0 Y:max", DSpinBox_X_null_Y_max);
+
+    QDoubleSpinBox *DSpinBox_X_null_Y_null = new QDoubleSpinBox(&dialog);
+    DSpinBox_X_null_Y_null->setRange(-9999999,999999);
+    DSpinBox_X_null_Y_null->setValue(m_database->m_error_X_null_Y_null);
+    form.addRow("Z error at X:0 Y:0", DSpinBox_X_null_Y_null);
+
+    QDoubleSpinBox *DSpinBox_angel_X = new QDoubleSpinBox(&dialog);
+    DSpinBox_angel_X->setRange(-9999999,999999);
+    DSpinBox_angel_X->setValue(m_database->m_X_angel);
+    form.addRow("X Angle", DSpinBox_angel_X);
+
+    QDoubleSpinBox *DSpinBox_angel_Y = new QDoubleSpinBox(&dialog);
+    DSpinBox_angel_Y->setRange(-9999999,999999);
+    DSpinBox_angel_Y->setValue(m_database->m_Y_angel);
+    form.addRow("Y Angle", DSpinBox_angel_Y);
+
+    //nozzel hight
+    QDoubleSpinBox *DSpinBox_TCP_higth = new QDoubleSpinBox(&dialog);
+    DSpinBox_TCP_higth->setRange(-9999999,999999);
+    DSpinBox_TCP_higth->setValue(m_database->m_Zmax_nozzel);
+    form.addRow("X Size", DSpinBox_TCP_higth);
+
+    //max speed
+    QDoubleSpinBox *DSpinBox_maxSpeed = new QDoubleSpinBox(&dialog);
+    DSpinBox_maxSpeed->setRange(-9999999,999999);
+    DSpinBox_maxSpeed->setValue(m_database->m_max_speed);
+    form.addRow("Max Speed mm/s", DSpinBox_maxSpeed);
+
+    // Add some standard buttons (Cancel/Ok) at the bottom of the dialog
+    QDialogButtonBox buttonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel,
+                               Qt::Horizontal, &dialog);
+    form.addRow(&buttonBox);
+    QObject::connect(&buttonBox, SIGNAL(accepted()), &dialog, SLOT(accept()));
+    QObject::connect(&buttonBox, SIGNAL(rejected()), &dialog, SLOT(reject()));
+
+    // Show the dialog as modal
+    if (dialog.exec() == QDialog::Accepted) {
+        Log("save values");
+        m_database->m_size_X = DSpinBox_size_X->value();
+        m_database->m_size_Y = DSpinBox_size_Y->value();
+        //kalibration results
+        m_database->m_error_X_max_Y_null = DSpinBox_X_max_Y_null->value();
+        m_database->m_error_X_max_Y_max = DSpinBox_X_max_Y_max->value();
+        m_database->m_error_X_null_Y_max = DSpinBox_X_null_Y_max->value();
+        m_database->m_error_X_null_Y_null = DSpinBox_X_null_Y_null->value();
+        //correktion angel
+        m_database->m_X_angel = DSpinBox_angel_X->value();
+        m_database->m_Y_angel = DSpinBox_angel_Y->value();
+        //TCP hight in home
+        m_database->m_Zmax_nozzel = DSpinBox_TCP_higth->value();
+        //max values
+        m_database->m_max_speed = DSpinBox_maxSpeed->value(); //mm per sec
+
+        m_database->saveSettings();
+    }
 }

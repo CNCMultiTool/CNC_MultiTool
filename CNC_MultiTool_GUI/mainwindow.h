@@ -10,6 +10,8 @@
 #include <cnc_basefunctions.h>
 #include <cnc_data.h>
 #include <cnc_automation.h>
+#include <QFormLayout>
+#include <QDialogButtonBox>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -119,5 +121,6 @@ private slots:
     void on_spinBoxFilament_valueChanged(int arg1);
     void on_pushButton_clear_queue_clicked();
     void on_pushButton_trigger_next_clicked();
+    void calibratenValueBox();
 };
 #endif // MAINWINDOW_H

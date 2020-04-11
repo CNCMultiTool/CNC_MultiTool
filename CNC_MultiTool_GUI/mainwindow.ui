@@ -1039,6 +1039,13 @@
      <height>22</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menuCalibrations">
+    <property name="title">
+     <string>Calibrations</string>
+    </property>
+    <addaction name="actionValues"/>
+   </widget>
+   <addaction name="menuCalibrations"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QToolBar" name="toolBar">
@@ -1052,6 +1059,11 @@
     <bool>false</bool>
    </attribute>
   </widget>
+  <action name="actionValues">
+   <property name="text">
+    <string>Values</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections/>

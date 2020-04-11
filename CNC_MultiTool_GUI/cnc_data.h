@@ -9,6 +9,7 @@
 #include <QMutex>
 #include <QSerialPort>
 #include <QList>
+#include <QSettings>
 
 union tTelegram
 {
@@ -83,6 +84,9 @@ public:
     void set_soll_settings(float speed,float temperatur,float filament);
     void set_endswitch(int X,int Y,int Z);
     void set_serial(bool isOpen);
+
+    void saveSettings();
+    void loadSettings();
 
     void test();
 
