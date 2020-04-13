@@ -340,6 +340,7 @@ void MainWindow::on_pushButton_Zcalib_pressed()
 
 void MainWindow::on_pushButton_browseGCode_pressed()
 {
+    m_serial->stop_timeouts();
     QString directory = QDir::toNativeSeparators(QFileDialog::getOpenFileName(this, tr("Open File"),QDir::currentPath(),tr("G-Code (*.gcode)")));
 
     Log(directory);
@@ -520,4 +521,9 @@ void MainWindow::on_pushButton_test_clicked()
     pointList.append(help);
 
     m_database->calc_correctionangel(pointList);
+}
+
+void MainWindow::on_doubleSpinBoxZOffset_valueChanged(const QString &arg1)
+{
+    m_database->m_z_offset = ui->doubleSpinBoxZOffset->value();
 }

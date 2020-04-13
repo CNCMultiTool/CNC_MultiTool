@@ -266,12 +266,12 @@ void loop() {
     sendsettinginfo();
     digitalWrite(22,!digitalRead(22));
   }
- /* if(cycle_time2 < time_now)
+  if(cycle_time2 < time_now)
   {
     char bufS[1] = {'Q'};
     Serial.write(bufS,1);
-    cycle_time2 = time_now + 50000;
-  }*/
+    cycle_time2 = time_now + 100000;
+  }
 }
 //check if one endswitch had changed
 float checkEndswitches(){

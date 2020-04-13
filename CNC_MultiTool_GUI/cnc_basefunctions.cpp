@@ -157,6 +157,11 @@ void cnc_basefunctions::trigger_next_command()
                 emit Log("Hardware is Working");
                 return;
             }
+            if(m_database->cnc_send_commands[0].command == 'm')
+            {
+                m_database->cnc_send_commands[0].value3 += m_database->m_z_offset;
+            }
+
             emit trigger_send();
             m_database->m_HWisMoving = true;
         }
@@ -290,7 +295,14 @@ void cnc_basefunctions::execute_command(char command,float value1,float value2,f
         break;
     default:
         m_database->FileLog("unknown kommand from Arduino");
-        emit Log("unknown kommand from Arduino");
+        LogText = "unknown kommand from Arduino";
+        LogText += " command :"+QString(command);
+        LogText += " value 1 :"+QString::number(value1);
+        LogText += " value 2 :"+QString::number(value2);
+        LogText += " value 3 :"+QString::number(value3);
+        LogText += " value 4 :"+QString::number(value4);
+        m_database->FileLog(LogText);
+        emit Log(LogText);
         break;
     }
 }

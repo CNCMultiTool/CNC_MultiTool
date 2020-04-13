@@ -5,27 +5,38 @@ Serial::Serial(cnc_data *database)
 {
     m_database = database;
     connect(&serial_timeout, SIGNAL(timeout()), this, SLOT(serial_timeout_handler()));
+    connect(&serial_fast_timeout, SIGNAL(timeout()), this, SLOT(serial_fast_timeout_handler()));
 }
 
 
 Serial::~Serial()
 {
-
+    serial_timeout.stop();
+    serial_fast_timeout.stop();
 }
 
 void Serial::send_last()
 {
-    //emit Log("resend last");
-    m_serial.write(m_sendBytesLast);
-    m_serial.waitForBytesWritten(m_send_timeout);
+    if(!m_sendBytesLast.isEmpty())
+    {
+        m_serial.write(m_sendBytesLast);
+        m_serial.waitForBytesWritten(m_send_timeout);
+    }
+}
+
+void Serial::stop_timeouts()
+{
+    serial_timeout.stop();
+    serial_fast_timeout.stop();
 }
 
 void Serial::serial_timeout_handler()
 {
     serial_fast_timeout.stop();
+    serial_fast_timeout.start(3*m_fast_timeout);
     serial_timeout.stop();
-    emit errorLog("Seerial TimeoutHandler called after: " +QString::number(debug_time.elapsed())+" "+QString(m_recivedBytes));
-    emit Log("Seerial TimeoutHandler called after: " +QString::number(debug_time.elapsed()));
+    emit errorLog("Serial TimeoutHandler called after: " +QString::number(debug_time.elapsed())+" "+QString(m_recivedBytes));
+    emit Log("Serial TimeoutHandler called after: " +QString::number(debug_time.elapsed()));
     m_recivedBytes.clear();
     m_sendBytes.clear();
     m_serial.clearError();
@@ -34,8 +45,25 @@ void Serial::serial_timeout_handler()
     serial_close();
     serial_open();
     //resend the last command
-    m_serial.write(m_sendBytesLast);
-    m_serial.waitForBytesWritten(m_send_timeout);
+    send_last();
+}
+
+void Serial::serial_fast_timeout_handler()
+{
+    serial_fast_timeout.stop();
+    serial_fast_timeout.start(3*m_fast_timeout);
+    serial_timeout.stop();
+    emit errorLog("Serial TimeoutHandler called after: " +QString::number(debug_time.elapsed())+" "+QString(m_recivedBytes));
+    emit Log("Serial TimeoutHandler called after: " +QString::number(debug_time.elapsed()));
+    m_recivedBytes.clear();
+    m_sendBytes.clear();
+    m_serial.clearError();
+    m_serial.flush();
+    m_serial.clear();
+    serial_close();
+    serial_open();
+    //resend the last command
+    send_last();
 }
 
 void Serial::serial_open()
@@ -59,6 +87,7 @@ void Serial::serial_close()
     //emit Log("serial_close");
     m_database->set_serial(false);
     m_serial.close();
+    stop_timeouts();
 }
 
 /**
@@ -155,6 +184,17 @@ void Serial::serial_read_command()
             m_recivedBytes.remove(0,1);
             debug_time.elapsed();
             //emit Log("recive respons quitirung ms:"+QString::number(debug_time.elapsed()));
+            m_database->cnc_send_commands.pop_front();
+            emit show_send_queue();
+            continue;
+        }
+
+        if(m_recivedBytes[0] == 'Q'){
+            serial_fast_timeout.stop();
+            serial_fast_timeout.start(m_fast_timeout);
+            m_recivedBytes.remove(0,1);
+            debug_time.elapsed();
+            //emit Log("recive respons quitirung ms:"+QString::number(debug_time.elapsed()));
             continue;
         }
 
@@ -204,6 +244,12 @@ void Serial::serial_read_command()
  */
 void Serial::serial_send_command()
 {
+    if(!m_serial.isOpen())
+    {
+        emit Log("Serial not open");
+        emit errorLog("Serial not open");
+        return;
+    }
     if(!(m_database->cnc_send_commands.length()>0)){
         emit errorLog("serial send: no command to send");
         return;
@@ -211,8 +257,8 @@ void Serial::serial_send_command()
 
     // read command and values to send
     cnc_command new_command = m_database->cnc_send_commands[0];
-    m_database->cnc_send_commands.pop_front();
-    emit show_send_queue();
+    //m_database->cnc_send_commands.pop_front();
+    //emit show_send_queue();
 
     unsigned char newCheckSumm = 0;
     m_sendBytes = QString("S").toUtf8();

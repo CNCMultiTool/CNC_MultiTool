@@ -83,6 +83,8 @@ public:
     //TCP hight in home
     float m_Zmax_nozzel;
 
+    float m_z_offset;
+
     //max values
     float m_max_speed; //mm per sec
 

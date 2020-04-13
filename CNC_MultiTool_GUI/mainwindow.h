@@ -123,5 +123,6 @@ private slots:
     void on_pushButton_trigger_next_clicked();
     void calibratenValueBox();
     void on_pushButton_test_clicked();
+    void on_doubleSpinBoxZOffset_valueChanged(const QString &arg1);
 };
 #endif // MAINWINDOW_H

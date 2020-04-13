@@ -536,6 +536,19 @@
        </property>
       </widget>
      </item>
+     <item row="1" column="3">
+      <widget class="QDoubleSpinBox" name="doubleSpinBoxZOffset">
+       <property name="minimum">
+        <double>-9999.000000000000000</double>
+       </property>
+       <property name="maximum">
+        <double>9999.000000000000000</double>
+       </property>
+       <property name="singleStep">
+        <double>0.010000000000000</double>
+       </property>
+      </widget>
+     </item>
     </layout>
    </widget>
    <widget class="QWidget" name="gridLayoutWidget_2">
@@ -856,9 +869,9 @@
     </property>
     <property name="geometry">
      <rect>
-      <x>510</x>
+      <x>520</x>
       <y>10</y>
-      <width>511</width>
+      <width>501</width>
       <height>441</height>
      </rect>
     </property>
