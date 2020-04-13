@@ -122,5 +122,6 @@ private slots:
     void on_pushButton_clear_queue_clicked();
     void on_pushButton_trigger_next_clicked();
     void calibratenValueBox();
+    void on_pushButton_test_clicked();
 };
 #endif // MAINWINDOW_H

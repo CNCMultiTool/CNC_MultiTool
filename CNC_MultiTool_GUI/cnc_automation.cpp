@@ -22,7 +22,7 @@ CNC_automation::~CNC_automation()
 
 void CNC_automation::move_home()
 {
-    m_basefunctions->settings_inQ(50,-1,-1);
+    m_basefunctions->settings_inQ(m_F_max,-1,-1);
     m_basefunctions->move_inQ(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
     m_basefunctions->move_inQ(-9999,-9999,9999,m_database->m_act_W);
     m_basefunctions->setPosition_inQ(0,0,m_database->m_Zmax_nozzel,0);
@@ -31,7 +31,7 @@ void CNC_automation::move_home()
 
 void CNC_automation::move_restposi()
 {
-    m_basefunctions->settings_inQ(50,-1,-1);
+    m_basefunctions->settings_inQ(m_F_max,-1,-1);
     m_basefunctions->move_inQ(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
     m_basefunctions->move_inQ(9999,-9999,9999,m_database->m_act_W);
     m_basefunctions->setPosition_inQ(m_database->m_size_X,0,m_database->m_Zmax_nozzel,0);
@@ -41,7 +41,7 @@ void CNC_automation::move_restposi()
 void CNC_automation::calib_size()
 {
     emit Log("calib size (do not use manuel move)");
-    m_basefunctions->settings_inQ(50,-1,-1);
+    m_basefunctions->settings_inQ(m_F_max,-1,-1);
     m_basefunctions->move_inQ(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
     m_basefunctions->move_inQ(-9999,-9999,9999,m_database->m_act_W);
     m_basefunctions->setPosition_inQ(0,0,m_database->m_Zmax_nozzel,m_database->m_act_W);
@@ -82,7 +82,7 @@ void CNC_automation::Z_calib()
     emit Log("Z angel calib (do not use manuel move)");
     m_basefunctions->m_pointList.clear();
     //first move home
-    m_basefunctions->settings_inQ(50,-1,-1);
+    m_basefunctions->settings_inQ(m_F_max,-1,-1);
     m_basefunctions->setPosition_inQ(0,0,0,0);
     m_basefunctions->move_inQ(-9999,-9999,9999,0);
     m_basefunctions->setPosition_inQ(0,0,0,0);
@@ -103,14 +103,14 @@ void CNC_automation::Z_calib()
 void CNC_automation::probe_Z(float X,float Y)
 {
     //move to test point
-    m_basefunctions->settings_inQ(50,-1,-1);
-    m_basefunctions->move_inQ(X,Y,10,0);
+    m_basefunctions->settings_inQ(m_F_max,-1,-1);
+    m_basefunctions->move_inQ(X,Y,20,0);
     //make slow probe
     m_basefunctions->settings_inQ(20,-1,-1);
-    m_basefunctions->move_inQ(X,Y,-10,0);
+    m_basefunctions->move_inQ(X,Y,-30,0);
     m_basefunctions->z_calib_safePos();
-    m_basefunctions->move_inQ(X,Y,10,0);
-    m_basefunctions->settings_inQ(50,-1,-1);
+    m_basefunctions->move_inQ(X,Y,20,0);
+    m_basefunctions->settings_inQ(m_F_max,-1,-1);
 }
 
 
@@ -315,4 +315,6 @@ void CNC_automation::getValue(const QString indent,const QString line,float *tar
         *target = resultStr.toFloat();
     }
 }
+
+
 

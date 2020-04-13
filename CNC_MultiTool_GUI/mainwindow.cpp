@@ -448,11 +448,13 @@ void MainWindow::calibratenValueBox()
 
     QDoubleSpinBox *DSpinBox_angel_X = new QDoubleSpinBox(&dialog);
     DSpinBox_angel_X->setRange(-9999999,999999);
+    DSpinBox_angel_X->setDecimals(6);
     DSpinBox_angel_X->setValue(m_database->m_X_angel);
     form.addRow("X Angle", DSpinBox_angel_X);
 
     QDoubleSpinBox *DSpinBox_angel_Y = new QDoubleSpinBox(&dialog);
     DSpinBox_angel_Y->setRange(-9999999,999999);
+    DSpinBox_angel_Y->setDecimals(6);
     DSpinBox_angel_Y->setValue(m_database->m_Y_angel);
     form.addRow("Y Angle", DSpinBox_angel_Y);
 
@@ -495,4 +497,27 @@ void MainWindow::calibratenValueBox()
 
         m_database->saveSettings();
     }
+}
+
+void MainWindow::on_pushButton_test_clicked()
+{
+    QList<point> pointList;
+    point help;
+    help.Z = m_database->m_error_X_null_Y_null;
+    Log("P0:"+QString::number(m_database->m_error_X_null_Y_null));
+    pointList.append(help);
+    help.Z = m_database->m_error_X_max_Y_null;
+    Log("P1:"+QString::number(m_database->m_error_X_max_Y_null));
+    pointList.append(help);
+    help.Z = m_database->m_error_X_max_Y_max;
+    Log("P2:"+QString::number(m_database->m_error_X_max_Y_max));
+    pointList.append(help);
+    help.Z = m_database->m_error_X_null_Y_max;
+    Log("P3:"+QString::number(m_database->m_error_X_null_Y_max));
+    pointList.append(help);
+    help.Z = m_database->m_error_X_null_Y_null;
+    Log("P4:"+QString::number(m_database->m_error_X_null_Y_null));
+    pointList.append(help);
+
+    m_database->calc_correctionangel(pointList);
 }

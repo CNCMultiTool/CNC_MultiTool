@@ -10,12 +10,19 @@
 #include <QSerialPort>
 #include <QList>
 #include <QSettings>
+#include <QtMath>
 
 union tTelegram
 {
     float Value[4];
     char Bytes[16];
 };
+
+typedef struct{
+    float X;
+    float Y;
+    float Z;
+}point;
 
 typedef struct
 {
@@ -87,6 +94,9 @@ public:
 
     void saveSettings();
     void loadSettings();
+
+    void calc_correctionangel(QList<point> Z_errors);
+    float calc_correction(float X,float Y);
 
     void test();
 

@@ -201,6 +201,11 @@ void cnc_basefunctions::trigger_next_command()
         {
             m_database->cnc_send_commands.pop_front();
             point temp_point;
+            m_database->m_error_X_max_Y_null = m_pointList[1].Z;
+            m_database->m_error_X_max_Y_max = m_pointList[2].Z;
+            m_database->m_error_X_null_Y_max = m_pointList[3].Z;
+            m_database->m_error_X_null_Y_null = m_pointList[4].Z;
+            m_database->calc_correctionangel(m_pointList);
             for(int i=0;i<m_pointList.size();i++)
             {
                 temp_point = m_pointList[i];

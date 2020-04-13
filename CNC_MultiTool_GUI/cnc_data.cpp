@@ -171,3 +171,22 @@ void cnc_data::saveSettings()
 
     settings.setValue("m_max_speed",m_max_speed);
 }
+
+void cnc_data::calc_correctionangel(QList<point> Z_errors)
+{
+    m_X_angel = atan(Z_errors[1].Z/m_size_X);
+    m_Y_angel = atan(Z_errors[3].Z/m_size_Y);
+    //a = math.tan(alpha)*b
+    float Zcorr = calc_correction(m_size_X,m_size_Y);
+    emit Log("messuring error at end:"+QString::number(Z_errors[4].Z));
+    emit Log("X_angel:"+QString::number(m_X_angel)+" Y_angel:"+QString::number(m_Y_angel));
+    emit Log("Correction error:"+QString::number(Z_errors[2].Z-Zcorr));
+}
+
+//correction fallut
+float cnc_data::calc_correction(float X,float Y)
+{
+    float Xcorr = X * tan(m_Y_angel);
+    float Ycorr = Y * tan(m_X_angel);
+    return(Xcorr+Ycorr);
+}

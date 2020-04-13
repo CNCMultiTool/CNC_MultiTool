@@ -24,8 +24,8 @@ public:
 
 
 private:
-    int m_send_timeout = 5;
-    int m_recive_timeout = 5;
+    int m_send_timeout = 0;
+    int m_recive_timeout = 0;
 
     QSerialPort m_serial;
     cnc_data *m_database;

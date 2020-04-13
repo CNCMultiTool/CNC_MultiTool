@@ -8,11 +8,6 @@
 #include <QObject>
 #include <QEventLoop>
 #include <QThread>
-typedef struct{
-    float X;
-    float Y;
-    float Z;
-}point;
 
 class cnc_basefunctions: public QObject
 {
