@@ -13,7 +13,8 @@ void cnc_basefunctions::test()
 
 void cnc_basefunctions::send_move(float X,float Y,float Z,float W)
 {
-    send_to_cnc('m',X,Y,Z,W,1);
+    //send_to_cnc('m',X,Y,Z,W,1);
+    send_to_cnc('j',X,Y,Z,W,1);
 }
 
 void cnc_basefunctions::move_inQ(float X,float Y,float Z,float W)
@@ -66,7 +67,8 @@ void cnc_basefunctions::send_settings(float speed,float temperatur,float filamen
         f = 1;
 
     m_database->set_soll_settings(s,t,f);
-    send_to_cnc('s',s,t,f,0,1);
+    //send_to_cnc('s',s,t,f,0,1);
+    send_to_cnc('w',s,t,f,0,1);
 }
 
 void cnc_basefunctions::settings_inQ(float speed,float temperatur,float filament)

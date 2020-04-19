@@ -283,13 +283,15 @@ void loop() {
     if(wait_for_Q == true)
     {
       serieltimeouthandler();
+      cycle_time2 = time_now + 500000;
     }
-      
+    else
+    {
+      cycle_time2 = time_now + 100000;
+    }
       char bufS[1] = {'Q'};
       Serial.write(bufS,1);
-      cycle_time2 = time_now + 100000;
       wait_for_Q = true;
-
   }
 }
 //check if one endswitch had changed
@@ -365,6 +367,14 @@ void recive_msg(){
       sendPose = false;
       //sendConfirmAnswer();
       break;
+    case 'j'://move to
+      Xachse.soll_posi = Buf.tel.value[0];
+      Yachse.soll_posi = Buf.tel.value[1];
+      Zachse.soll_posi = Buf.tel.value[2];
+      Wachse.soll_posi = Buf.tel.value[3];
+      getMoveParams();
+      sendactposition();
+      break;
     case 'p'://set new pose
       Xachse.act_posi = Buf.tel.value[0];
       Yachse.act_posi = Buf.tel.value[1];
@@ -382,6 +392,12 @@ void recive_msg(){
       Wachse.steps_pmm = Buf.tel.value[2];
       sendsetting();
       break;
+    case 'w': //set speed temperatur and filament
+      Speed = Buf.tel.value[0];
+      soll_T = Buf.tel.value[1];
+      Wachse.steps_pmm = Buf.tel.value[2];
+      sendsettinginfo();
+      break;
     case 'b'://send stop
       act_equal_soll();
       sendPose = true;
@@ -393,15 +409,15 @@ void recive_msg(){
 }
 void serieltimeouthandler(){
       digitalWrite(26,!digitalRead(26));
-      Serial.flush();
-      char dummy[1];
-      while(Serial.available())
-      {
-        Serial.readBytes(dummy,1);
-      }
+      //Serial.flush();
+      //char dummy[1];
+      //while(Serial.available())
+      //{
+      //  Serial.readBytes(dummy,1);
+      //}
       Serial.end();
       Serial.begin(115200,SERIAL_8E1);//9600
-      Serial.write(lastSend,19);      
+      //Serial.write(lastSend,19);      
 }
 //strops the movement (set soll pos equal act pos)
 void act_equal_soll(){
@@ -655,7 +671,8 @@ void read_Telegram(){
     Serial.write(bufS,1);
     msg_available = true;
   }else{
-    digitalWrite(26,!digitalRead(26));
+    Serial.readBytes(bufS,1);
+    digitalWrite(28,!digitalRead(28));
     return;
   }
 }

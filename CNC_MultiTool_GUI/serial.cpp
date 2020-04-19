@@ -19,8 +19,8 @@ void Serial::send_last()
 {
     if(!m_sendBytesLast.isEmpty()&&m_serial.isOpen())
     {
-        cnc_command dummy;
-        m_database->cnc_send_commands.append(dummy);
+        //cnc_command dummy;
+        //m_database->cnc_send_commands.append(dummy);
         m_serial.write(m_sendBytesLast);
         m_serial.waitForBytesWritten(m_send_timeout);
     }
