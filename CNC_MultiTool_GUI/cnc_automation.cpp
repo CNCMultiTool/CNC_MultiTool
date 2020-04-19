@@ -120,6 +120,8 @@ void CNC_automation::G_Code_Start(QString fileName)
     m_database->FileLog("start g-code: "+fileName);
     m_fileName = fileName;
     //m_basefunctions->send_setPosition(0,0,m_database->m_Zmax_nozzel,0);
+    m_database->m_HWisMoving = false;
+    m_database->m_HWisHeating = false;
 
     if(!inputFile.isOpen())
     {

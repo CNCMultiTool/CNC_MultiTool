@@ -111,6 +111,7 @@ unsigned long PID_time = millis();
 int debug = 0;
 
 bool wait_for_response = false;
+bool wait_for_Q = false;
 
 void setup() {
   Serial.begin(115200,SERIAL_8E1);//9600
@@ -221,6 +222,17 @@ void setup() {
 
 void loop() {
   time_now = micros();
+  if(old_time_now>time_now)
+  {
+    digitalWrite(22,HIGH);
+    digitalWrite(24,HIGH);
+    digitalWrite(26,HIGH);
+    digitalWrite(28,HIGH);
+  }
+  else
+  {
+    old_time_now = time_now;
+  }
 
   if(Serial.available())
   {
@@ -268,9 +280,16 @@ void loop() {
   }
   if(cycle_time2 < time_now)
   {
-    char bufS[1] = {'Q'};
-    Serial.write(bufS,1);
-    cycle_time2 = time_now + 100000;
+    if(wait_for_Q == true)
+    {
+      serieltimeouthandler();
+    }
+      
+      char bufS[1] = {'Q'};
+      Serial.write(bufS,1);
+      cycle_time2 = time_now + 100000;
+      wait_for_Q = true;
+
   }
 }
 //check if one endswitch had changed
@@ -373,6 +392,7 @@ void recive_msg(){
   }
 }
 void serieltimeouthandler(){
+      digitalWrite(26,!digitalRead(26));
       Serial.flush();
       char dummy[1];
       while(Serial.available())
@@ -618,11 +638,17 @@ void read_Telegram(){
     //stop respons timer
     stop_responstimer();
     return;
+  }else if(Serial.peek() == 'Q'){
+    Serial.readBytes(bufS,1);
+    //stop respons timer
+    wait_for_Q = false;
+    return;
   }else if(Serial.peek() == 'S'){
     Serial.readBytes(Buf.buf,19);
     //check checksumm
     if(Buf.buf[18]!=calc_checkbyte(Buf.buf)){
       digitalWrite(24,!digitalRead(24));
+      sendRepeatRequest();
       return;
     }
     bufS[0] = 'T';

@@ -19,7 +19,7 @@ public:
     Serial(cnc_data *database = nullptr);
     ~Serial();
 
-    void serial_open();
+    bool serial_open();
     void serial_close();
     void stop_timeouts();
 
@@ -28,6 +28,7 @@ private:
     int m_send_timeout = 0;
     int m_recive_timeout = 0;
     int m_fast_timeout = 300;
+    int m_timeout = 150;
 
     QSerialPort m_serial;
     cnc_data *m_database;
@@ -58,7 +59,6 @@ public slots:
     void serial_read_command();
     void serial_send_command();
     void serial_timeout_handler();
-    void serial_fast_timeout_handler();
     void send_last();
 
 };

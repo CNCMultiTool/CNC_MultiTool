@@ -152,11 +152,11 @@ void cnc_basefunctions::trigger_next_command()
 
         if(action == 1||action == 2)
         {
-            if(m_database->m_HWisMoving)//did not send next command while HW is working
-            {
-                emit Log("Hardware is Working");
-                return;
-            }
+            //if(m_database->m_HWisMoving)//did not send next command while HW is working
+            //{
+            //    emit Log("Hardware is Working");
+            //    return;
+            //}
             if(m_database->cnc_send_commands[0].command == 'm')
             {
                 m_database->cnc_send_commands[0].value3 += m_database->m_z_offset;
@@ -223,7 +223,7 @@ void cnc_basefunctions::trigger_next_command()
         if(action == 9)//wait for heating
         {
             emit Log("wait for heating");
-            m_database->cnc_send_commands.pop_front();
+            //m_database->cnc_send_commands.pop_front();
             m_database->m_HWisHeating = true;
         }
         emit show_send_queue();
@@ -274,6 +274,7 @@ void cnc_basefunctions::execute_command(char command,float value1,float value2,f
             if(3 > temp_dif)
             {
                 emit Log("end of the heating");
+                m_database->cnc_send_commands.pop_front();
                 trigger_next_command();
                 m_database->m_HWisHeating = false;
             }
