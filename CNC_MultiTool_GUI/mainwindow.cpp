@@ -107,7 +107,7 @@ void MainWindow::show_settings()
     ui->label_actSpeed->setText(QString::number(m_database->m_act_speed)+"/"+QString::number(m_database->m_soll_speed));
     ui->label_actTemperatur->setText(QString::number(m_database->m_act_temperatur)+"/"+QString::number(m_database->m_soll_temperatur));
     ui->label_actFilament->setText(QString::number(m_database->m_act_filament)+"/"+QString::number(m_database->m_soll_filament));
-
+    ui->label_accSteps->setText(QString::number(m_database->m_soll_accSteps));
     if(m_alive)
     {
         m_alive = false;
@@ -315,7 +315,8 @@ void MainWindow::on_pushButtonSetSettings_pressed()
     float Speed = ui->spinBoxSpeed->value();
     float Temperatur = ui->spinBoxTemperatur->value();
     float Filament = ui->spinBoxFilament->value();
-    m_basefunctions->send_settings(Speed,Temperatur,Filament);
+    float Acc = ui->spinBoxAccSteps->value();
+    m_basefunctions->send_settings(Speed,Temperatur,Filament,Acc);
 }
 
 void MainWindow::on_pushButton_home_pressed()

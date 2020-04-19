@@ -52,11 +52,14 @@ void cnc_basefunctions::wait_for_heating()
     send_to_cnc(' ',0,0,0,0,9);
 }
 
-void cnc_basefunctions::send_settings(float speed,float temperatur,float filament)
+void cnc_basefunctions::send_settings(float speed,float temperatur,float filament,float acc)
 {
     float s = speed;
     float t = temperatur;
     float f = filament;
+    float a = acc;
+    if(a<0)
+        a = m_database->m_soll_accSteps;
     if(s<0)
         s = m_database->m_soll_speed;
     if(t<0)
@@ -66,16 +69,19 @@ void cnc_basefunctions::send_settings(float speed,float temperatur,float filamen
     if(f<1)
         f = 1;
 
-    m_database->set_soll_settings(s,t,f);
+    m_database->set_soll_settings(s,t,f,a);
     //send_to_cnc('s',s,t,f,0,1);
-    send_to_cnc('w',s,t,f,0,1);
+    send_to_cnc('w',s,t,f,a,1);
 }
 
-void cnc_basefunctions::settings_inQ(float speed,float temperatur,float filament)
+void cnc_basefunctions::settings_inQ(float speed,float temperatur,float filament,float acc)
 {
     float s = speed;
     float t = temperatur;
     float f = filament;
+    float a = acc;
+    if(a<0)
+        a = m_database->m_soll_accSteps;
     if(s<0)
         s = m_database->m_soll_speed;
     if(t<0)
@@ -85,8 +91,7 @@ void cnc_basefunctions::settings_inQ(float speed,float temperatur,float filament
     if(f<1)
         f = 1;
 
-
-    m_database->set_soll_settings(s,t,f);
+    m_database->set_soll_settings(s,t,f,a);
     send_to_cnc('s',s,t,f,0,2);
 }
 

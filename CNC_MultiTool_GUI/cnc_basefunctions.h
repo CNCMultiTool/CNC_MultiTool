@@ -41,13 +41,13 @@ public slots:
     void send_init();
 
     void send_move(float X,float Y,float Z,float W);
-    void send_settings(float speed,float temperatur,float filament);
+    void send_settings(float speed,float temperatur,float filament,float acc);
     void send_stop();
     void send_getPosition();
     void send_setPosition(float X,float Y,float Z,float W);
     void setPosition_inQ(float X,float Y,float Z,float W);
     void move_inQ(float X,float Y,float Z,float W);
-    void settings_inQ(float speed,float temperatur,float filament);
+    void settings_inQ(float speed,float temperatur,float filament,float acc);
     void process_command();
 };
 

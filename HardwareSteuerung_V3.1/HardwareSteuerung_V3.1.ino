@@ -390,12 +390,14 @@ void recive_msg(){
       Speed = Buf.tel.value[0];
       soll_T = Buf.tel.value[1];
       Wachse.steps_pmm = Buf.tel.value[2];
+      acceleration_steps = Buf.tel.value[3];
       sendsetting();
       break;
     case 'w': //set speed temperatur and filament
       Speed = Buf.tel.value[0];
       soll_T = Buf.tel.value[1];
       Wachse.steps_pmm = Buf.tel.value[2];
+      acceleration_steps = Buf.tel.value[3];
       sendsettinginfo();
       break;
     case 'b'://send stop

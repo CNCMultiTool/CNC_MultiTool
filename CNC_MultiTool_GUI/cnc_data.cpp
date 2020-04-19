@@ -7,7 +7,7 @@ cnc_data::cnc_data()
     m_soll_speed = 0;
     m_soll_filament = 30;
     m_soll_temperatur = 0;
-
+    m_soll_accSteps = 20;
     //values recived
     //position
     m_act_X = 0;
@@ -18,6 +18,7 @@ cnc_data::cnc_data()
     m_act_speed = 0;
     m_act_filament = m_soll_filament;
     m_act_temperatur = 0;
+    m_act_accSteps = 0;
 
     //status
     m_endswitch_X = 0;
@@ -95,7 +96,7 @@ void cnc_data::set_settings(float speed,float temperatur,float filament,float so
     emit show_settings();
 }
 
-void cnc_data::set_soll_settings(float speed,float temperatur,float filament)
+void cnc_data::set_soll_settings(float speed,float temperatur,float filament,float acc)
 {
     m_soll_speed = speed;
     m_soll_temperatur = temperatur;

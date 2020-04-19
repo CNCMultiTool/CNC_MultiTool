@@ -51,6 +51,7 @@ public:
     float m_soll_speed;
     float m_soll_filament;
     float m_soll_temperatur;
+    float m_soll_accSteps;
 
     //values recived
     //position
@@ -62,6 +63,7 @@ public:
     float m_act_speed;
     float m_act_filament;
     float m_act_temperatur;
+    float m_act_accSteps;
 
     //status
     float m_endswitch_X;
@@ -90,7 +92,7 @@ public:
 
     void set_position(float X,float Y,float Z,float W);
     void set_settings(float speed,float temperatur,float filament,float soll_temperatur);
-    void set_soll_settings(float speed,float temperatur,float filament);
+    void set_soll_settings(float speed,float temperatur,float filament,float acc);
     void set_endswitch(int X,int Y,int Z);
     void set_serial(bool isOpen);
 
