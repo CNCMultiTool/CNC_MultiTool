@@ -52,6 +52,11 @@ void cnc_basefunctions::wait_for_heating()
     send_to_cnc(' ',0,0,0,0,9);
 }
 
+void cnc_basefunctions::cycletimeTest()
+{
+    send_to_cnc('l',0,0,0,0,2);
+}
+
 void cnc_basefunctions::send_settings(float speed,float temperatur,float filament,float acc)
 {
     float s = speed;
@@ -170,6 +175,10 @@ void cnc_basefunctions::trigger_next_command()
             }
 
             emit trigger_send();
+            speedOldPoint.X = m_database->m_act_X;
+            speedOldPoint.Y = m_database->m_act_Y;
+            speedOldPoint.Z = m_database->m_act_Z;
+            speedTimer.restart();
             m_database->m_HWisMoving = true;
         }
         if(action == 3)//calib size safe max posi
@@ -249,6 +258,7 @@ void cnc_basefunctions::process_command()
 
 void cnc_basefunctions::execute_command(char command,float value1,float value2,float value3,float value4)
 {
+    double tracDist;
     QString LogText;
     switch(command)
     {
@@ -257,6 +267,9 @@ void cnc_basefunctions::execute_command(char command,float value1,float value2,f
         m_database->FileLog("INFO recived set position: X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
         break;
     case 'c'://end of movemend and ready for next comand
+        tracDist = sqrt(qPow(speedOldPoint.X-value1,2)+qPow(speedOldPoint.Y-value2,2)+qPow(speedOldPoint.Z-value3,2));
+        emit Log("real traveled speed:"+QString::number((tracDist/speedTimer.elapsed())*1000)+" dist:"+QString::number(tracDist)+"mm time:"+QString::number(speedTimer.elapsed())+"ms soll_speed:"+QString::number(m_database->m_act_speed));
+
         m_database->set_position(value1,value2,value3,value4);
         m_database->set_HWisMoving(false);
         m_database->FileLog("INFO recived set position and ready for next command: X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
@@ -291,6 +304,16 @@ void cnc_basefunctions::execute_command(char command,float value1,float value2,f
         m_database->set_endswitch(value1,value2,value3);
         m_database->FileLog("INFO recived endswitches: X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
         //emit Log("recive endswitch X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
+        break;
+    case 'l':
+        LogText = "timecheck ";
+        LogText += " value 1 :"+QString::number(value1);
+        LogText += " value 2 :"+QString::number(value2);
+        LogText += " value 3 :"+QString::number(value3);
+        LogText += " value 4 :"+QString::number(value4);
+        m_database->FileLog(LogText);
+        emit Log(LogText);
+        trigger_next_command();
         break;
     case 'd':
         LogText = "DEBUG recived Debug";

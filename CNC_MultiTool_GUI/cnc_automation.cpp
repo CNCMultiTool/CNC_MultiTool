@@ -61,6 +61,7 @@ void CNC_automation::repeat_test()
     m_basefunctions->setPosition_inQ(0,0,0,m_database->m_act_W);
     m_basefunctions->settings_inQ(30,-1,-1,-1);
     m_basefunctions->move_inQ(10,10,-10,m_database->m_act_W);
+    m_basefunctions->cycletimeTest();
     for(int i = 0;i<2;i++)
     {
         m_basefunctions->move_inQ(20,20,-20,m_database->m_act_W);

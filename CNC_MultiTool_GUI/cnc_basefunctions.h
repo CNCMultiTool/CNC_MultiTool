@@ -28,6 +28,8 @@ private:
     void send_to_cnc(char commmand,float v1,float v2,float v3,float v4,int action);
     cnc_data *m_database;
     void execute_command(char command,float value1,float value2,float value3,float value4);
+    QTime speedTimer;
+    point speedOldPoint;
 
 
 
@@ -48,6 +50,7 @@ public slots:
     void setPosition_inQ(float X,float Y,float Z,float W);
     void move_inQ(float X,float Y,float Z,float W);
     void settings_inQ(float speed,float temperatur,float filament,float acc);
+    void cycletimeTest();
     void process_command();
 };
 

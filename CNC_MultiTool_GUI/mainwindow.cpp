@@ -71,12 +71,6 @@ void MainWindow::Log(const QString &s)
     ui->textEditLog->append(text);
 }
 
-void MainWindow::test()
-{
-    ui->textEditLog->append("trigger sending manuel");
-    m_basefunctions->trigger_next_command();
-}
-
 void MainWindow::errorLog(const QString &s)
 {
     ui->textEditLog_error->append(s);
@@ -369,12 +363,6 @@ void MainWindow::on_pushButton_AboardGCode_pressed()
     m_automation->G_Code_Stop();
 }
 
-void MainWindow::on_pushButton_test_pressed()
-{
-    //m_database->test();
-    test();
-}
-
 void MainWindow::on_pushButton_rest_pressed()
 {
     m_automation->move_restposi();
@@ -503,6 +491,7 @@ void MainWindow::calibratenValueBox()
 
 void MainWindow::on_pushButton_test_clicked()
 {
+    /*
     QList<point> pointList;
     point help;
     help.Z = m_database->m_error_X_null_Y_null;
@@ -522,6 +511,10 @@ void MainWindow::on_pushButton_test_clicked()
     pointList.append(help);
 
     m_database->calc_correctionangel(pointList);
+    */
+    ui->textEditLog->append("cycletime cheack");
+    m_basefunctions->cycletimeTest();
+    m_basefunctions->trigger_next_command();
 }
 
 void MainWindow::on_doubleSpinBoxZOffset_valueChanged(const QString &arg1)

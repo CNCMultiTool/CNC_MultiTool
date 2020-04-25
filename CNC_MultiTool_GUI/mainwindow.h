@@ -60,7 +60,6 @@ signals:
 private slots:
     void Log(const QString &s);
     void errorLog(const QString &s);
-    void test();
 
     void show_position();
     void show_settings();
@@ -114,7 +113,6 @@ private slots:
 
     void on_pushButton_pauseGCode_pressed();
     void on_pushButton_AboardGCode_pressed();
-    void on_pushButton_test_pressed();
     void on_pushButton_rest_pressed();
     void on_spinBoxSpeed_valueChanged(int arg1);
     void on_spinBoxTemperatur_valueChanged(int arg1);
