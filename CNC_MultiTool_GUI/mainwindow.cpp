@@ -115,6 +115,21 @@ void MainWindow::show_settings()
     }
 }
 
+void MainWindow::show_alive()
+{
+    if(m_alive)
+    {
+        m_alive = false;
+        ui->label_alive->setStyleSheet("background-color: blue");
+
+    }
+    else
+    {
+        m_alive = true;
+        ui->label_alive->setStyleSheet("background-color: lightblue");
+    }
+}
+
 void MainWindow::show_serial(bool isOpen)
 {
     if(isOpen)

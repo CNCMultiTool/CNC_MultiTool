@@ -311,6 +311,7 @@ void cnc_basefunctions::execute_command(char command,float value1,float value2,f
         LogText += " value 2 :"+QString::number(value2);
         LogText += " value 3 :"+QString::number(value3);
         LogText += " value 4 :"+QString::number(value4);
+        emit Log(LogText);
         m_database->FileLog(LogText);
         emit Log(LogText);
         trigger_next_command();

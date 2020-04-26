@@ -49,6 +49,8 @@ cnc_data::cnc_data()
 
     m_LogFile = new QFile;
     m_LogFile->setFileName(m_LogFileName);
+    m_SerialLogFile = new QFile;
+    m_SerialLogFile->setFileName(m_SerialLogFileName);
 
     const QMutexLocker locker(&m_mutex);
 }
@@ -62,7 +64,7 @@ void cnc_data::FileLog(QString value)
 {
     m_mutex.lock();
     m_LogFile->open(QIODevice::Append | QIODevice::Text);
-    value = QDateTime::currentDateTime().toString("dd.MM.yyyy hh:mm:ss.ms ") + value +"\n";
+    value = QDateTime::currentDateTime().toString("dd.MM.yyyy hh:mm:ss.zzz ") + value +"\n";
     QTextStream out(m_LogFile);
     out.setCodec("UTF-8");
     if (m_LogFile != 0) {
@@ -70,6 +72,20 @@ void cnc_data::FileLog(QString value)
     }
     m_LogFile->close();
     m_mutex.unlock();
+}
+
+void cnc_data::SerialLog(QString value)
+{
+    m_Serialmutex.lock();
+    m_SerialLogFile->open(QIODevice::Append | QIODevice::Text);
+    value = QDateTime::currentDateTime().toString("dd.MM.yyyy hh:mm:ss.zzz ") + value +"\n";
+    QTextStream out(m_SerialLogFile);
+    out.setCodec("UTF-8");
+    if (m_SerialLogFile != 0) {
+      out << value;
+    }
+    m_SerialLogFile->close();
+    m_Serialmutex.unlock();
 }
 
 void cnc_data::test()

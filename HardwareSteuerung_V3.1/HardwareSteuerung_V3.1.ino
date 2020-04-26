@@ -78,6 +78,7 @@ unsigned long cycle_time3 = micros();
 unsigned long old_time_now = micros();
 
 bool sendPose = true;
+bool sendPoseInfo = true;
 
 bool alavie;
 
@@ -117,7 +118,8 @@ int cycle_time_test = 0;
 unsigned long  cycle_time_test_start = 0;
 
 void setup() {
-  Serial.begin(115200,SERIAL_8E1);//9600
+  lastSend[0]= '\0';
+  Serial.begin(115200,SERIAL_8N2);//9600
   /*TODO
    * EndPins
    */
@@ -233,7 +235,6 @@ void loop() {
   }
 
 //cycletime tester
-  digitalWrite(22,!digitalRead(22));
   if(cycle_time_test>0){
     cycle_time_test++;
   }
@@ -254,7 +255,6 @@ void loop() {
 
   checkEndswitches();
   TempControle();
-  digitalWrite(24,!digitalRead(24));
   //motors drive
   treiberBig(Xachse);
   treiberBig(Yachse);
@@ -269,29 +269,33 @@ void loop() {
             sendconfirmpos();
             sendPose = true;
           }
+          if(sendPoseInfo == false){
+            sendactposition();
+            sendPoseInfo = true;
+          }
         }
       }
     }
   }
-  digitalWrite(26,!digitalRead(26));
+
   if(cycle_time < time_now && wait_for_response == true)
   {
-    digitalWrite(28,!digitalRead(28));
     serieltimeouthandler();
     wait_for_response = false;
   }
   if(2 < abs(old_T - T) && cycle_time1 < time_now)
   {
-    old_T = T;
+    //old_T = T;
     cycle_time1 = time_now + 5000000;
     sendsettinginfo();
   }
+  
   if(cycle_time2 < time_now)
   {
     if(wait_for_Q == true)
     {
       serieltimeouthandler();
-      cycle_time2 = time_now + 400000;
+      //cycle_time2 = time_now + 400000;
     }
     else
     {
@@ -301,7 +305,7 @@ void loop() {
       Serial.write(bufS,1);
       wait_for_Q = true;
   }
-  digitalWrite(28,!digitalRead(28));
+  
 }
 //check if one endswitch had changed
 float checkEndswitches(){
@@ -383,7 +387,7 @@ void recive_msg(){
       Zachse.soll_posi = Buf.tel.value[2];
       Wachse.soll_posi = Buf.tel.value[3];
       getMoveParams();
-      sendactposition();
+      sendPoseInfo = false;
       break;
     case 'p'://set new pose
       Xachse.act_posi = Buf.tel.value[0];
@@ -428,6 +432,10 @@ void serieltimeouthandler(){
       //Serial.flush();
       //Serial.end();
       //Serial.begin(115200,SERIAL_8E1);//9600
+      char bufS[1];
+      //while(Serial.available())
+      //  Serial.readBytes(bufS,1);
+        
       if(strlen(lastSend)!=0)
         Serial.write(lastSend,19);      
 }
@@ -498,23 +506,25 @@ unsigned long calc_steptime(struct StepMotorBig &StepM){
   double soll_speed = (1/double(StepM.time_pstep)) * 100;
   double next_speed;
   int state = 0;
+  //send_debug(StepM.step_div,curr_step,soll_speed,acceleration_steps);
   if(StepM.step_div/2<curr_step)//abbremsen
   {
-    state = 1;
-    if(abs(StepM.step_div-curr_step) < acceleration_steps)
+    state = 3;
+    if(abs(StepM.step_div-curr_step) <= acceleration_steps)
     {
-      state = 2;
-      next_speed = (soll_speed/double(acceleration_steps))*double((abs(StepM.step_div-curr_step)+1));
+      state = 4;
+      next_speed = (soll_speed/double(acceleration_steps))*double((abs(StepM.step_div-(curr_step+1))+1));
       ist_time_pstep = 1/(next_speed/100);
     }
   }
   else    //beschleunigung
   {
-    if(StepM.ramp_step < acceleration_steps)
+    state = 1;
+    if(curr_step < acceleration_steps)
     {
-      next_speed = (soll_speed/double(acceleration_steps))*double(acceleration_steps-(acceleration_steps-StepM.ramp_step)+1);
+      state = 2;
+      next_speed = (soll_speed/double(acceleration_steps))*double(acceleration_steps-(acceleration_steps-curr_step)+1);
       ist_time_pstep = 1/(next_speed/100);
-      StepM.ramp_step += 1;
     }
   }      
   
@@ -533,8 +543,8 @@ void treiberBig(struct StepMotorBig &StepM){
       digitalWrite(StepM.pinDIR,HIGH);
       digitalWrite(StepM.pinPUL,LOW);
       digitalWrite(StepM.pinPUL,HIGH);
-      StepM.time_next_step += StepM.time_pstep;
-      //StepM.time_next_step += calc_steptime(StepM);
+      //StepM.time_next_step += StepM.time_pstep;
+      StepM.time_next_step += calc_steptime(StepM);
       StepM.act_step++;
     }else if(StepM.soll_step<StepM.act_step){
       //one stepp back

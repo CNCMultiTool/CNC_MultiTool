@@ -15,7 +15,7 @@
 union tTelegram
 {
     float Value[4];
-    char Bytes[16];
+    unsigned char Bytes[16];
 };
 
 typedef struct{
@@ -41,6 +41,7 @@ public:
     cnc_data();
 
     void FileLog(QString value);
+    void SerialLog(QString value);
 
     bool m_HWisHeating;
     bool m_HWisMoving;
@@ -118,6 +119,9 @@ private:
     QString m_LogFileName = "CNC_Log.txt";
     QFile *m_LogFile;
     QMutex m_mutex;
+    QString m_SerialLogFileName = "CNC_SerialLog.txt";
+    QFile *m_SerialLogFile;
+    QMutex m_Serialmutex;
     ~cnc_data();
 
 signals:
