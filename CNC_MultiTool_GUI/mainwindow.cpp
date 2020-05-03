@@ -104,17 +104,6 @@ void MainWindow::show_settings()
     ui->label_actTemperatur->setText(QString::number(m_database->m_act_temperatur)+"/"+QString::number(m_database->m_soll_temperatur));
     ui->label_actFilament->setText(QString::number(m_database->m_act_filament)+"/"+QString::number(m_database->m_soll_filament));
     ui->label_accSteps->setText(QString::number(m_database->m_soll_accSteps));
-    //if(m_alive)
-    //{
-    //    m_alive = false;
-    //    ui->label_alive->setStyleSheet("background-color: blue");
-
-    //}
-    //else
-    //{
-    //    m_alive = true;
-    //    ui->label_alive->setStyleSheet("background-color: lightblue");
-    //}
 }
 
 void MainWindow::show_alive()
@@ -155,6 +144,7 @@ void MainWindow::show_endswitch(float X, float Y, float Z)
 
 void MainWindow::show_status()
 {
+    /*
     if(m_database->m_HWisMoving)
     {
         ui->label_Queue_state->setStyleSheet("background-color: green");
@@ -165,6 +155,21 @@ void MainWindow::show_status()
     }
     else
     {
+        ui->label_Queue_state->setStyleSheet("background-color: red");
+    }
+    */
+    switch(m_database->m_HW_status)
+    {
+    case 0:
+        ui->label_Queue_state->setStyleSheet("background-color: green");
+        break;
+    case 1:
+        ui->label_Queue_state->setStyleSheet("background-color: blue");
+        break;
+    case 2:
+        ui->label_Queue_state->setStyleSheet("background-color: yellow");
+        break;
+    default:
         ui->label_Queue_state->setStyleSheet("background-color: red");
     }
 }

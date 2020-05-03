@@ -136,15 +136,19 @@ int Serial::serial_CheckTelegram()
         //m_database->SerialLog("recive telCheak no bytes to check");
         return -5;
     }
-    if(m_recivedBytes[0] == 'Q')
+    if(m_recivedBytes[0] == 'Q')//std alive and idle signal
     {
         return 0;
     }
-    if(m_recivedBytes[0] == 'N')
+    if(m_recivedBytes[0] == 'W')//alive and working signal
     {
         return 0;
     }
-    if(m_recivedBytes[0] == 'T')
+    if(m_recivedBytes[0] == 'N')//repeat request
+    {
+        return 0;
+    }
+    if(m_recivedBytes[0] == 'T')//check kommand
     {
         return 0;
     }
@@ -156,35 +160,6 @@ int Serial::serial_CheckTelegram()
         m_recivedBytes.remove(0,1);
         return -2;
     }
-
-    /*
-    //check if telegram is long enought
-    //calculate Checksam and check if valid
-    for(int i=0;i<m_recivedBytes.size()-1;i++)
-    {
-        m_database->SerialLog("reciveByte:"+QString::number(m_recivedBytes[i])+" recive as char:"+QString(char(m_recivedBytes[i])));
-    }
-    m_database->SerialLog("target Checcksummm:"+QString::number(m_recivedBytes[18]));
-    unsigned char checksumm = 0;
-    for(int i=0;i<m_TelegramLength-2;i++)
-    {
-        m_database->SerialLog("reciveByte:"+QString::number(abs(m_recivedBytes[i]))+" checksom befor:"+QString::number(checksumm));
-        checksumm += m_recivedBytes[i];
-    }
-    m_database->SerialLog("recive telCheak (calc:"+QString::number(checksumm)+
-                          ", recive: "+QString::number(m_recivedBytes[18]));
-
-    if(checksumm != m_recivedBytes[m_TelegramLength-1])
-    {
-        m_database->SerialLog("recive telCheak wrong checksumm (calc: "+
-                              QString::number(checksumm)+
-                              ", recive: "+QString::number(m_recivedBytes[18])+")");
-        m_recivedBytes.remove(0,m_TelegramLength);
-        m_database->SerialLog("recive telCheak checksumm error");
-        return -4;
-    }
-*/
-
 
     if(m_recivedBytes.size()<m_TelegramLength)
     {
@@ -229,15 +204,27 @@ void Serial::serial_read_command()
         }
 
         if(m_recivedBytes[0] == 'Q'){
-            //m_database->SerialLog("recive Q "+QString::number(fast_Timeout_time.elapsed()));
             serial_fast_timeout.stop();
             serial_fast_timeout.start(m_fast_timeout);
             m_recivedBytes.remove(0,1);
-            emit show_alive();
-            QByteArray respose = QString("Q").toUtf8();
-            m_serial.write(respose);
-            m_serial.waitForBytesWritten(m_send_timeout);
+            //emit show_alive();
+            //emit Log("idle");
+            if(m_database->m_HW_status == 0 && m_database->cnc_send_commands.length()>0)
+            {
+                m_database->SerialLog("send new comand while idle");
+                emit errorLog("send new comand while idle");
+                serial_send_command();
+            }
+            fast_Timeout_time.restart();
+            continue;
+        }
 
+        if(m_recivedBytes[0] == 'W'){
+            serial_fast_timeout.stop();
+            serial_fast_timeout.start(m_fast_timeout);
+            m_recivedBytes.remove(0,1);
+            //emit show_alive();
+            //emit Log("working");
             fast_Timeout_time.restart();
             continue;
         }

@@ -45,6 +45,7 @@ public:
 
     bool m_HWisHeating;
     bool m_HWisMoving;
+    int m_HW_status; //0 = idle, 1 = moveing, 2 = heating
 
 
     //values to send

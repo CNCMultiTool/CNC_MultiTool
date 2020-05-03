@@ -130,7 +130,7 @@ void setup() {
   Xachse.act_step = 0;
   Xachse.time_next_step = 0;
   Xachse.time_pstep = 0;
-  Xachse.steps_pmm = 50;
+  Xachse.steps_pmm = 100;
   Xachse.pinENA = 37;
   Xachse.pinDIR = 39;
   Xachse.pinPUL = 41;
@@ -144,7 +144,7 @@ void setup() {
   Yachse.act_step = 0;
   Yachse.time_next_step = 0;
   Yachse.time_pstep = 0;
-  Yachse.steps_pmm = 50;
+  Yachse.steps_pmm = 100;
   Yachse.pinENA = 43;
   Yachse.pinDIR = 45;
   Yachse.pinPUL = 47;
@@ -158,7 +158,7 @@ void setup() {
   Zachse.act_step = 0;
   Zachse.time_next_step = 0;
   Zachse.time_pstep = 0;
-  Zachse.steps_pmm = 50;
+  Zachse.steps_pmm = 100;
   Zachse.pinENA = 49;
   Zachse.pinDIR = 51;
   Zachse.pinPUL = 53;
@@ -278,11 +278,6 @@ void loop() {
     }
   }
 
-  if(cycle_time < time_now && wait_for_response == true)
-  {
-    serieltimeouthandler();
-    wait_for_response = false;
-  }
   if(2 < abs(old_T - T) && cycle_time1 < time_now)
   {
     //old_T = T;
@@ -292,20 +287,14 @@ void loop() {
   
   if(cycle_time2 < time_now)
   {
-    if(wait_for_Q == true)
-    {
-      serieltimeouthandler();
-      //cycle_time2 = time_now + 400000;
-    }
+    char bufS[1];
+    cycle_time2 = time_now + 100000;
+    if(sendPose == true)
+      bufS[0] = {'Q'}; //wait for new task
     else
-    {
-      cycle_time2 = time_now + 100000;
-    }
-      char bufS[1] = {'Q'};
-      Serial.write(bufS,1);
-      wait_for_Q = true;
+      bufS[0] = {'W'}; //hardware is working 
+    Serial.write(bufS,1);
   }
-  
 }
 //check if one endswitch had changed
 float checkEndswitches(){
@@ -422,20 +411,16 @@ void recive_msg(){
     case 'l'://start cycletime test
       cycle_time_test++;
       cycle_time_test_start = micros();
-      break; 
+      break;
+    case 'r':
+      serieltimeouthandler();
+      break;
     default:
       break;
   }
 }
 void serieltimeouthandler(){
       digitalWrite(26,!digitalRead(26));
-      //Serial.flush();
-      //Serial.end();
-      //Serial.begin(115200,SERIAL_8E1);//9600
-      char bufS[1];
-      //while(Serial.available())
-      //  Serial.readBytes(bufS,1);
-        
       if(strlen(lastSend)!=0)
         Serial.write(lastSend,19);      
 }
@@ -683,18 +668,15 @@ void read_Telegram(){
       Serial.readBytes(bufS,1);
       lastSend[0]= '\0';
       stop_responstimer();
-    }else if(Serial.peek() == 'Q'){
-      Serial.readBytes(bufS,1);
-      wait_for_Q = false;
     }else if(Serial.peek() == 'S'){
       if(Serial.available()<19)
-        return;
-        
+        return;   
       Serial.readBytes(Buf.buf,19);
       //check checksumm
       if(Buf.buf[18]!=calc_checkbyte(Buf.buf)){
         digitalWrite(24,!digitalRead(24));
         sendRepeatRequest();
+        return;
       }
       bufS[0] = 'T';
       Serial.write(bufS,1);

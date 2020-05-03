@@ -117,6 +117,7 @@ void cnc_data::set_soll_settings(float speed,float temperatur,float filament,flo
     m_soll_speed = speed;
     m_soll_temperatur = temperatur;
     m_soll_filament = filament;
+    m_soll_accSteps = acc;
     emit show_settings();
 }
 
