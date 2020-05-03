@@ -7,7 +7,7 @@ cnc_data::cnc_data()
     m_soll_speed = 0;
     m_soll_filament = 30;
     m_soll_temperatur = 0;
-    m_soll_accSteps = 20;
+    m_soll_accSteps = 10;
     //values recived
     //position
     m_act_X = 0;
@@ -40,7 +40,7 @@ cnc_data::cnc_data()
     m_error_X_null_Y_max = 0;
     m_error_X_null_Y_null = 0;
 
-    m_max_speed = 50;
+    m_max_speed = 30;
 
     m_HWisHeating = false;
     m_HWisMoving = false;

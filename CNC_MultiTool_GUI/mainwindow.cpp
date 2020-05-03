@@ -75,7 +75,8 @@ void MainWindow::Log(const QString &s)
 
 void MainWindow::errorLog(const QString &s)
 {
-    ui->textEditLog_error->append(s);
+    QString text = QDateTime::currentDateTime().toString("hh:mm:ss.zzz ") + s;
+    ui->textEditLog_error->append(text);
 }
 
 

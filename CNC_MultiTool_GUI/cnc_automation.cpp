@@ -285,6 +285,14 @@ void CNC_automation::G_Code_Parser()
             emit Log("Command: "+newLine);
         }
     }while(!newLine.isNull());
+
+    //move home and set position
+    m_basefunctions->settings_inQ(50,0,-1,-1);
+    m_basefunctions->setPosition_inQ(0,0,0,0);
+    m_basefunctions->move_inQ(0, 0,9999,0);
+    m_basefunctions->setPosition_inQ(0,0,0,0);
+    m_basefunctions->move_inQ(-9999, -9999, 0, 0);
+
     emit Log("end of file");
     inputFile.close();
     emit Log("read G-Code is finishd");

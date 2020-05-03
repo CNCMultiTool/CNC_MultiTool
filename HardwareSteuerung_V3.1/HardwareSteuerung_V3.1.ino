@@ -66,7 +66,7 @@ bool msg_available;
 
 char lastSend[19];
 
-double Speed = 50; //mm pro minute
+double Speed = 30; //mm pro minute
 double dist;
 double ges_time;
 
