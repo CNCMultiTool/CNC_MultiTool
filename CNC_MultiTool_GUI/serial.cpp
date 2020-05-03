@@ -233,7 +233,7 @@ void Serial::serial_read_command()
             serial_fast_timeout.stop();
             serial_fast_timeout.start(m_fast_timeout);
             m_recivedBytes.remove(0,1);
-
+            emit show_alive();
             QByteArray respose = QString("Q").toUtf8();
             m_serial.write(respose);
             m_serial.waitForBytesWritten(m_send_timeout);
@@ -287,7 +287,7 @@ void Serial::serial_read_command()
         NewCheckSumm += command;
         for(int i=0;i<16;i++)
         {
-            m_database->SerialLog("calc "+QString::number(NewCheckSumm)+" to add "+QString::number(m_recivedBytes[i]));
+            //m_database->SerialLog("calc "+QString::number(NewCheckSumm)+" to add "+QString::number(m_recivedBytes[i]));
             NewCheckSumm += m_recive_telegram.Bytes[i];
         }
 

@@ -55,6 +55,7 @@ signals:
     void Log(const QString &s);
     void errorLog(const QString &s);
     void show_send_queue();
+    void show_alive();
 
 public slots:
     void serial_read_command();

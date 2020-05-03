@@ -38,6 +38,7 @@ signals:
     void errorLog(const QString &s);
     void trigger_send();
     void show_send_queue();
+    void show_status();
 
 public slots:
     void send_init();

@@ -38,6 +38,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_basefunctions,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
     connect(m_basefunctions,SIGNAL(trigger_send()),m_serial,SLOT(serial_send_command()));
     connect(m_basefunctions,SIGNAL(show_send_queue()),this,SLOT(show_send_queue()));
+    connect(m_basefunctions,SIGNAL(show_status()),this,SLOT(show_status()));
 
     connect(m_database,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_database,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
@@ -51,6 +52,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_serial,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_serial,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
     connect(m_serial,SIGNAL(show_send_queue()),this,SLOT(show_send_queue()));
+    connect(m_serial,SIGNAL(show_alive()),this,SLOT(show_alive()));
 
     connect(m_automation,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_automation,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
@@ -102,17 +104,17 @@ void MainWindow::show_settings()
     ui->label_actTemperatur->setText(QString::number(m_database->m_act_temperatur)+"/"+QString::number(m_database->m_soll_temperatur));
     ui->label_actFilament->setText(QString::number(m_database->m_act_filament)+"/"+QString::number(m_database->m_soll_filament));
     ui->label_accSteps->setText(QString::number(m_database->m_soll_accSteps));
-    if(m_alive)
-    {
-        m_alive = false;
-        ui->label_alive->setStyleSheet("background-color: blue");
+    //if(m_alive)
+    //{
+    //    m_alive = false;
+    //    ui->label_alive->setStyleSheet("background-color: blue");
 
-    }
-    else
-    {
-        m_alive = true;
-        ui->label_alive->setStyleSheet("background-color: lightblue");
-    }
+    //}
+    //else
+    //{
+    //    m_alive = true;
+    //    ui->label_alive->setStyleSheet("background-color: lightblue");
+    //}
 }
 
 void MainWindow::show_alive()
@@ -155,19 +157,15 @@ void MainWindow::show_status()
 {
     if(m_database->m_HWisMoving)
     {
-        ui->label_Queue->setStyleSheet("background-color: green");
+        ui->label_Queue_state->setStyleSheet("background-color: green");
+    }
+    else if(m_database->m_HWisHeating)
+    {
+        ui->label_Queue_state->setStyleSheet("background-color: yellow");
     }
     else
     {
-        ui->label_Queue->setStyleSheet("background-color: red");
-    }
-    if(m_database->m_HWisHeating)
-    {
-        ui->label_Queue->setStyleSheet("background-color: green");
-    }
-    else
-    {
-        ui->label_Queue->setStyleSheet("background-color: red");
+        ui->label_Queue_state->setStyleSheet("background-color: red");
     }
 }
 

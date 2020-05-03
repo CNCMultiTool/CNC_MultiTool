@@ -4,6 +4,7 @@ cnc_basefunctions::cnc_basefunctions(cnc_data *database)
 {
     m_database = database;
     m_database->m_HWisMoving = false;
+    m_database->m_HWisHeating = false;
 }
 
 void cnc_basefunctions::test()
@@ -13,7 +14,6 @@ void cnc_basefunctions::test()
 
 void cnc_basefunctions::send_move(float X,float Y,float Z,float W)
 {
-    //send_to_cnc('m',X,Y,Z,W,1);
     send_to_cnc('j',X,Y,Z,W,1);
 }
 
@@ -67,12 +67,15 @@ void cnc_basefunctions::send_settings(float speed,float temperatur,float filamen
         a = m_database->m_soll_accSteps;
     if(s<0)
         s = m_database->m_soll_speed;
+    if(s > m_database->m_max_speed)
+        s = m_database->m_max_speed;
     if(t<0)
         t = m_database->m_soll_temperatur;
     if(f<0)
         f = m_database->m_soll_filament;
     if(f<1)
         f = 1;
+
 
     m_database->set_soll_settings(s,t,f,a);
     //send_to_cnc('s',s,t,f,0,1);
@@ -89,6 +92,8 @@ void cnc_basefunctions::settings_inQ(float speed,float temperatur,float filament
         a = m_database->m_soll_accSteps;
     if(s<0)
         s = m_database->m_soll_speed;
+    if(s > m_database->m_max_speed)
+        s = m_database->m_max_speed;
     if(t<0)
         t = m_database->m_soll_temperatur;
     if(f<0)
@@ -172,6 +177,8 @@ void cnc_basefunctions::trigger_next_command()
             if(m_database->cnc_send_commands[0].command == 'm')
             {
                 m_database->cnc_send_commands[0].value3 += m_database->m_z_offset;
+                m_database->m_HWisMoving = true;
+                emit show_status();
             }
 
             emit trigger_send();
@@ -241,6 +248,7 @@ void cnc_basefunctions::trigger_next_command()
             emit Log("wait for heating");
             //m_database->cnc_send_commands.pop_front();
             m_database->m_HWisHeating = true;
+            emit show_status();
         }
         emit show_send_queue();
 }
@@ -274,12 +282,12 @@ void cnc_basefunctions::execute_command(char command,float value1,float value2,f
         m_database->set_HWisMoving(false);
         m_database->FileLog("INFO recived set position and ready for next command: X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
         m_database->m_HWisMoving = false;
+        emit show_status();
         trigger_next_command();
         break;
     case 's'://set the actual settings
         m_database->set_settings(value1,value2,value3,value4);
         m_database->FileLog("INFO recived current setting: speed:"+QString::number(value1)+" temperatur:"+QString::number(value2)+" filament:"+QString::number(value3)+" PWM:"+QString::number(value4));
-        m_database->m_HWisMoving = false;
         trigger_next_command();
         break;
     case 'j'://set the actual settings
@@ -297,6 +305,7 @@ void cnc_basefunctions::execute_command(char command,float value1,float value2,f
                 m_database->cnc_send_commands.pop_front();
                 trigger_next_command();
                 m_database->m_HWisHeating = false;
+                emit show_status();
             }
         }
         break;

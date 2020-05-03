@@ -24,7 +24,7 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
-    void show_alive();
+
 
 private:
     Ui::MainWindow *ui;
@@ -49,7 +49,7 @@ private:
     void calib_size();
     void repeat_test();
     void Z_calib();
-    void show_status();
+
 
 
     bool m_alive;
@@ -67,6 +67,8 @@ private slots:
     void show_endswitch(float X,float Y,float Z);
     void show_serial(bool isOpen);
     void show_send_queue();
+    void show_alive();
+    void show_status();
 
     void sendStopMoving();
 
