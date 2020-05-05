@@ -12,6 +12,7 @@
 #include <cnc_automation.h>
 #include <QFormLayout>
 #include <QDialogButtonBox>
+#include <QCheckBox>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -123,7 +124,9 @@ private slots:
     void on_pushButton_clear_queue_clicked();
     void on_pushButton_trigger_next_clicked();
     void calibratenValueBox();
+    void repeattestValueBox();
     void on_pushButton_test_clicked();
     void on_doubleSpinBoxZOffset_valueChanged(const QString &arg1);
+    void on_pushButton_nozzel_calib_clicked();
 };
 #endif // MAINWINDOW_H

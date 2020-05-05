@@ -28,6 +28,9 @@ cnc_data::cnc_data()
     m_size_X = 269.89;
     m_size_Y = 231.68;
     m_Zmax_nozzel = 170.95;
+    m_calibplateX = 0;
+    m_calibplateY = 127.0;
+    m_calibplateZ =  1;
 
     m_z_offset = 0;
 
@@ -170,6 +173,20 @@ void cnc_data::loadSettings()
     m_error_X_null_Y_null = settings.value("m_error_X_null_Y_null").toDouble();
 
     m_max_speed = settings.value("m_max_speed").toDouble();
+    m_calibplateX = settings.value("m_calibplateX").toDouble();
+    m_calibplateY = settings.value("m_calibplateY").toDouble();
+    m_calibplateZ =  settings.value("m_calibplateZ").toDouble();
+    m_useCalibPlate = settings.value("m_useCalibPlate").toBool();
+
+
+    m_repeat1 = settings.value("m_repeat1").toInt();
+    m_speed1 = settings.value("m_speed1").toInt();
+    m_x11 = settings.value("m_x11").toDouble();
+    m_y11 = settings.value("m_y11").toDouble();
+    m_z11 = settings.value("m_z11").toDouble();
+    m_x12 = settings.value("m_x12").toDouble();
+    m_y12 = settings.value("m_y12").toDouble();
+    m_z12 = settings.value("m_z12").toDouble();
 
 }
 
@@ -190,6 +207,19 @@ void cnc_data::saveSettings()
     settings.setValue("m_error_X_null_Y_null",m_error_X_null_Y_null);
 
     settings.setValue("m_max_speed",m_max_speed);
+    settings.setValue("m_calibplateX",m_calibplateX);
+    settings.setValue("m_calibplateY",m_calibplateY);
+    settings.setValue("m_calibplateZ",m_calibplateZ);
+    settings.setValue("m_useCalibPlate",m_useCalibPlate);
+
+    settings.setValue("m_repeat1",m_repeat1);
+    settings.setValue("m_speed1",m_speed1);
+    settings.setValue("m_x11",m_x11);
+    settings.setValue("m_y11",m_y11);
+    settings.setValue("m_z11",m_z11);
+    settings.setValue("m_x12",m_x12);
+    settings.setValue("m_y12",m_y12);
+    settings.setValue("m_z12",m_z12);
 }
 
 void cnc_data::calc_correctionangel(QList<point> Z_errors)

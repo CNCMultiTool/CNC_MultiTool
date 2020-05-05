@@ -87,10 +87,20 @@ public:
     //TCP hight in home
     float m_Zmax_nozzel;
 
+    float m_calibplateX;
+    float m_calibplateY;
+    float m_calibplateZ;
+    bool m_useCalibPlate;
+
     float m_z_offset;
 
     //max values
     float m_max_speed; //mm per sec
+
+
+    //repeattest values
+    int m_repeat1,m_speed1;
+    float m_x11,m_y11,m_z11,m_x12,m_y12,m_z12;
 
     void set_position(float X,float Y,float Z,float W);
     void set_settings(float speed,float temperatur,float filament,float soll_temperatur);

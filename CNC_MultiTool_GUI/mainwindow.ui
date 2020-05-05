@@ -1007,6 +1007,13 @@
        </property>
       </widget>
      </item>
+     <item row="1" column="1">
+      <widget class="QPushButton" name="pushButton_nozzel_calib">
+       <property name="text">
+        <string>Nozzel Z calib</string>
+       </property>
+      </widget>
+     </item>
     </layout>
    </widget>
    <widget class="QLabel" name="label_alive">
@@ -1078,7 +1085,15 @@
     </property>
     <addaction name="actionValues"/>
    </widget>
+   <widget class="QMenu" name="menuTests">
+    <property name="title">
+     <string>Repeattest</string>
+    </property>
+    <addaction name="actionexecute"/>
+    <addaction name="actionsettings_repeattest"/>
+   </widget>
    <addaction name="menuCalibrations"/>
+   <addaction name="menuTests"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QToolBar" name="toolBar">
@@ -1095,6 +1110,16 @@
   <action name="actionValues">
    <property name="text">
     <string>Values</string>
+   </property>
+  </action>
+  <action name="actionexecute">
+   <property name="text">
+    <string>run repeattest</string>
+   </property>
+  </action>
+  <action name="actionsettings_repeattest">
+   <property name="text">
+    <string>settings repeattest</string>
    </property>
   </action>
  </widget>
