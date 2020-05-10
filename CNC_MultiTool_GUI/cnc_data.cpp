@@ -5,9 +5,9 @@ cnc_data::cnc_data()
 
 
     m_soll_speed = 0;
-    m_soll_filament = 30;
+    m_soll_filament = 37;
     m_soll_temperatur = 0;
-    m_soll_accSteps = 10;
+    m_soll_accSteps = 0;
     //values recived
     //position
     m_act_X = 0;

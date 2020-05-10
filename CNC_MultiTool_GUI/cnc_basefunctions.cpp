@@ -174,7 +174,8 @@ void cnc_basefunctions::trigger_next_command()
             //    emit Log("Hardware is Working");
             //    return;
             //}
-            if(m_database->cnc_send_commands[0].command == 'm')
+            char n_com = m_database->cnc_send_commands[0].command;
+            if(n_com == 'm' || n_com == 'j' ||n_com == 'p')
             {
                 m_database->cnc_send_commands[0].value3 += m_database->m_z_offset;
                 //m_database->m_HWisMoving = true;
@@ -305,7 +306,7 @@ void cnc_basefunctions::execute_command(char command,float value1,float value2,f
             emit Log("temperature soll:"+QString::number(m_database->m_soll_temperatur)
                      +", ist:"+QString::number(m_database->m_act_temperatur)
                      +", dif:"+QString::number(temp_dif));
-            if(3 > temp_dif)
+            if(m_database->m_act_temperatur > m_database->m_soll_temperatur-3)
             {
                 emit Log("end of the heating");
                 m_database->cnc_send_commands.pop_front();

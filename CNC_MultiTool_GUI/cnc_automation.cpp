@@ -190,6 +190,11 @@ void CNC_automation::G_Code_Parser()
     m_basefunctions->setPosition_inQ(0,0,0,0);
     m_basefunctions->move_inQ(-9999, -9999, 0, 0);
     m_basefunctions->setPosition_inQ(0,0,m_database->m_Zmax_nozzel,0);
+    m_X = 0;
+    m_Y = 0;
+    m_Z = m_database->m_Zmax_nozzel;
+    m_W = 0;
+
 
     //calib Z on calib plate
     if(m_database->m_useCalibPlate)
@@ -199,6 +204,10 @@ void CNC_automation::G_Code_Parser()
         m_basefunctions->setPosition_inQ(m_database->m_calibplateX,m_database->m_calibplateY,m_database->m_calibplateZ,0);
         m_basefunctions->move_inQ(m_database->m_calibplateX,m_database->m_calibplateY,m_database->m_calibplateZ+20,m_database->m_act_W);
         m_basefunctions->move_inQ(m_database->m_calibplateX,m_database->m_calibplateY-50,m_database->m_calibplateZ+20,m_database->m_act_W);
+        m_X = m_database->m_calibplateX;
+        m_Y = m_database->m_calibplateY-50;
+        m_Z = m_database->m_calibplateZ+20;
+        m_W = m_database->m_act_W;
     }
 
     do{

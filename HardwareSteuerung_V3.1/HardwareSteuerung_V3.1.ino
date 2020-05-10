@@ -130,7 +130,7 @@ void setup() {
   Xachse.act_step = 0;
   Xachse.time_next_step = 0;
   Xachse.time_pstep = 0;
-  Xachse.steps_pmm = 100;
+  Xachse.steps_pmm = 50;
   Xachse.pinENA = 37;
   Xachse.pinDIR = 39;
   Xachse.pinPUL = 41;
@@ -144,7 +144,7 @@ void setup() {
   Yachse.act_step = 0;
   Yachse.time_next_step = 0;
   Yachse.time_pstep = 0;
-  Yachse.steps_pmm = 100;
+  Yachse.steps_pmm = 50;
   Yachse.pinENA = 43;
   Yachse.pinDIR = 45;
   Yachse.pinPUL = 47;
@@ -158,7 +158,7 @@ void setup() {
   Zachse.act_step = 0;
   Zachse.time_next_step = 0;
   Zachse.time_pstep = 0;
-  Zachse.steps_pmm = 100;
+  Zachse.steps_pmm = 50;
   Zachse.pinENA = 49;
   Zachse.pinDIR = 51;
   Zachse.pinPUL = 53;
@@ -528,8 +528,14 @@ void treiberBig(struct StepMotorBig &StepM){
       digitalWrite(StepM.pinDIR,HIGH);
       digitalWrite(StepM.pinPUL,LOW);
       digitalWrite(StepM.pinPUL,HIGH);
-      //StepM.time_next_step += StepM.time_pstep;
-      StepM.time_next_step += calc_steptime(StepM);
+      if(acceleration_steps == 0)
+      {
+        StepM.time_next_step += StepM.time_pstep;
+      }
+      else
+      {
+        StepM.time_next_step += calc_steptime(StepM);
+      }
       StepM.act_step++;
     }else if(StepM.soll_step<StepM.act_step){
       //one stepp back
