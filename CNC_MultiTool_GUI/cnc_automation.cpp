@@ -20,9 +20,23 @@ CNC_automation::~CNC_automation()
     m_aboard = true;
 }
 
+void CNC_automation::nozzel_calib()
+{
+    m_basefunctions->settings_inQ(m_F_max,-1,-1,-1);
+    m_basefunctions->move_inQ(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
+    m_basefunctions->move_inQ(-9999,-9999,9999,m_database->m_act_W);
+    m_basefunctions->setPosition_inQ(0,0,m_database->m_Zmax_nozzel,0);
+    m_basefunctions->move_inQ(m_database->m_calibplateX,m_database->m_calibplateY,20,m_database->m_act_W);
+    m_basefunctions->move_inQ(m_database->m_calibplateX,m_database->m_calibplateY,0,m_database->m_act_W);
+    m_basefunctions->setPosition_inQ(m_database->m_calibplateX,m_database->m_calibplateY,m_database->m_calibplateZ,0);
+    m_basefunctions->move_inQ(m_database->m_calibplateX,m_database->m_calibplateY,m_database->m_calibplateZ+20,m_database->m_act_W);
+    m_basefunctions->move_inQ(m_database->m_calibplateX,m_database->m_calibplateY-50,m_database->m_calibplateZ+20,m_database->m_act_W);
+    m_basefunctions->trigger_next_command();
+}
+
 void CNC_automation::move_home()
 {
-    m_basefunctions->settings_inQ(50,-1,-1);
+    m_basefunctions->settings_inQ(m_F_max,-1,-1,-1);
     m_basefunctions->move_inQ(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
     m_basefunctions->move_inQ(-9999,-9999,9999,m_database->m_act_W);
     m_basefunctions->setPosition_inQ(0,0,m_database->m_Zmax_nozzel,0);
@@ -31,7 +45,7 @@ void CNC_automation::move_home()
 
 void CNC_automation::move_restposi()
 {
-    m_basefunctions->settings_inQ(50,-1,-1);
+    m_basefunctions->settings_inQ(m_F_max,-1,-1,-1);
     m_basefunctions->move_inQ(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
     m_basefunctions->move_inQ(9999,-9999,9999,m_database->m_act_W);
     m_basefunctions->setPosition_inQ(m_database->m_size_X,0,m_database->m_Zmax_nozzel,0);
@@ -41,7 +55,7 @@ void CNC_automation::move_restposi()
 void CNC_automation::calib_size()
 {
     emit Log("calib size (do not use manuel move)");
-    m_basefunctions->settings_inQ(50,-1,-1);
+    m_basefunctions->settings_inQ(m_F_max,-1,-1,-1);
     m_basefunctions->move_inQ(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
     m_basefunctions->move_inQ(-9999,-9999,9999,m_database->m_act_W);
     m_basefunctions->setPosition_inQ(0,0,m_database->m_Zmax_nozzel,m_database->m_act_W);
@@ -55,22 +69,16 @@ void CNC_automation::calib_size()
 void CNC_automation::repeat_test()
 {
     emit Log("repeat test (do not use manuel move)");
-    m_basefunctions->settings_inQ(50,-1,-1);
+    m_basefunctions->settings_inQ(50,-1,-1,-1);
     m_basefunctions->move_inQ(m_database->m_act_X,m_database->m_act_Y,9999,m_database->m_act_W);
     m_basefunctions->move_inQ(-9999,-9999,9999,m_database->m_act_W);
-    m_basefunctions->setPosition_inQ(0,0,0,m_database->m_act_W);
-    m_basefunctions->settings_inQ(30,-1,-1);
-    m_basefunctions->move_inQ(10,10,-10,m_database->m_act_W);
-    for(int i = 0;i<2;i++)
+    m_basefunctions->setPosition_inQ(0,0,m_database->m_Zmax_nozzel,m_database->m_act_W);
+    m_basefunctions->settings_inQ(m_database->m_speed1,-1,-1,-1);
+    m_basefunctions->cycletimeTest();
+    for(int i = 0;i<m_database->m_repeat1;i++)
     {
-        m_basefunctions->move_inQ(20,20,-20,m_database->m_act_W);
-        m_basefunctions->move_inQ(10,10,-10,m_database->m_act_W);
-    }
-    m_basefunctions->settings_inQ(50,-1,-1);
-    for(int i = 0;i<2;i++)
-    {
-        m_basefunctions->move_inQ(30,30,-30,m_database->m_act_W);
-        m_basefunctions->move_inQ(10,10,-10,m_database->m_act_W);
+        m_basefunctions->move_inQ(m_database->m_x11,m_database->m_y11,m_database->m_z11,m_database->m_act_W);
+        m_basefunctions->move_inQ(m_database->m_x12,m_database->m_y12,m_database->m_z12,m_database->m_act_W);
     }
     m_basefunctions->move_inQ(-9999,-9999,9999,m_database->m_act_W);
     m_basefunctions->repeattest_results();
@@ -82,7 +90,7 @@ void CNC_automation::Z_calib()
     emit Log("Z angel calib (do not use manuel move)");
     m_basefunctions->m_pointList.clear();
     //first move home
-    m_basefunctions->settings_inQ(50,-1,-1);
+    m_basefunctions->settings_inQ(m_F_max,-1,-1,-1);
     m_basefunctions->setPosition_inQ(0,0,0,0);
     m_basefunctions->move_inQ(-9999,-9999,9999,0);
     m_basefunctions->setPosition_inQ(0,0,0,0);
@@ -103,14 +111,14 @@ void CNC_automation::Z_calib()
 void CNC_automation::probe_Z(float X,float Y)
 {
     //move to test point
-    m_basefunctions->settings_inQ(50,-1,-1);
-    m_basefunctions->move_inQ(X,Y,10,0);
+    m_basefunctions->settings_inQ(m_F_max,-1,-1,-1);
+    m_basefunctions->move_inQ(X,Y,20,0);
     //make slow probe
-    m_basefunctions->settings_inQ(20,-1,-1);
-    m_basefunctions->move_inQ(X,Y,-10,0);
+    m_basefunctions->settings_inQ(20,-1,-1,-1);
+    m_basefunctions->move_inQ(X,Y,-30,0);
     m_basefunctions->z_calib_safePos();
-    m_basefunctions->move_inQ(X,Y,10,0);
-    m_basefunctions->settings_inQ(50,-1,-1);
+    m_basefunctions->move_inQ(X,Y,20,0);
+    m_basefunctions->settings_inQ(m_F_max,-1,-1,-1);
 }
 
 
@@ -120,6 +128,8 @@ void CNC_automation::G_Code_Start(QString fileName)
     m_database->FileLog("start g-code: "+fileName);
     m_fileName = fileName;
     //m_basefunctions->send_setPosition(0,0,m_database->m_Zmax_nozzel,0);
+    m_database->m_HWisMoving = false;
+    m_database->m_HWisHeating = false;
 
     if(!inputFile.isOpen())
     {
@@ -174,12 +184,31 @@ void CNC_automation::G_Code_Parser()
     m_database->m_HWisMoving = false;
 
     //move home and set position
-    m_basefunctions->settings_inQ(50,-1,-1);
+    m_basefunctions->settings_inQ(50,-1,-1,-1);
     m_basefunctions->setPosition_inQ(0,0,0,0);
     m_basefunctions->move_inQ(0, 0,9999,0);
     m_basefunctions->setPosition_inQ(0,0,0,0);
     m_basefunctions->move_inQ(-9999, -9999, 0, 0);
     m_basefunctions->setPosition_inQ(0,0,m_database->m_Zmax_nozzel,0);
+    m_X = 0;
+    m_Y = 0;
+    m_Z = m_database->m_Zmax_nozzel;
+    m_W = 0;
+
+
+    //calib Z on calib plate
+    if(m_database->m_useCalibPlate)
+    {
+        m_basefunctions->move_inQ(m_database->m_calibplateX,m_database->m_calibplateY,20,m_database->m_act_W);
+        m_basefunctions->move_inQ(m_database->m_calibplateX,m_database->m_calibplateY,0,m_database->m_act_W);
+        m_basefunctions->setPosition_inQ(m_database->m_calibplateX,m_database->m_calibplateY,m_database->m_calibplateZ,0);
+        m_basefunctions->move_inQ(m_database->m_calibplateX,m_database->m_calibplateY,m_database->m_calibplateZ+20,m_database->m_act_W);
+        m_basefunctions->move_inQ(m_database->m_calibplateX,m_database->m_calibplateY-50,m_database->m_calibplateZ+20,m_database->m_act_W);
+        m_X = m_database->m_calibplateX;
+        m_Y = m_database->m_calibplateY-50;
+        m_Z = m_database->m_calibplateZ+20;
+        m_W = m_database->m_act_W;
+    }
 
     do{
         newLine = in.readLine();
@@ -206,7 +235,7 @@ void CNC_automation::G_Code_Parser()
         if(isCommand("G0",newLine))//fast move
         {
             m_F = m_F_max*60;
-            m_basefunctions->settings_inQ(m_F/60,m_S,-1);
+            m_basefunctions->settings_inQ(m_F/60,m_S,-1,-1);
             m_basefunctions->move_inQ(m_X,m_Y,m_Z,m_W);
             m_validCommand = true;
         }
@@ -214,7 +243,7 @@ void CNC_automation::G_Code_Parser()
         {
             if(0.001>abs(m_F-m_F_old))
             {
-                m_basefunctions->settings_inQ(m_F/60,m_S,-1);
+                m_basefunctions->settings_inQ(m_F/60,m_S,-1,-1);
             }
             m_basefunctions->move_inQ(m_X,m_Y,m_Z,m_W);
             m_validCommand = true;
@@ -225,7 +254,7 @@ void CNC_automation::G_Code_Parser()
         }
         if(isCommand("G28",newLine))//move home
         {
-            m_basefunctions->settings_inQ(50,-1,-1);
+            m_basefunctions->settings_inQ(50,-1,-1,-1);
             m_basefunctions->setPosition_inQ(0,0,0,0);
             m_basefunctions->move_inQ(0, 0,9999,0);
             m_basefunctions->setPosition_inQ(0,0,0,0);
@@ -254,7 +283,7 @@ void CNC_automation::G_Code_Parser()
         }
         if(isCommand("M104",newLine))//set temperatur
         {
-            m_basefunctions->settings_inQ(m_F/60,m_S,-1);
+            m_basefunctions->settings_inQ(m_F/60,m_S,-1,-1);
             m_validCommand = true;
         }
         if(isCommand("M106",newLine))
@@ -269,7 +298,7 @@ void CNC_automation::G_Code_Parser()
         }
         if(isCommand("M109",newLine))//wait for reaching temperatur
         {
-            m_basefunctions->settings_inQ(m_F/60,m_S,-1);
+            m_basefunctions->settings_inQ(m_F/60,m_S,-1,-1);
             m_basefunctions->wait_for_heating();
             m_validCommand = true;
         }
@@ -282,6 +311,14 @@ void CNC_automation::G_Code_Parser()
             emit Log("Command: "+newLine);
         }
     }while(!newLine.isNull());
+
+    //move home and set position
+    m_basefunctions->settings_inQ(50,0,-1,-1);
+    m_basefunctions->setPosition_inQ(0,0,0,0);
+    m_basefunctions->move_inQ(0, 0,9999,0);
+    m_basefunctions->setPosition_inQ(0,0,0,0);
+    m_basefunctions->move_inQ(-9999, -9999, 0, 0);
+
     emit Log("end of file");
     inputFile.close();
     emit Log("read G-Code is finishd");
@@ -315,4 +352,6 @@ void CNC_automation::getValue(const QString indent,const QString line,float *tar
         *target = resultStr.toFloat();
     }
 }
+
+
 

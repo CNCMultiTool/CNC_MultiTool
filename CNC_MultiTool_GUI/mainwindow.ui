@@ -536,6 +536,19 @@
        </property>
       </widget>
      </item>
+     <item row="1" column="3">
+      <widget class="QDoubleSpinBox" name="doubleSpinBoxZOffset">
+       <property name="minimum">
+        <double>-9999.000000000000000</double>
+       </property>
+       <property name="maximum">
+        <double>9999.000000000000000</double>
+       </property>
+       <property name="singleStep">
+        <double>0.010000000000000</double>
+       </property>
+      </widget>
+     </item>
     </layout>
    </widget>
    <widget class="QWidget" name="gridLayoutWidget_2">
@@ -805,6 +818,9 @@
        <property name="maximum">
         <number>999</number>
        </property>
+       <property name="value">
+        <number>180</number>
+       </property>
       </widget>
      </item>
      <item row="2" column="1">
@@ -822,16 +838,26 @@
       </widget>
      </item>
      <item row="0" column="4">
-      <widget class="QLabel" name="label_Power">
+      <widget class="QLabel" name="label_AccSteps">
        <property name="text">
-        <string>PWM Output</string>
+        <string>Acc Steps</string>
        </property>
       </widget>
      </item>
      <item row="1" column="4">
-      <widget class="QLabel" name="label_actPower">
+      <widget class="QLabel" name="label_accSteps">
        <property name="text">
         <string>--</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="4">
+      <widget class="QSpinBox" name="spinBoxAccSteps">
+       <property name="maximum">
+        <number>999</number>
+       </property>
+       <property name="value">
+        <number>10</number>
        </property>
       </widget>
      </item>
@@ -856,9 +882,9 @@
     </property>
     <property name="geometry">
      <rect>
-      <x>510</x>
+      <x>520</x>
       <y>10</y>
-      <width>511</width>
+      <width>501</width>
       <height>441</height>
      </rect>
     </property>
@@ -974,6 +1000,20 @@
        </property>
       </widget>
      </item>
+     <item row="1" column="3">
+      <widget class="QPushButton" name="pushButton_test">
+       <property name="text">
+        <string>Test</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QPushButton" name="pushButton_nozzel_calib">
+       <property name="text">
+        <string>Nozzel Z calib</string>
+       </property>
+      </widget>
+     </item>
     </layout>
    </widget>
    <widget class="QLabel" name="label_alive">
@@ -1000,7 +1040,7 @@
     </property>
     <layout class="QGridLayout" name="gridLayout_3">
      <item row="0" column="0">
-      <widget class="QLabel" name="label_Queue_3">
+      <widget class="QLabel" name="label_Queue_state">
        <property name="text">
         <string>QueueStatusd</string>
        </property>
@@ -1039,6 +1079,21 @@
      <height>22</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menuCalibrations">
+    <property name="title">
+     <string>Calibrations</string>
+    </property>
+    <addaction name="actionValues"/>
+   </widget>
+   <widget class="QMenu" name="menuTests">
+    <property name="title">
+     <string>Repeattest</string>
+    </property>
+    <addaction name="actionexecute"/>
+    <addaction name="actionsettings_repeattest"/>
+   </widget>
+   <addaction name="menuCalibrations"/>
+   <addaction name="menuTests"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QToolBar" name="toolBar">
@@ -1052,6 +1107,21 @@
     <bool>false</bool>
    </attribute>
   </widget>
+  <action name="actionValues">
+   <property name="text">
+    <string>Values</string>
+   </property>
+  </action>
+  <action name="actionexecute">
+   <property name="text">
+    <string>run repeattest</string>
+   </property>
+  </action>
+  <action name="actionsettings_repeattest">
+   <property name="text">
+    <string>settings repeattest</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections/>

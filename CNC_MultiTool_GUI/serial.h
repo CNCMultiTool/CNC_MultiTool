@@ -19,13 +19,16 @@ public:
     Serial(cnc_data *database = nullptr);
     ~Serial();
 
-    void serial_open();
+    bool serial_open();
     void serial_close();
+    void stop_timeouts();
 
 
 private:
-    int m_send_timeout = 5;
-    int m_recive_timeout = 5;
+    int m_send_timeout = 0;
+    int m_recive_timeout = 0;
+    int m_fast_timeout = 300;
+    int m_timeout = 300;
 
     QSerialPort m_serial;
     cnc_data *m_database;
@@ -44,6 +47,7 @@ private:
     QTimer serial_timeout;
     QTimer serial_fast_timeout;
     QTime debug_time;
+    QTime fast_Timeout_time;
     int serial_CheckTelegram();
     int serial_calcCheckSumm(QByteArray bytes,unsigned char *Checksumm);
 
@@ -51,11 +55,13 @@ signals:
     void Log(const QString &s);
     void errorLog(const QString &s);
     void show_send_queue();
+    void show_alive();
 
 public slots:
     void serial_read_command();
     void serial_send_command();
     void serial_timeout_handler();
+    void serial_fasttimeout_handler();
     void send_last();
 
 };

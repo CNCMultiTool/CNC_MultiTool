@@ -55,7 +55,7 @@ struct StepMotorBig {
   unsigned long step_div;
   unsigned long ramp_step; 
 };
-int acceleration_steps = 20;
+int acceleration_steps = 10;
 
 struct StepMotorMedi Wachse;
 struct StepMotorBig Xachse;
@@ -66,7 +66,7 @@ bool msg_available;
 
 char lastSend[19];
 
-double Speed = 50; //mm pro minute
+double Speed = 30; //mm pro minute
 double dist;
 double ges_time;
 
@@ -78,6 +78,7 @@ unsigned long cycle_time3 = micros();
 unsigned long old_time_now = micros();
 
 bool sendPose = true;
+bool sendPoseInfo = true;
 
 bool alavie;
 
@@ -111,14 +112,14 @@ unsigned long PID_time = millis();
 int debug = 0;
 
 bool wait_for_response = false;
+bool wait_for_Q = false;
+
+int cycle_time_test = 0;
+unsigned long  cycle_time_test_start = 0;
 
 void setup() {
-  Serial.begin(115200,SERIAL_8E1);//9600
-  char dummy[1];
-  while(Serial.available())
-  {
-    Serial.readBytes(dummy,1);
-  }
+  lastSend[0]= '\0';
+  Serial.begin(115200,SERIAL_8N2);//9600
   /*TODO
    * EndPins
    */
@@ -129,7 +130,7 @@ void setup() {
   Xachse.act_step = 0;
   Xachse.time_next_step = 0;
   Xachse.time_pstep = 0;
-  Xachse.steps_pmm = 100;
+  Xachse.steps_pmm = 50;
   Xachse.pinENA = 37;
   Xachse.pinDIR = 39;
   Xachse.pinPUL = 41;
@@ -143,7 +144,7 @@ void setup() {
   Yachse.act_step = 0;
   Yachse.time_next_step = 0;
   Yachse.time_pstep = 0;
-  Yachse.steps_pmm = 100;
+  Yachse.steps_pmm = 50;
   Yachse.pinENA = 43;
   Yachse.pinDIR = 45;
   Yachse.pinPUL = 47;
@@ -157,7 +158,7 @@ void setup() {
   Zachse.act_step = 0;
   Zachse.time_next_step = 0;
   Zachse.time_pstep = 0;
-  Zachse.steps_pmm = 100;
+  Zachse.steps_pmm = 50;
   Zachse.pinENA = 49;
   Zachse.pinDIR = 51;
   Zachse.pinPUL = 53;
@@ -221,19 +222,39 @@ void setup() {
 
 void loop() {
   time_now = micros();
+  if(old_time_now>time_now)
+  {
+    digitalWrite(22,HIGH);
+    digitalWrite(24,HIGH);
+    digitalWrite(26,HIGH);
+    digitalWrite(28,HIGH);
+  }
+  else
+  {
+    old_time_now = time_now;
+  }
 
+//cycletime tester
+  if(cycle_time_test>0){
+    cycle_time_test++;
+  }
+  if(cycle_time_test>1000)
+  {
+    cycle_time_test_start = (micros()-cycle_time_test_start)/1000;
+    sendcycletime(0,0,0,cycle_time_test_start);
+    cycle_time_test = 0;
+  }
+  
   if(Serial.available())
   {
     read_Telegram();
   }
-
   if(msg_available){
     recive_msg();
   }
 
   checkEndswitches();
   TempControle();
-
   //motors drive
   treiberBig(Xachse);
   treiberBig(Yachse);
@@ -248,30 +269,32 @@ void loop() {
             sendconfirmpos();
             sendPose = true;
           }
+          if(sendPoseInfo == false){
+            sendactposition();
+            sendPoseInfo = true;
+          }
         }
       }
     }
   }
 
-  if(cycle_time < time_now && wait_for_response == true)
-  {
-    digitalWrite(28,!digitalRead(28));
-    serieltimeouthandler();
-    wait_for_response = false;
-  }
   if(2 < abs(old_T - T) && cycle_time1 < time_now)
   {
-    old_T = T;
+    //old_T = T;
     cycle_time1 = time_now + 5000000;
     sendsettinginfo();
-    digitalWrite(22,!digitalRead(22));
   }
- /* if(cycle_time2 < time_now)
+  
+  if(cycle_time2 < time_now)
   {
-    char bufS[1] = {'Q'};
+    char bufS[1];
+    cycle_time2 = time_now + 100000;
+    if(sendPose == true)
+      bufS[0] = {'Q'}; //wait for new task
+    else
+      bufS[0] = {'W'}; //hardware is working 
     Serial.write(bufS,1);
-    cycle_time2 = time_now + 50000;
-  }*/
+  }
 }
 //check if one endswitch had changed
 float checkEndswitches(){
@@ -336,6 +359,7 @@ void recive_msg(){
       sendsetting();
       sendconfirmpos();
       sendendswitch();
+      //digitalWrite(22,!digitalRead(22));
       break;
     case 'm'://move to
       Xachse.soll_posi = Buf.tel.value[0];
@@ -345,6 +369,14 @@ void recive_msg(){
       getMoveParams();
       sendPose = false;
       //sendConfirmAnswer();
+      break;
+    case 'j'://move to
+      Xachse.soll_posi = Buf.tel.value[0];
+      Yachse.soll_posi = Buf.tel.value[1];
+      Zachse.soll_posi = Buf.tel.value[2];
+      Wachse.soll_posi = Buf.tel.value[3];
+      getMoveParams();
+      sendPoseInfo = false;
       break;
     case 'p'://set new pose
       Xachse.act_posi = Buf.tel.value[0];
@@ -361,27 +393,36 @@ void recive_msg(){
       Speed = Buf.tel.value[0];
       soll_T = Buf.tel.value[1];
       Wachse.steps_pmm = Buf.tel.value[2];
+      acceleration_steps = Buf.tel.value[3];
       sendsetting();
+      break;
+    case 'w': //set speed temperatur and filament
+      Speed = Buf.tel.value[0];
+      soll_T = Buf.tel.value[1];
+      Wachse.steps_pmm = Buf.tel.value[2];
+      acceleration_steps = Buf.tel.value[3];
+      sendsettinginfo();
       break;
     case 'b'://send stop
       act_equal_soll();
       sendPose = true;
       sendactposition();
       break;
+    case 'l'://start cycletime test
+      cycle_time_test++;
+      cycle_time_test_start = micros();
+      break;
+    case 'r':
+      serieltimeouthandler();
+      break;
     default:
       break;
   }
 }
 void serieltimeouthandler(){
-      Serial.flush();
-      char dummy[1];
-      while(Serial.available())
-      {
-        Serial.readBytes(dummy,1);
-      }
-      Serial.end();
-      Serial.begin(115200,SERIAL_8E1);//9600
-      Serial.write(lastSend,19);      
+      digitalWrite(26,!digitalRead(26));
+      if(strlen(lastSend)!=0)
+        Serial.write(lastSend,19);      
 }
 //strops the movement (set soll pos equal act pos)
 void act_equal_soll(){
@@ -425,18 +466,19 @@ void getMoveParams(){
     dist = abs(Wachse.soll_posi-Wachse.act_posi)*15;
   }
   ges_time = (dist/Speed)*1000000;
-  
+  //send_debug(dist,Speed,ges_time,0);
   BigM_move_params(Xachse);
   BigM_move_params(Yachse);
   BigM_move_params(Zachse);
   MediM_move_params(Wachse);  
 }
 void BigM_move_params(struct StepMotorBig &StepM){
-  StepM.soll_step = StepM.soll_posi*StepM.steps_pmm;
+  StepM.soll_step = StepM.soll_posi*float(StepM.steps_pmm);
   StepM.step_div = abs(StepM.soll_step-StepM.act_step);
   StepM.time_pstep = ges_time/StepM.step_div;
   StepM.time_next_step = micros();
   StepM.ramp_step = 0;
+  //send_debug(StepM.soll_step,StepM.act_step,StepM.step_div,StepM.time_pstep);
 }
 void MediM_move_params(struct StepMotorMedi &StepM){
   StepM.soll_step = StepM.soll_posi*StepM.steps_pmm;
@@ -449,23 +491,25 @@ unsigned long calc_steptime(struct StepMotorBig &StepM){
   double soll_speed = (1/double(StepM.time_pstep)) * 100;
   double next_speed;
   int state = 0;
+  //send_debug(StepM.step_div,curr_step,soll_speed,acceleration_steps);
   if(StepM.step_div/2<curr_step)//abbremsen
   {
-    state = 1;
-    if(abs(StepM.step_div-curr_step) < acceleration_steps)
+    state = 3;
+    if(abs(StepM.step_div-curr_step) <= acceleration_steps)
     {
-      state = 2;
-      next_speed = (soll_speed/double(acceleration_steps))*double((abs(StepM.step_div-curr_step)+1));
+      state = 4;
+      next_speed = (soll_speed/double(acceleration_steps))*double((abs(StepM.step_div-(curr_step+1))+1));
       ist_time_pstep = 1/(next_speed/100);
     }
   }
   else    //beschleunigung
   {
-    if(StepM.ramp_step < acceleration_steps)
+    state = 1;
+    if(curr_step < acceleration_steps)
     {
-      next_speed = (soll_speed/double(acceleration_steps))*double(acceleration_steps-(acceleration_steps-StepM.ramp_step)+1);
+      state = 2;
+      next_speed = (soll_speed/double(acceleration_steps))*double(acceleration_steps-(acceleration_steps-curr_step)+1);
       ist_time_pstep = 1/(next_speed/100);
-      StepM.ramp_step += 1;
     }
   }      
   
@@ -484,8 +528,14 @@ void treiberBig(struct StepMotorBig &StepM){
       digitalWrite(StepM.pinDIR,HIGH);
       digitalWrite(StepM.pinPUL,LOW);
       digitalWrite(StepM.pinPUL,HIGH);
-      //StepM.time_next_step += StepM.time_pstep;
-      StepM.time_next_step += calc_steptime(StepM);
+      if(acceleration_steps == 0)
+      {
+        StepM.time_next_step += StepM.time_pstep;
+      }
+      else
+      {
+        StepM.time_next_step += calc_steptime(StepM);
+      }
       StepM.act_step++;
     }else if(StepM.soll_step<StepM.act_step){
       //one stepp back
@@ -593,6 +643,10 @@ void sendsetting(){
 void sendsettinginfo(){
   send_variabelTestCommand('j',Speed,T,Wachse.steps_pmm,soll_T);
 }
+void sendcycletime(float a,float b,float c,float d){
+  send_variabelTestCommand('l',a,b,c,d);
+  start_responstimer();
+}
 void send_variabelTestCommand(char C, float val1, float val2, float val3, float val4){
   SenBuf.tel.comand = C;
   SenBuf.tel.value[0] = val1;
@@ -605,7 +659,7 @@ void send_variabelTestCommand(char C, float val1, float val2, float val3, float 
 }
 void start_responstimer(){
   wait_for_response = true;
-  cycle_time = micros() + 150000;
+  cycle_time = micros() + 50000;
 }
 void stop_responstimer(){
   wait_for_response = false;
@@ -613,24 +667,29 @@ void stop_responstimer(){
 void read_Telegram(){
   char bufS[1];
   char bufBig[19];
-  if(Serial.peek() == 'T'){
-    Serial.readBytes(bufS,1);
-    //stop respons timer
-    stop_responstimer();
-    return;
-  }else if(Serial.peek() == 'S'){
-    Serial.readBytes(Buf.buf,19);
-    //check checksumm
-    if(Buf.buf[18]!=calc_checkbyte(Buf.buf)){
-      digitalWrite(24,!digitalRead(24));
-      return;
+  digitalWrite(28,!digitalRead(28));
+  for(int i=0;i<20&&Serial.available();i++)
+  {
+    if(Serial.peek() == 'T'){
+      Serial.readBytes(bufS,1);
+      lastSend[0]= '\0';
+      stop_responstimer();
+    }else if(Serial.peek() == 'S'){
+      if(Serial.available()<19)
+        return;   
+      Serial.readBytes(Buf.buf,19);
+      //check checksumm
+      if(Buf.buf[18]!=calc_checkbyte(Buf.buf)){
+        digitalWrite(24,!digitalRead(24));
+        sendRepeatRequest();
+        return;
+      }
+      bufS[0] = 'T';
+      Serial.write(bufS,1);
+      msg_available = true;
+    }else{
+      Serial.readBytes(bufS,1);
     }
-    bufS[0] = 'T';
-    Serial.write(bufS,1);
-    msg_available = true;
-  }else{
-    digitalWrite(26,!digitalRead(26));
-    return;
   }
 }
 void send_tel(){

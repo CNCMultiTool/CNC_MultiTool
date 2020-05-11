@@ -9,12 +9,20 @@
 #include <QMutex>
 #include <QSerialPort>
 #include <QList>
+#include <QSettings>
+#include <QtMath>
 
 union tTelegram
 {
     float Value[4];
-    char Bytes[16];
+    unsigned char Bytes[16];
 };
+
+typedef struct{
+    float X;
+    float Y;
+    float Z;
+}point;
 
 typedef struct
 {
@@ -33,9 +41,11 @@ public:
     cnc_data();
 
     void FileLog(QString value);
+    void SerialLog(QString value);
 
     bool m_HWisHeating;
     bool m_HWisMoving;
+    int m_HW_status; //0 = idle, 1 = moveing, 2 = heating
 
 
     //values to send
@@ -43,6 +53,7 @@ public:
     float m_soll_speed;
     float m_soll_filament;
     float m_soll_temperatur;
+    float m_soll_accSteps;
 
     //values recived
     //position
@@ -54,6 +65,7 @@ public:
     float m_act_speed;
     float m_act_filament;
     float m_act_temperatur;
+    float m_act_accSteps;
 
     //status
     float m_endswitch_X;
@@ -75,14 +87,32 @@ public:
     //TCP hight in home
     float m_Zmax_nozzel;
 
+    float m_calibplateX;
+    float m_calibplateY;
+    float m_calibplateZ;
+    bool m_useCalibPlate;
+
+    float m_z_offset;
+
     //max values
     float m_max_speed; //mm per sec
 
+
+    //repeattest values
+    int m_repeat1,m_speed1;
+    float m_x11,m_y11,m_z11,m_x12,m_y12,m_z12;
+
     void set_position(float X,float Y,float Z,float W);
     void set_settings(float speed,float temperatur,float filament,float soll_temperatur);
-    void set_soll_settings(float speed,float temperatur,float filament);
+    void set_soll_settings(float speed,float temperatur,float filament,float acc);
     void set_endswitch(int X,int Y,int Z);
     void set_serial(bool isOpen);
+
+    void saveSettings();
+    void loadSettings();
+
+    void calc_correctionangel(QList<point> Z_errors);
+    float calc_correction(float X,float Y);
 
     void test();
 
@@ -100,6 +130,9 @@ private:
     QString m_LogFileName = "CNC_Log.txt";
     QFile *m_LogFile;
     QMutex m_mutex;
+    QString m_SerialLogFileName = "CNC_SerialLog.txt";
+    QFile *m_SerialLogFile;
+    QMutex m_Serialmutex;
     ~cnc_data();
 
 signals:

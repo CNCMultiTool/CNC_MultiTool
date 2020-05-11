@@ -10,6 +10,9 @@
 #include <cnc_basefunctions.h>
 #include <cnc_data.h>
 #include <cnc_automation.h>
+#include <QFormLayout>
+#include <QDialogButtonBox>
+#include <QCheckBox>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -22,6 +25,7 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+
 
 private:
     Ui::MainWindow *ui;
@@ -46,7 +50,7 @@ private:
     void calib_size();
     void repeat_test();
     void Z_calib();
-    void show_status();
+
 
 
     bool m_alive;
@@ -58,13 +62,14 @@ signals:
 private slots:
     void Log(const QString &s);
     void errorLog(const QString &s);
-    void test();
 
     void show_position();
     void show_settings();
     void show_endswitch(float X,float Y,float Z);
     void show_serial(bool isOpen);
     void show_send_queue();
+    void show_alive();
+    void show_status();
 
     void sendStopMoving();
 
@@ -112,12 +117,16 @@ private slots:
 
     void on_pushButton_pauseGCode_pressed();
     void on_pushButton_AboardGCode_pressed();
-    void on_pushButton_test_pressed();
     void on_pushButton_rest_pressed();
     void on_spinBoxSpeed_valueChanged(int arg1);
     void on_spinBoxTemperatur_valueChanged(int arg1);
     void on_spinBoxFilament_valueChanged(int arg1);
     void on_pushButton_clear_queue_clicked();
     void on_pushButton_trigger_next_clicked();
+    void calibratenValueBox();
+    void repeattestValueBox();
+    void on_pushButton_test_clicked();
+    void on_doubleSpinBoxZOffset_valueChanged(const QString &arg1);
+    void on_pushButton_nozzel_calib_clicked();
 };
 #endif // MAINWINDOW_H

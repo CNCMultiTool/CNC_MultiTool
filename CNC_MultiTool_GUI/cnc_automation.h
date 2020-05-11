@@ -24,6 +24,7 @@ public:
     CNC_automation(cnc_data *database = nullptr,cnc_basefunctions *basefunctions=nullptr);
     ~CNC_automation();
 
+    void nozzel_calib();
     void move_home();
     void move_restposi();
     void repeat_test();
