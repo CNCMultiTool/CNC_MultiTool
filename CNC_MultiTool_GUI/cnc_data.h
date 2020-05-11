@@ -43,9 +43,8 @@ public:
     void FileLog(QString value);
     void SerialLog(QString value);
 
-    bool m_HWisHeating;
-    bool m_HWisMoving;
     int m_HW_status; //0 = idle, 1 = moveing, 2 = heating
+    int m_G_Code_State; //0 = idle , 1= running, 2 = pause
 
 
     //values to send
@@ -115,9 +114,6 @@ public:
     float calc_correction(float X,float Y);
 
     void test();
-
-    void set_HWisHeating(bool status);
-    void set_HWisMoving(bool status);
     
     void append_recive_command(cnc_command new_command);
 

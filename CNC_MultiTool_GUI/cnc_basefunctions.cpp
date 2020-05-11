@@ -3,8 +3,7 @@
 cnc_basefunctions::cnc_basefunctions(cnc_data *database)
 {
     m_database = database;
-    m_database->m_HWisMoving = false;
-    m_database->m_HWisHeating = false;
+    m_database->m_HW_status = 0;
 }
 
 void cnc_basefunctions::test()
@@ -113,7 +112,6 @@ void cnc_basefunctions::send_init()
 void cnc_basefunctions::send_stop()
 {
     send_to_cnc('b',0,0,0,0,4);
-    m_database->m_HWisMoving = false;
 }
 
 void cnc_basefunctions::send_getPosition()
@@ -277,15 +275,14 @@ void cnc_basefunctions::execute_command(char command,float value1,float value2,f
     {
     case 'm'://end of movemend
         m_database->set_position(value1,value2,value3,value4);
-        m_database->FileLog("INFO recived set position: X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
+        //m_database->FileLog("INFO recived set position: X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
         break;
     case 'c'://end of movemend and ready for next comand
         tracDist = sqrt(qPow(speedOldPoint.X-value1,2)+qPow(speedOldPoint.Y-value2,2)+qPow(speedOldPoint.Z-value3,2));
         emit Log("real traveled speed:"+QString::number((tracDist/speedTimer.elapsed())*1000)+" dist:"+QString::number(tracDist)+"mm time:"+QString::number(speedTimer.elapsed())+"ms soll_speed:"+QString::number(m_database->m_act_speed));
 
         m_database->set_position(value1,value2,value3,value4);
-        m_database->set_HWisMoving(false);
-        m_database->FileLog("INFO recived set position and ready for next command: X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
+        //m_database->FileLog("INFO recived set position and ready for next command: X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
         //m_database->m_HWisMoving = false;
         m_database->m_HW_status = 0;
         emit show_status();
@@ -293,13 +290,12 @@ void cnc_basefunctions::execute_command(char command,float value1,float value2,f
         break;
     case 's'://set the actual settings
         m_database->set_settings(value1,value2,value3,value4);
-        m_database->FileLog("INFO recived current setting: speed:"+QString::number(value1)+" temperatur:"+QString::number(value2)+" filament:"+QString::number(value3)+" PWM:"+QString::number(value4));
+        //m_database->FileLog("INFO recived current setting: speed:"+QString::number(value1)+" temperatur:"+QString::number(value2)+" filament:"+QString::number(value3)+" ACCStep:"+QString::number(value4));
         trigger_next_command();
         break;
     case 'j'://set the actual settings
         m_database->set_settings(value1,value2,value3,value4);
-        m_database->FileLog("INFO recived current setting: speed:"+QString::number(value1)+" temperatur:"+QString::number(value2)+" filament:"+QString::number(value3)+" PWM:"+QString::number(value4));
-        //if(m_database->m_HWisHeating == true)
+        //m_database->FileLog("INFO recived current setting: speed:"+QString::number(value1)+" temperatur:"+QString::number(value2)+" filament:"+QString::number(value3)+" ACCStep:"+QString::number(value4));
         if(m_database->m_HW_status == 2)
         {
             float temp_dif = abs(m_database->m_act_temperatur - m_database->m_soll_temperatur);
@@ -311,7 +307,6 @@ void cnc_basefunctions::execute_command(char command,float value1,float value2,f
                 emit Log("end of the heating");
                 m_database->cnc_send_commands.pop_front();
                 trigger_next_command();
-                //m_database->m_HWisHeating = false;
                 m_database->m_HW_status = 0;
                 emit show_status();
             }
@@ -319,7 +314,7 @@ void cnc_basefunctions::execute_command(char command,float value1,float value2,f
         break;
     case 'e':
         m_database->set_endswitch(value1,value2,value3);
-        m_database->FileLog("INFO recived endswitches: X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
+        //m_database->FileLog("INFO recived endswitches: X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
         //emit Log("recive endswitch X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
         break;
     case 'l':

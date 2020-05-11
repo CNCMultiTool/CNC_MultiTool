@@ -13,11 +13,15 @@ MainWindow::MainWindow(QWidget *parent)
     ui->spinBoxSpeed->setValue(m_database->m_max_speed);
     ui->spinBoxFilament->setValue(m_database->m_soll_filament);
 
-    m_database->m_soll_speed = ui->spinBoxSpeed->value();
-    m_database->m_soll_temperatur = ui->spinBoxTemperatur->value();
-    m_database->m_soll_filament = ui->spinBoxFilament->value();
+
 
     m_database->loadSettings();
+    ui->spinBoxSpeed->setValue(m_database->m_soll_speed);
+    ui->spinBoxTemperatur->setValue(m_database->m_soll_temperatur);
+    ui->spinBoxFilament->setValue(m_database->m_soll_filament);
+    ui->spinBoxAccSteps->setValue(m_database->m_soll_accSteps);
+
+
     //chek availabal port add to the comboBox
     const auto infos = QSerialPortInfo::availablePorts();
     for (const QSerialPortInfo &info : infos)
@@ -66,6 +70,7 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
+    m_database->saveSettings();
     delete ui;
 }
 
@@ -147,20 +152,6 @@ void MainWindow::show_endswitch(float X, float Y, float Z)
 
 void MainWindow::show_status()
 {
-    /*
-    if(m_database->m_HWisMoving)
-    {
-        ui->label_Queue_state->setStyleSheet("background-color: green");
-    }
-    else if(m_database->m_HWisHeating)
-    {
-        ui->label_Queue_state->setStyleSheet("background-color: yellow");
-    }
-    else
-    {
-        ui->label_Queue_state->setStyleSheet("background-color: red");
-    }
-    */
     switch(m_database->m_HW_status)
     {
     case 0:
@@ -208,7 +199,6 @@ void MainWindow::on_pushButtonSerialConnect_clicked()
     {
         Log("open serial");
         m_database->m_SerialPortName = ui->comboBoxComPortName->currentText();
-        m_database->m_HWisMoving = false;
         m_serial->serial_open();
         m_basefunctions->send_init();
     }
@@ -413,7 +403,6 @@ void MainWindow::on_pushButton_clear_queue_clicked()
 void MainWindow::on_pushButton_trigger_next_clicked()
 {
     ui->textEditLog->append("trigger sending manuel");
-    m_database->m_HWisMoving = false;
     m_basefunctions->trigger_next_command();
     show_send_queue();
 }

@@ -43,12 +43,11 @@ cnc_data::cnc_data()
     m_error_X_null_Y_max = 0;
     m_error_X_null_Y_null = 0;
 
-    m_max_speed = 30;
-
-    m_HWisHeating = false;
-    m_HWisMoving = false;
+    m_max_speed = 25;
 
     m_SerialIsOpen = false;
+
+    m_G_Code_State = 0;
 
     m_LogFile = new QFile;
     m_LogFile->setFileName(m_LogFileName);
@@ -138,18 +137,6 @@ void cnc_data::set_serial(bool isOpen)
     emit show_serial(isOpen);
 }
 
-void cnc_data::set_HWisHeating(bool status)
-{
-    m_HWisHeating = status;
-    emit show_status();
-}
-
-void cnc_data::set_HWisMoving(bool status)
-{
-    m_HWisMoving = status;
-    emit show_status();
-}
-
 void cnc_data::append_recive_command(cnc_command new_command)
 {
     cnc_recive_commands.append(new_command);
@@ -178,6 +165,10 @@ void cnc_data::loadSettings()
     m_calibplateZ =  settings.value("m_calibplateZ").toDouble();
     m_useCalibPlate = settings.value("m_useCalibPlate").toBool();
 
+    m_soll_speed = settings.value("m_soll_speed").toDouble();
+    m_soll_temperatur = settings.value("m_soll_temperatur").toDouble();
+    m_soll_filament = settings.value("m_soll_filament").toDouble();
+    m_soll_accSteps = settings.value("m_soll_accSteps").toDouble();
 
     m_repeat1 = settings.value("m_repeat1").toInt();
     m_speed1 = settings.value("m_speed1").toInt();
@@ -211,6 +202,11 @@ void cnc_data::saveSettings()
     settings.setValue("m_calibplateY",m_calibplateY);
     settings.setValue("m_calibplateZ",m_calibplateZ);
     settings.setValue("m_useCalibPlate",m_useCalibPlate);
+
+    settings.setValue("m_soll_speed",m_soll_speed);
+    settings.setValue("m_soll_temperatur",m_soll_temperatur);
+    settings.setValue("m_soll_filament",m_soll_filament);
+    settings.setValue("m_soll_accSteps",m_soll_accSteps);
 
     settings.setValue("m_repeat1",m_repeat1);
     settings.setValue("m_speed1",m_speed1);
