@@ -273,7 +273,7 @@ void loop() {
   if(cycle_time2 < time_now)
   {
     char bufS[1];
-    cycle_time2 = time_now + 100000;
+    cycle_time2 = time_now + 50000;
     if(sendPose == true)
       bufS[0] = {'Q'}; //wait for new task
     else

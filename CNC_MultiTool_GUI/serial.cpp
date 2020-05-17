@@ -25,7 +25,7 @@ void Serial::send_last()
         //cnc_command dummy;
         //m_database->cnc_send_commands.append(dummy);
         m_serial.write(m_sendBytesLast);
-        m_serial.waitForBytesWritten(m_send_timeout*3);
+        m_serial.waitForBytesWritten(m_send_timeout);
         debug_time.restart();
     }
 }
@@ -204,27 +204,27 @@ void Serial::serial_read_command()
         }
 
         if(m_recivedBytes[0] == 'Q'){
+            emit Log("HW IDLE HW_status:"+QString::number(m_database->m_HW_status)+
+                     " G-Code:"+QString::number(m_database->m_G_Code_State)+
+                     " Queue:"+QString::number(m_database->cnc_send_commands.size())+
+                     " LastSendEmpty:"+QString::number(!m_sendBytesLast.isEmpty()));
             serial_fast_timeout.stop();
             serial_fast_timeout.start(m_fast_timeout);
             m_recivedBytes.remove(0,1);
-            if(!m_sendBytesLast.isEmpty())
-            {
-                send_last();
-                m_database->SerialLog("resend last command while idle");
-                emit errorLog("resend last command while idle");
-                continue;
-            }
-            if(m_database->m_HW_status == 0 && m_database->cnc_send_commands.size()>0 && !(m_database->m_G_Code_State == 2))
+            fast_Timeout_time.restart();
+            if(m_database->m_HW_status == 0 &&m_database->cnc_send_commands.size()>0 && m_database->m_G_Code_State == 1)
             {
                 m_database->SerialLog("send new comand while idle");
-                emit errorLog("send new comand while idle");
                 serial_send_command();
             }
-            fast_Timeout_time.restart();
             continue;
         }
 
         if(m_recivedBytes[0] == 'W'){
+            emit Log("HW WORKING HW_status:"+QString::number(m_database->m_HW_status)+
+                     " G-Code:"+QString::number(m_database->m_G_Code_State)+
+                     " Queue:"+QString::number(m_database->cnc_send_commands.size())+
+                     " LastSendEmpty:"+QString::number(!m_sendBytesLast.isEmpty()));
             serial_fast_timeout.stop();
             serial_fast_timeout.start(m_fast_timeout);
             m_recivedBytes.remove(0,1);
@@ -235,6 +235,7 @@ void Serial::serial_read_command()
         if(m_recivedBytes[0] == 'N'){
             m_database->SerialLog("recive N repeatrequest");
             emit errorLog("recive N repeatrequest");
+            emit Log("recive N repeatrequest");
             serial_fast_timeout.stop();
             serial_fast_timeout.start(m_fast_timeout);
             m_recivedBytes.remove(0,1);
@@ -255,15 +256,15 @@ void Serial::serial_read_command()
         }
         checkSumm = m_recivedBytes[m_TelegramLength-1];
 
-        //QString LogText = QString(char(m_recivedBytes[0]))+" ";
-        //LogText += QString(command)+" ";
-        //LogText += QString::number(m_recive_telegram.Value[0])+" ";
-        //LogText += QString::number(m_recive_telegram.Value[1])+" ";
-        //LogText += QString::number(m_recive_telegram.Value[2])+" ";
-        //LogText += QString::number(m_recive_telegram.Value[3])+" ";
-        //LogText += QString::number(checkSumm);
+        QString LogText = QString(char(m_recivedBytes[0]))+" ";
+        LogText += QString(command)+" ";
+        LogText += QString::number(m_recive_telegram.Value[0])+" ";
+        LogText += QString::number(m_recive_telegram.Value[1])+" ";
+        LogText += QString::number(m_recive_telegram.Value[2])+" ";
+        LogText += QString::number(m_recive_telegram.Value[3])+" ";
+        LogText += QString::number(checkSumm);
         //m_database->SerialLog("recive S telegram "+LogText);
-        //emit Log("INFO recive:"+LogText);
+        emit Log("INFO recive:"+LogText);
 
 
         //empfangene daten in cnc_command verpacken und an empfangs queue packen
@@ -352,13 +353,14 @@ void Serial::serial_send_command()
     debug_time.restart();
 
 
-    //QString LogText = QString(char(m_sendBytes[0]))+" ";
-    //LogText += QString(char(m_sendBytes[1]))+" ";
-    //LogText += QString::number(send_telegram.Value[0])+" ";
-    //LogText += QString::number(send_telegram.Value[1])+" ";
-    //LogText += QString::number(send_telegram.Value[2])+" ";
-    //LogText += QString::number(send_telegram.Value[3])+" ";
-    //LogText += QString::number(m_sendBytes[18]);
+    QString LogText = QString(char(m_sendBytes[0]))+" ";
+    LogText += QString(char(m_sendBytes[1]))+" ";
+    LogText += QString::number(send_telegram.Value[0])+" ";
+    LogText += QString::number(send_telegram.Value[1])+" ";
+    LogText += QString::number(send_telegram.Value[2])+" ";
+    LogText += QString::number(send_telegram.Value[3])+" ";
+    LogText += QString::number(m_sendBytes[18]);
+    emit Log("INFO send:"+LogText);
     //m_database->SerialLog("send send telegram"+LogText);
 
 

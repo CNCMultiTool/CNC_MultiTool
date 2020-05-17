@@ -113,6 +113,8 @@ void MainWindow::show_send_queue()
     if(m_database->cnc_send_commands.size()==0)
     {
         ui->label_Queue->setStyleSheet("background-color: red");
+        ui->pushButton_startGCode->setStyleSheet("background-color: red");
+        m_database->m_G_Code_State = 0;
     }else{
         ui->label_Queue->setStyleSheet("background-color: green");
     }
@@ -222,6 +224,9 @@ void MainWindow::on_pushButtonSerialConnect_clicked()
         m_database->m_SerialPortName = ui->comboBoxComPortName->currentText();
         m_serial->serial_open();
         m_basefunctions->send_init();
+        m_basefunctions->send_PID(m_database->m_KP,m_database->m_KI,m_database->m_KD,m_database->m_POn);
+        m_basefunctions->send_Temp_Setting(m_database->m_R_vor,m_database->m_bValue,m_database->m_R_nen);
+        m_basefunctions->send_settings(m_database->m_soll_speed,-1,m_database->m_soll_filament,m_database->m_soll_accSteps);
     }
 }
 
