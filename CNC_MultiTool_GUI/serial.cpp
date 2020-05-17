@@ -207,6 +207,13 @@ void Serial::serial_read_command()
             serial_fast_timeout.stop();
             serial_fast_timeout.start(m_fast_timeout);
             m_recivedBytes.remove(0,1);
+            if(!m_sendBytesLast.isEmpty())
+            {
+                send_last();
+                m_database->SerialLog("resend last command while idle");
+                emit errorLog("resend last command while idle");
+                continue;
+            }
             if(m_database->m_HW_status == 0 && m_database->cnc_send_commands.size()>0 && !(m_database->m_G_Code_State == 2))
             {
                 m_database->SerialLog("send new comand while idle");

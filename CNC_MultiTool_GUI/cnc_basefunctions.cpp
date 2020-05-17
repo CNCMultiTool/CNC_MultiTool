@@ -11,6 +11,16 @@ void cnc_basefunctions::test()
     emit Log("basefunction is alive");
 }
 
+void cnc_basefunctions::send_PID(float P,float I,float D,float PO)
+{
+    send_to_cnc('o',P,I,D,PO,1);
+}
+
+void cnc_basefunctions::send_Temp_Setting(float R_vor,float B_Value,float R_nen)
+{
+    send_to_cnc('z',R_vor,B_Value,R_nen,0,1);
+}
+
 void cnc_basefunctions::send_move(float X,float Y,float Z,float W)
 {
     send_to_cnc('j',X,Y,Z,W,1);
@@ -161,9 +171,9 @@ void cnc_basefunctions::trigger_next_command()
         }
         int action = m_database->cnc_send_commands[0].action;
 
-        emit Log("trigger_next_command (action: "+
-                 QString::number(m_database->cnc_send_commands[0].action)+
-                ", command: "+QString(m_database->cnc_send_commands[0].command)+")");
+        //emit Log("trigger_next_command (action: "+
+        //         QString::number(m_database->cnc_send_commands[0].action)+
+        //        ", command: "+QString(m_database->cnc_send_commands[0].command)+")");
 
         if(action == 1||action == 2)
         {
@@ -295,6 +305,8 @@ void cnc_basefunctions::execute_command(char command,float value1,float value2,f
         break;
     case 'j'://set the actual settings
         m_database->set_settings(value1,value2,value3,value4);
+        emit DataToGraph(0,m_database->m_act_temperatur,0,m_database->m_soll_temperatur);
+        emit show_alive();
         //m_database->FileLog("INFO recived current setting: speed:"+QString::number(value1)+" temperatur:"+QString::number(value2)+" filament:"+QString::number(value3)+" ACCStep:"+QString::number(value4));
         if(m_database->m_HW_status == 2)
         {
@@ -326,7 +338,26 @@ void cnc_basefunctions::execute_command(char command,float value1,float value2,f
         emit Log(LogText);
         m_database->FileLog(LogText);
         emit Log(LogText);
-        trigger_next_command();
+        break;
+    case 'o'://set PID values response
+        LogText = "new PID ";
+        LogText += " P :"+QString::number(value1);
+        LogText += " I :"+QString::number(value2);
+        LogText += " D :"+QString::number(value3);
+        LogText += " use POn :"+QString::number(value4);
+        emit Log(LogText);
+        m_database->FileLog(LogText);
+        emit Log(LogText);
+        break;
+    case 'u'://PID debug infos
+        LogText = "new PID ";
+        LogText += " soll_T :"+QString::number(value1);
+        LogText += " T_ntc :"+QString::number(value2);
+        LogText += " PWM :"+QString::number(value3);
+        LogText += " T_100 :"+QString::number(value4);
+        //emit Log(LogText);
+        //m_database->FileLog(LogText);
+        emit DataToGraph(value4,value2,value3,value1);
         break;
     case 'd':
         LogText = "DEBUG recived Debug";

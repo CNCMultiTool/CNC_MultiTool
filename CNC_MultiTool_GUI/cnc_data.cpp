@@ -45,6 +45,8 @@ cnc_data::cnc_data()
 
     m_max_speed = 25;
 
+    m_plot_size = 250;
+
     m_SerialIsOpen = false;
 
     m_G_Code_State = 0;
@@ -179,6 +181,15 @@ void cnc_data::loadSettings()
     m_y12 = settings.value("m_y12").toDouble();
     m_z12 = settings.value("m_z12").toDouble();
 
+    m_KP = settings.value("m_KP").toDouble();
+    m_KI = settings.value("m_KI").toDouble();
+    m_KD = settings.value("m_KD").toDouble();
+    m_POn = settings.value("m_POn").toBool();
+
+    m_R_vor = settings.value("m_R_vor").toDouble();
+    m_R_nen = settings.value("m_R_nen").toDouble();
+    m_bValue = settings.value("m_bValue").toDouble();
+    m_plot_size = settings.value("m_plot_size").toDouble();
 }
 
 void cnc_data::saveSettings()
@@ -216,6 +227,16 @@ void cnc_data::saveSettings()
     settings.setValue("m_x12",m_x12);
     settings.setValue("m_y12",m_y12);
     settings.setValue("m_z12",m_z12);
+
+    settings.setValue("m_KP",m_KP);
+    settings.setValue("m_KI",m_KI);
+    settings.setValue("m_KD",m_KD);
+    settings.setValue("m_POn",m_POn);
+
+    settings.setValue("m_R_vor",m_R_vor);
+    settings.setValue("m_R_nen",m_R_nen);
+    settings.setValue("m_bValue",m_bValue);
+    settings.setValue("m_plot_size",m_plot_size);
 }
 
 void cnc_data::calc_correctionangel(QList<point> Z_errors)

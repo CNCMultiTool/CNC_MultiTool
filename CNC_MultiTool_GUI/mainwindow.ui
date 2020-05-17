@@ -876,19 +876,6 @@
      <string>Connect</string>
     </property>
    </widget>
-   <widget class="QTextEdit" name="textEditLog">
-    <property name="enabled">
-     <bool>true</bool>
-    </property>
-    <property name="geometry">
-     <rect>
-      <x>520</x>
-      <y>10</y>
-      <width>501</width>
-      <height>441</height>
-     </rect>
-    </property>
-   </widget>
    <widget class="QComboBox" name="comboBoxComPortName">
     <property name="geometry">
      <rect>
@@ -950,7 +937,7 @@
      <rect>
       <x>520</x>
       <y>460</y>
-      <width>511</width>
+      <width>501</width>
       <height>151</height>
      </rect>
     </property>
@@ -1069,6 +1056,52 @@
      </item>
     </layout>
    </widget>
+   <widget class="QTabWidget" name="tabWidget">
+    <property name="geometry">
+     <rect>
+      <x>520</x>
+      <y>10</y>
+      <width>501</width>
+      <height>441</height>
+     </rect>
+    </property>
+    <property name="currentIndex">
+     <number>1</number>
+    </property>
+    <widget class="QWidget" name="tab">
+     <attribute name="title">
+      <string>Tab 1</string>
+     </attribute>
+     <widget class="QTextEdit" name="textEditLog">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>501</width>
+        <height>421</height>
+       </rect>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="tab_2">
+     <attribute name="title">
+      <string>Tab 2</string>
+     </attribute>
+     <widget class="QCustomPlot" name="Plot_PID_Temp" native="true">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>491</width>
+        <height>411</height>
+       </rect>
+      </property>
+     </widget>
+    </widget>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
@@ -1092,8 +1125,15 @@
     <addaction name="actionexecute"/>
     <addaction name="actionsettings_repeattest"/>
    </widget>
+   <widget class="QMenu" name="menuPID">
+    <property name="title">
+     <string>PID</string>
+    </property>
+    <addaction name="actionSet_PID"/>
+   </widget>
    <addaction name="menuCalibrations"/>
    <addaction name="menuTests"/>
+   <addaction name="menuPID"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QToolBar" name="toolBar">
@@ -1122,7 +1162,20 @@
     <string>settings repeattest</string>
    </property>
   </action>
+  <action name="actionSet_PID">
+   <property name="text">
+    <string>Set PID</string>
+   </property>
+  </action>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QCustomPlot</class>
+   <extends>QWidget</extends>
+   <header>qcustomplot.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

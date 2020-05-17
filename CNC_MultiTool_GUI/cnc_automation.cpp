@@ -124,6 +124,7 @@ void CNC_automation::probe_Z(float X,float Y)
 
 void CNC_automation::G_Code_Start(QString fileName)
 {
+    m_database->m_G_Code_State = 2;
     emit Log("start g-code: "+fileName);
     m_database->FileLog("start g-code: "+fileName);
     m_fileName = fileName;

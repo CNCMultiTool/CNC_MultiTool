@@ -43,6 +43,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_basefunctions,SIGNAL(trigger_send()),m_serial,SLOT(serial_send_command()));
     connect(m_basefunctions,SIGNAL(show_send_queue()),this,SLOT(show_send_queue()));
     connect(m_basefunctions,SIGNAL(show_status()),this,SLOT(show_status()));
+    connect(m_basefunctions,SIGNAL(DataToGraph(float,float,float,float)),this,SLOT(addToGraph(float,float,float,float)));
+    connect(m_basefunctions,SIGNAL(show_alive()),this,SLOT(show_alive()));
 
     connect(m_database,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_database,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
@@ -66,6 +68,25 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionValues,SIGNAL(triggered()),this,SLOT(calibratenValueBox()));
     connect(ui->actionsettings_repeattest,SIGNAL(triggered()),this,SLOT(repeattestValueBox()));
     connect(ui->actionexecute,SIGNAL(triggered()),this,SLOT(on_pushButton_repeattest_pressed()));
+    connect(ui->actionSet_PID,SIGNAL(triggered()),this,SLOT(PID_ValueBox()));
+
+
+    //SEtupPlot
+    ui->Plot_PID_Temp->addGraph(); // blue line
+    ui->Plot_PID_Temp->graph(0)->setPen(QPen(QColor(40, 110, 255)));
+    ui->Plot_PID_Temp->addGraph(); // red line
+    ui->Plot_PID_Temp->graph(1)->setPen(QPen(QColor(255, 110, 40)));
+    ui->Plot_PID_Temp->addGraph(); // red line
+    ui->Plot_PID_Temp->graph(2)->setPen(QPen(QColor(60, 110, 40)));
+    ui->Plot_PID_Temp->addGraph(); // red line
+    ui->Plot_PID_Temp->graph(3)->setPen(QPen(QColor(255, 110, 200)));
+    time.start();
+    ui->Plot_PID_Temp->yAxis->setRange(-10, 260);
+    QSharedPointer<QCPAxisTickerTime> timeTicker(new QCPAxisTickerTime);
+    timeTicker->setTimeFormat("%h:%m:%s");
+    ui->Plot_PID_Temp->xAxis->setTicker(timeTicker);
+    ui->Plot_PID_Temp->axisRect()->setupFullAxesBox();
+
 }
 
 MainWindow::~MainWindow()
@@ -600,29 +621,110 @@ void MainWindow::calibratenValueBox()
     }
 }
 
+void MainWindow::PID_ValueBox()
+{
+    Log("show checkbox");
+    QDialog dialog(this);
+    // Use a layout allowing to have a label next to each field
+    QFormLayout form(&dialog);
+
+    //KP
+    QDoubleSpinBox *DSpinBox_KP = new QDoubleSpinBox(&dialog);
+    DSpinBox_KP->setRange(-9999999,999999);
+    DSpinBox_KP->setDecimals(2);
+    DSpinBox_KP->setValue(m_database->m_KP);
+    form.addRow("KP", DSpinBox_KP);
+
+    //KI
+    QDoubleSpinBox *DSpinBox_KI = new QDoubleSpinBox(&dialog);
+    DSpinBox_KI->setRange(-9999999,999999);
+    DSpinBox_KI->setDecimals(2);
+    DSpinBox_KI->setValue(m_database->m_KI);
+    form.addRow("KI", DSpinBox_KI);
+
+    //KD
+    QDoubleSpinBox *DSpinBox_KD = new QDoubleSpinBox(&dialog);
+    DSpinBox_KD->setRange(-9999999,999999);
+    DSpinBox_KD->setDecimals(2);
+    DSpinBox_KD->setValue(m_database->m_KD);
+    form.addRow("KD", DSpinBox_KD);
+
+    //make nozzel calib
+    QCheckBox *CheckBox_POn = new QCheckBox(&dialog);
+    CheckBox_POn->setCheckState(m_database->m_POn == true ? Qt::CheckState::Checked : Qt::CheckState::Unchecked);
+    form.addRow("POn", CheckBox_POn);
+
+    //Vorwiederstand
+    QDoubleSpinBox *DSpinBox_m_R_vor = new QDoubleSpinBox(&dialog);
+    DSpinBox_m_R_vor->setRange(-9999999,999999);
+    DSpinBox_m_R_vor->setDecimals(2);
+    DSpinBox_m_R_vor->setValue(m_database->m_R_vor);
+    form.addRow("Vorwiederstand", DSpinBox_m_R_vor);
+
+    //Vorwiederstand
+    QDoubleSpinBox *DSpinBox_m_R_nen = new QDoubleSpinBox(&dialog);
+    DSpinBox_m_R_nen->setRange(-9999999,999999);
+    DSpinBox_m_R_nen->setDecimals(2);
+    DSpinBox_m_R_nen->setValue(m_database->m_R_nen);
+    form.addRow("Nennwiederstand", DSpinBox_m_R_nen);
+
+    //B Value
+    QDoubleSpinBox *DSpinBox_m_bValue = new QDoubleSpinBox(&dialog);
+    DSpinBox_m_bValue->setRange(-9999999,999999);
+    DSpinBox_m_bValue->setDecimals(2);
+    DSpinBox_m_bValue->setValue(m_database->m_bValue);
+    form.addRow("B-Wert_NTC", DSpinBox_m_bValue);
+
+    //Plot site
+    QDoubleSpinBox *DSpinBox_m_plot_size = new QDoubleSpinBox(&dialog);
+    DSpinBox_m_plot_size->setRange(-9999999,999999);
+    DSpinBox_m_plot_size->setDecimals(2);
+    DSpinBox_m_plot_size->setValue(m_database->m_plot_size);
+    form.addRow("PlotSize", DSpinBox_m_plot_size);
+
+
+    // Add some standard buttons (Cancel/Ok) at the bottom of the dialog
+    QDialogButtonBox buttonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel,
+                               Qt::Horizontal, &dialog);
+    form.addRow(&buttonBox);
+    QObject::connect(&buttonBox, SIGNAL(accepted()), &dialog, SLOT(accept()));
+    QObject::connect(&buttonBox, SIGNAL(rejected()), &dialog, SLOT(reject()));
+
+    // Show the dialog as modal
+    if (dialog.exec() == QDialog::Accepted) {
+        Log("save PID");
+        m_database->m_R_vor = DSpinBox_m_R_vor->value();
+        m_database->m_R_nen = DSpinBox_m_R_nen->value();
+        m_database->m_bValue = DSpinBox_m_bValue->value();
+        m_database->m_plot_size = DSpinBox_m_plot_size->value();
+
+        m_database->m_KP = DSpinBox_KP->value();
+        m_database->m_KI = DSpinBox_KI->value();
+        m_database->m_KD = DSpinBox_KD->value();
+
+        m_database->m_POn = CheckBox_POn->isChecked();
+
+        m_database->saveSettings();
+
+        m_basefunctions->send_PID(m_database->m_KP,m_database->m_KI,m_database->m_KD,m_database->m_POn);
+        m_basefunctions->send_Temp_Setting(m_database->m_R_vor,m_database->m_bValue,m_database->m_R_nen);
+    }
+}
+
+void MainWindow::addToGraph(float T_100,float T_ntc,float PWM,float T_soll)
+{
+    double sec = time.elapsed()/1000;
+    ui->Plot_PID_Temp->graph(0)->addData(sec, T_100);
+    ui->Plot_PID_Temp->graph(1)->addData(sec, T_ntc);
+    ui->Plot_PID_Temp->graph(2)->addData(sec, PWM);
+    ui->Plot_PID_Temp->graph(3)->addData(sec, T_soll);
+    ui->Plot_PID_Temp->xAxis->setRange(sec, m_database->m_plot_size, Qt::AlignRight);
+    ui->Plot_PID_Temp->replot();
+}
+
+
 void MainWindow::on_pushButton_test_clicked()
 {
-    /*
-    QList<point> pointList;
-    point help;
-    help.Z = m_database->m_error_X_null_Y_null;
-    Log("P0:"+QString::number(m_database->m_error_X_null_Y_null));
-    pointList.append(help);
-    help.Z = m_database->m_error_X_max_Y_null;
-    Log("P1:"+QString::number(m_database->m_error_X_max_Y_null));
-    pointList.append(help);
-    help.Z = m_database->m_error_X_max_Y_max;
-    Log("P2:"+QString::number(m_database->m_error_X_max_Y_max));
-    pointList.append(help);
-    help.Z = m_database->m_error_X_null_Y_max;
-    Log("P3:"+QString::number(m_database->m_error_X_null_Y_max));
-    pointList.append(help);
-    help.Z = m_database->m_error_X_null_Y_null;
-    Log("P4:"+QString::number(m_database->m_error_X_null_Y_null));
-    pointList.append(help);
-
-    m_database->calc_correctionangel(pointList);
-    */
     ui->textEditLog->append("cycletime cheack");
     m_basefunctions->cycletimeTest();
     m_basefunctions->trigger_next_command();

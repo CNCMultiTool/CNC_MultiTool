@@ -96,6 +96,12 @@ public:
     //max values
     float m_max_speed; //mm per sec
 
+    //PID
+    float m_KP,m_KI,m_KD;
+    bool m_POn;
+    float m_R_vor,m_R_nen, m_bValue;
+    int m_plot_size;
+
 
     //repeattest values
     int m_repeat1,m_speed1;

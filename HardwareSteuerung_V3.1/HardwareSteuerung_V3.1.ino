@@ -55,7 +55,7 @@ struct StepMotorBig {
   unsigned long step_div;
   unsigned long ramp_step; 
 };
-int acceleration_steps = 10;
+int acceleration_steps = 0;
 
 struct StepMotorMedi Wachse;
 struct StepMotorBig Xachse;
@@ -80,34 +80,29 @@ unsigned long old_time_now = micros();
 bool sendPose = true;
 bool sendPoseInfo = true;
 
-bool alavie;
-
-double U1;
-double U2;
-double R1 = 110;//messwiederstand in Ohm
-double R2; //berechnete Ohm des PT100 
-double R0 = 100;//R0 des PT1000
-double A = 3.9083*pow(10,-3); //constanten für pt100
-double B = -5.775*pow(10,-7);
-double C = -4.183*pow(10,-4);
-double T;
-double soll_T;
-double old_T;
-
-int temprelai = 27;
+int sensorPin = A1;
+double bitwertNTC = 0;
+double widerstand1=690;                   //Ohm
+double bWert =3950;                           // B- Wert vom NTC
+double widerstandNTC =0;
+double kelvintemp = 273.15;                // 0°Celsius in Kelvin
+double Tn=kelvintemp + 25;                 //Nenntemperatur in Kelvin
+double Rn = 100000;
+double TKelvin = 0;                        //Die errechnete Isttemperatur
+double T = 0;
 
 //PID
 double Output;
-
 double KP = 35;
 double KI = 0.2;
 double KD = 750;
+double soll_T = 0;
+
+int temprelai = 2;
 
 //PID myPID(&soll_T, &Output, &T, KP, KI, KD,P_ON_M, REVERSE);
 PID myPID(&soll_T, &Output, &T, KP, KI, KD,P_ON_E, REVERSE);
-unsigned long WindowSize = 5000;
-unsigned long windowStartTime;
-unsigned long PID_time = millis();
+unsigned long WindowSize = 100;
 
 int debug = 0;
 
@@ -123,7 +118,6 @@ void setup() {
   /*TODO
    * EndPins
    */
-
   Xachse.soll_posi = 0;
   Xachse.act_posi = 0;
   Xachse.soll_step = 0;
@@ -202,10 +196,8 @@ void setup() {
   pinMode(Wachse.pin3,OUTPUT);
   pinMode(Wachse.pin4,OUTPUT);
 
-  pinMode(23,INPUT_PULLUP);
   pinMode(temprelai,OUTPUT);
-
-  myPID.SetOutputLimits(0, WindowSize);
+  myPID.SetOutputLimits(0, 255);
   myPID.SetSampleTime(WindowSize);
   myPID.SetMode(AUTOMATIC);
 
@@ -277,14 +269,7 @@ void loop() {
       }
     }
   }
-
-  if(2 < abs(old_T - T) && cycle_time1 < time_now)
-  {
-    //old_T = T;
-    cycle_time1 = time_now + 5000000;
-    sendsettinginfo();
-  }
-  
+    
   if(cycle_time2 < time_now)
   {
     char bufS[1];
@@ -325,32 +310,33 @@ float checkEndswitch(struct StepMotorBig &StepM){
   return(switchID);
 }
 void TempControle(){
-  PID_time = millis();
-  U1 = analogRead(0);
-  U2 = 1024-U1;
-  R2 = (R1*U2)/U1;
-  T = (-A*R0+sqrt(pow(A*R0,2)-4*B*R0*(R0-R2)))/(2*B*R0);
-
-  if(soll_T >= 0){
-    myPID.Compute();
-    if(PID_time > (windowStartTime + WindowSize)){
-      windowStartTime = PID_time;
-    } 
-      
-    if(Output > (PID_time - windowStartTime)){
-      digitalWrite(temprelai, HIGH);
-    }else{
-      digitalWrite(temprelai, LOW);
+  if(myPID.Compute())
+  {
+    bitwertNTC = analogRead(A1);      // lese Analogwert an A0 aus
+    widerstandNTC = widerstand1*(((double)bitwertNTC/1024)/(1-((double)bitwertNTC/1024)));
+    TKelvin = 1/((1/Tn)+((double)1/bWert)*log((double)widerstandNTC/Rn));
+    T = TKelvin-kelvintemp;
+    analogWrite(temprelai,Output);
+    if(debug == 1)
+    {
+      sendsettinginfo();
+      sendPIDvalues(soll_T,T,Output,0);
     }
-    debug = Output;
+    if(cycle_time1<time_now)
+    {
+      if(abs(T-soll_T)>2)
+      {
+        cycle_time1 = time_now + 1000000;
+      }
+      else
+      {
+        cycle_time1 = time_now + 5000000;
+      }
+        sendsettinginfo();
+    }
   }
 
-  if(soll_T == -1){
-    digitalWrite(temprelai, LOW);
-  }
-  if(soll_T == -2){
-    digitalWrite(temprelai, HIGH);
-  }
+
 }
 void recive_msg(){
   msg_available = false;
@@ -359,7 +345,11 @@ void recive_msg(){
       sendsetting();
       sendconfirmpos();
       sendendswitch();
-      //digitalWrite(22,!digitalRead(22));
+      break;
+    case 'z':
+      widerstand1 = Buf.tel.value[0];
+      bWert = Buf.tel.value[1];
+      Rn = Buf.tel.value[2];
       break;
     case 'm'://move to
       Xachse.soll_posi = Buf.tel.value[0];
@@ -415,6 +405,18 @@ void recive_msg(){
     case 'r':
       serieltimeouthandler();
       break;
+    case 'o'://change PID
+      KP = Buf.tel.value[0];
+      KI = Buf.tel.value[1];
+      KD = Buf.tel.value[2];
+      if(Buf.tel.value[3]>0.5)
+        myPID.SetTunings(KP, KI, KD, P_ON_E);
+      else
+        myPID.SetTunings(KP, KI, KD, P_ON_M);  
+      sendPID(KP,KI,KD,Buf.tel.value[3]>0.5 ? 1:0);
+      break;
+    case 'd':
+      debug = Buf.tel.value[0];
     default:
       break;
   }
@@ -645,6 +647,14 @@ void sendsettinginfo(){
 }
 void sendcycletime(float a,float b,float c,float d){
   send_variabelTestCommand('l',a,b,c,d);
+  start_responstimer();
+}
+void sendPID(float a,float b,float c,float d){
+  send_variabelTestCommand('o',a,b,c,d);
+  start_responstimer();
+}
+void sendPIDvalues(float a,float b,float c,float d){
+  send_variabelTestCommand('u',a,b,c,d);
   start_responstimer();
 }
 void send_variabelTestCommand(char C, float val1, float val2, float val3, float val4){
