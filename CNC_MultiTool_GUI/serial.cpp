@@ -204,27 +204,45 @@ void Serial::serial_read_command()
         }
 
         if(m_recivedBytes[0] == 'Q'){
-            emit Log("HW IDLE HW_status:"+QString::number(m_database->m_HW_status)+
-                     " G-Code:"+QString::number(m_database->m_G_Code_State)+
-                     " Queue:"+QString::number(m_database->cnc_send_commands.size())+
-                     " LastSendEmpty:"+QString::number(!m_sendBytesLast.isEmpty()));
+            //emit Log("HW IDLE HW_status:"+QString::number(m_database->m_HW_status)+
+                     //" G-Code:"+QString::number(m_database->m_G_Code_State)+
+                     //" Queue:"+QString::number(m_database->cnc_send_commands.size())+
+                     //" LastSendEmpty:"+QString::number(!m_sendBytesLast.isEmpty()));
             serial_fast_timeout.stop();
             serial_fast_timeout.start(m_fast_timeout);
             m_recivedBytes.remove(0,1);
             fast_Timeout_time.restart();
-            if(m_database->m_HW_status == 0 &&m_database->cnc_send_commands.size()>0 && m_database->m_G_Code_State == 1)
+
+            if(m_database->m_HW_status == 1 && m_database->m_G_Code_State == 1)
+                m_Q_count--;
+            if(m_database->m_HW_status == 0 && m_database->cnc_send_commands.size()>0 && m_database->m_G_Code_State == 1)
+                m_Q_count--;
+
+            if(m_Q_count<=0)
             {
-                m_database->SerialLog("send new comand while idle");
-                serial_send_command();
+                m_Q_count = 10;
+                if(m_database->m_HW_status == 1 && m_database->m_G_Code_State == 1)
+                {
+                    emit Log("request last send from arduino");
+                    m_database->SerialLog("request last send from arduino");
+                    m_serial.write(QString("N").toUtf8());
+                    m_serial.waitForBytesWritten(m_send_timeout);
+                }
+                if(m_database->m_HW_status == 0 && m_database->cnc_send_commands.size()>0 && m_database->m_G_Code_State == 1)
+                {
+                    emit Log("send new comand while idle");
+                    m_database->SerialLog("send new comand while idle");
+                    serial_send_command();
+                }
             }
             continue;
         }
 
         if(m_recivedBytes[0] == 'W'){
-            emit Log("HW WORKING HW_status:"+QString::number(m_database->m_HW_status)+
-                     " G-Code:"+QString::number(m_database->m_G_Code_State)+
-                     " Queue:"+QString::number(m_database->cnc_send_commands.size())+
-                     " LastSendEmpty:"+QString::number(!m_sendBytesLast.isEmpty()));
+            //emit Log("HW WORKING HW_status:"+QString::number(m_database->m_HW_status)+
+                     //" G-Code:"+QString::number(m_database->m_G_Code_State)+
+                     //" Queue:"+QString::number(m_database->cnc_send_commands.size())+
+                     //" LastSendEmpty:"+QString::number(!m_sendBytesLast.isEmpty()));
             serial_fast_timeout.stop();
             serial_fast_timeout.start(m_fast_timeout);
             m_recivedBytes.remove(0,1);
@@ -239,7 +257,12 @@ void Serial::serial_read_command()
             serial_fast_timeout.stop();
             serial_fast_timeout.start(m_fast_timeout);
             m_recivedBytes.remove(0,1);
-            send_last();
+            //send_last();
+            if(m_database->m_HW_status != 2)
+            {
+                m_serial.write(m_sendBytesLastSave);
+                m_serial.waitForBytesWritten(m_send_timeout);
+            }
             continue;
         }
 
@@ -345,6 +368,7 @@ void Serial::serial_send_command()
     m_sendBytes += newCheckSumm;
     if(new_command.command != 'b')
         m_sendBytesLast = m_sendBytes;//save last sended
+        m_sendBytesLastSave = m_sendBytes;
 
     m_serial.write(m_sendBytes);
     m_serial.waitForBytesWritten(m_send_timeout);

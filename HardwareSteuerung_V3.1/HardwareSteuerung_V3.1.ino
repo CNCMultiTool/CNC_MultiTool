@@ -77,8 +77,8 @@ unsigned long cycle_time2 = micros();
 unsigned long cycle_time3 = micros();
 unsigned long old_time_now = micros();
 
-bool sendPose = true;
-bool sendPoseInfo = true;
+bool sendPose = false;
+bool sendPoseInfo = false;
 
 int sensorPin = A1;
 double bitwertNTC = 0;
@@ -106,8 +106,8 @@ unsigned long WindowSize = 100;
 
 int debug = 0;
 
-bool wait_for_response = false;
-bool wait_for_Q = false;
+bool wait_for_response = true;
+bool wait_for_Q = true;
 
 int cycle_time_test = 0;
 unsigned long  cycle_time_test_start = 0;
@@ -216,10 +216,7 @@ void loop() {
   time_now = micros();
   if(old_time_now>time_now)
   {
-    digitalWrite(22,HIGH);
-    digitalWrite(24,HIGH);
-    digitalWrite(26,HIGH);
-    digitalWrite(28,HIGH);
+    send_debug(999,999,old_time_now,time_now);
   }
   else
   {
@@ -402,9 +399,9 @@ void recive_msg(){
       cycle_time_test++;
       cycle_time_test_start = micros();
       break;
-    case 'r':
-      serieltimeouthandler();
-      break;
+    //case 'r':
+      //serieltimeouthandler();
+      //break;
     case 'o'://change PID
       KP = Buf.tel.value[0];
       KI = Buf.tel.value[1];
@@ -421,11 +418,7 @@ void recive_msg(){
       break;
   }
 }
-void serieltimeouthandler(){
-      digitalWrite(26,!digitalRead(26));
-      if(strlen(lastSend)!=0)
-        Serial.write(lastSend,19);      
-}
+
 //strops the movement (set soll pos equal act pos)
 void act_equal_soll(){
   Xachse.soll_step = Xachse.act_step;
@@ -632,10 +625,6 @@ void sendconfirmpos(){
   send_variabelTestCommand('c',Xachse.act_posi,Yachse.act_posi,Zachse.act_posi,Wachse.act_posi);
   start_responstimer();
 }
-void sendRepeatRequest(){
-  send_variabelTestCommand('N',0,0,0,0);
-  start_responstimer();
-}
 void sendConfirmAnswer(){
   send_variabelTestCommand('a',0,0,0,0);
 }
@@ -674,30 +663,53 @@ void start_responstimer(){
 void stop_responstimer(){
   wait_for_response = false;
 }
+
+void sendLast(){
+  char bufS[1];
+  if(lastSend[0 != '\0'])
+  {
+    Serial.write(lastSend,19);
+  }
+  else
+  {
+    bufS[0] = 'N';
+    Serial.write(bufS,1); 
+  }
+}
 void read_Telegram(){
   char bufS[1];
   char bufBig[19];
-  digitalWrite(28,!digitalRead(28));
-  for(int i=0;i<20&&Serial.available();i++)
+  for(int i=0;i<25&&Serial.available();i++)
   {
-    if(Serial.peek() == 'T'){
+    if(Serial.peek() == 'T')//bestätigung des letzden komandos
+    {
       Serial.readBytes(bufS,1);
       lastSend[0]= '\0';
       stop_responstimer();
-    }else if(Serial.peek() == 'S'){
+    }
+    else if(Serial.peek() == 'N')//bestätigung des letzden komandos
+    {
+      Serial.readBytes(bufS,1);
+      sendLast();
+    }
+    else if(Serial.peek() == 'S')//begin eines Telegrams
+    {
       if(Serial.available()<19)
         return;   
       Serial.readBytes(Buf.buf,19);
       //check checksumm
-      if(Buf.buf[18]!=calc_checkbyte(Buf.buf)){
-        digitalWrite(24,!digitalRead(24));
-        sendRepeatRequest();
+      if(Buf.buf[18]!=calc_checkbyte(Buf.buf))//if checksumm wrong ask for reseand
+      {
+        bufS[0] = 'N';
+        Serial.write(bufS,1);
         return;
       }
-      bufS[0] = 'T';
+      bufS[0] = 'T';//if telegram ok send T as respons
       Serial.write(bufS,1);
       msg_available = true;
-    }else{
+    }
+    else
+    {
       Serial.readBytes(bufS,1);
     }
   }

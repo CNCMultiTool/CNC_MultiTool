@@ -25,6 +25,8 @@ public:
 
 
 private:
+    int m_Q_count = 0;
+
     int m_send_timeout = 0;
     int m_recive_timeout = 0;
     int m_fast_timeout = 150;
@@ -39,6 +41,7 @@ private:
     QByteArray m_recivedBytes;
     QByteArray m_sendBytes;
     QByteArray m_sendBytesLast;
+    QByteArray m_sendBytesLastSave;
 
     bool m_serial_running;
 
