@@ -313,6 +313,16 @@ void CNC_automation::G_Code_Parser()
             m_basefunctions->wait_for_heating();
             m_validCommand = true;
         }
+        if(isCommand("M190",newLine))//set Bed Temperatur
+        {
+            m_basefunctions->settings_inQ(m_F/60,-1,-1,m_S);
+            m_validCommand = true;
+        }
+        if(isCommand("M140",newLine))//set Bed Temperatur
+        {
+            m_basefunctions->settings_inQ(m_F/60,-1,-1,m_S);
+            m_validCommand = true;
+        }
         if(!m_validCommand)
         {
             emit errorLog("Line not Known:"+newLine);

@@ -129,6 +129,8 @@ PID myPID_Bed(&soll_T_Bed, &Output_Bed, &T_Bed, KP_Bed, KI_Bed, KD_Bed,P_ON_E, R
 unsigned long WindowSize_Bed = 5000;
 unsigned long WindowStartSize_Bed = 0;
 
+const unsigned long threshold = 4294967295/2;
+
 int debug = 0;
 
 bool wait_for_response = true;
@@ -260,7 +262,7 @@ void loop() {
   }
   if(cycle_time_test>1000)
   {
-    cycle_time_test_start = (micros()-cycle_time_test_start)/1000;
+    cycle_time_test_start = (time_now-cycle_time_test_start)/1000;
     sendcycletime(0,0,0,cycle_time_test_start);
     cycle_time_test = 0;
   }
@@ -298,7 +300,7 @@ void loop() {
     }
   }
     
-  if(cycle_time2 < time_now)
+  if(is_time_over(cycle_time2))
   {
     char bufS[1];
     cycle_time2 = time_now + 50000;
@@ -307,6 +309,22 @@ void loop() {
     else
       bufS[0] = {'W'}; //hardware is working 
     Serial.write(bufS,1);
+  }
+}
+
+bool is_time_over(unsigned long value)
+{
+  if(value < threshold && time_now > threshold)
+  {
+    return 0;
+  }
+  if(time_now >= value)
+  {
+    return 1;
+  }
+  else
+  {
+    return 0;
   }
 }
 //check if one endswitch had changed
@@ -356,7 +374,7 @@ void TempControle(){
       sendsettinginfo();
       sendPIDvalues(soll_T,T,Output,0);
     }
-    if(cycle_time1<time_now)
+    if(is_time_over(cycle_time1))
     {
       if(abs(T-soll_T)>2)
       {
@@ -369,21 +387,7 @@ void TempControle(){
         sendsettinginfo();
     }
   }
-  /*
-  if(myPID_Bed.Compute())
-  {
-    WindowStartSize_Bed = millis();
-    bitwertNTC_Bed = analogRead(sensorPin_Bed);      // lese Analogwert an A0 aus
-    widerstandNTC_Bed = widerstand1_Bed*(((double)bitwertNTC_Bed/1024)/(1-((double)bitwertNTC_Bed/1024)));
-    TKelvin_Bed = 1/((1/Tn_Bed)+((double)1/bWert_Bed)*log((double)widerstandNTC_Bed/Rn_Bed));
-    T_Bed = TKelvin_Bed-kelvintemp_Bed;
-    //analogWrite(temprelai_Bed,Output_Bed);
-  }else{
-    if(WindowStartSize_Bed+Output_Bed>millis())
-      digitalWrite(temprelai_Bed,HIGH);
-    else
-      digitalWrite(temprelai_Bed,LOW);
-  }*/
+
   if(soll_T_Bed < T_Bed)
   {
     digitalWrite(temprelai_Bed,HIGH);
@@ -462,7 +466,7 @@ void recive_msg(){
       break;
     case 'l'://start cycletime test
       cycle_time_test++;
-      cycle_time_test_start = micros();
+      cycle_time_test_start = time_now;
       break;
     //case 'r':
       //serieltimeouthandler();
@@ -544,14 +548,14 @@ void BigM_move_params(struct StepMotorBig &StepM){
   StepM.soll_step = StepM.soll_posi*float(StepM.steps_pmm);
   StepM.step_div = abs(StepM.soll_step-StepM.act_step);
   StepM.time_pstep = ges_time/StepM.step_div;
-  StepM.time_next_step = micros();
+  StepM.time_next_step = time_now;
   StepM.ramp_step = 0;
   //send_debug(StepM.soll_step,StepM.act_step,StepM.step_div,StepM.time_pstep);
 }
 void MediM_move_params(struct StepMotorMedi &StepM){
   StepM.soll_step = StepM.soll_posi*StepM.steps_pmm;
   StepM.time_pstep = ges_time/abs(StepM.soll_step-StepM.act_step);
-  StepM.time_next_step = micros();
+  StepM.time_next_step = time_now;
 }
 unsigned long calc_steptime(struct StepMotorBig &StepM){
   unsigned long curr_step = StepM.step_div-abs(StepM.soll_step-StepM.act_step);
@@ -589,7 +593,7 @@ unsigned long calc_steptime(struct StepMotorBig &StepM){
 }
 ///////////////////////////////////fürt einen schrit aus und gibt den actuellen an////////////////////////////7
 void treiberBig(struct StepMotorBig &StepM){
-  if(time_now >= StepM.time_next_step){
+  if(is_time_over(StepM.time_next_step)){
     if(StepM.soll_step>StepM.act_step){
       //one stapp forward
       digitalWrite(StepM.pinENA,LOW);
@@ -614,7 +618,7 @@ void treiberBig(struct StepMotorBig &StepM){
       //StepM.time_next_step += StepM.time_pstep;
       StepM.time_next_step += calc_steptime(StepM);
       StepM.act_step--;
-    }else if(time_now >= StepM.time_next_step+500000){
+    }else if(is_time_over(StepM.time_next_step+500000)){
       //turn motor off
       digitalWrite(StepM.pinENA,HIGH);
     }else{
@@ -625,7 +629,7 @@ void treiberBig(struct StepMotorBig &StepM){
   }
 }
 void treiberMedi(struct StepMotorMedi &StepM){
-  if(time_now >= StepM.time_next_step){
+  if(is_time_over(StepM.time_next_step)){
     if(StepM.soll_step>StepM.act_step){
       //one stapp forward
       StepMedi(StepM,1);
@@ -636,7 +640,7 @@ void treiberMedi(struct StepMotorMedi &StepM){
       StepMedi(StepM,-1);
       StepM.time_next_step += StepM.time_pstep;
       StepM.act_step--;
-    }else if(time_now >= StepM.time_next_step+1500000){
+    }else if(is_time_over(StepM.time_next_step+5000000)){
       //turn motor off
       digitalWrite(StepM.pin1, LOW);
       digitalWrite(StepM.pin2, LOW);
@@ -727,7 +731,7 @@ void send_variabelTestCommand(char C, float val1, float val2, float val3, float 
 }
 void start_responstimer(){
   wait_for_response = true;
-  cycle_time = micros() + 50000;
+  cycle_time = time_now + 50000;
 }
 void stop_responstimer(){
   wait_for_response = false;

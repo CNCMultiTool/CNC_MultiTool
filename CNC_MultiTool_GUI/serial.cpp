@@ -397,8 +397,10 @@ void Serial::serial_send_command()
     serial_calcCheckSumm(m_sendBytes,&newCheckSumm);
     m_sendBytes += newCheckSumm;
     if(new_command.command != 'b')
+    {
         m_sendBytesLast = m_sendBytes;//save last sended
         m_sendBytesLastSave = m_sendBytes;
+    }
 
     m_serial.write(m_sendBytes);
     m_serial.waitForBytesWritten(m_send_timeout);
