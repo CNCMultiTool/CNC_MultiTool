@@ -4,7 +4,8 @@
 Serial::Serial(cnc_data *database)
 {
     m_database = database;
-    connect(&serial_timeout, SIGNAL(timeout()), this, SLOT(serial_timeout_handler()));
+    //connect(&serial_timeout, SIGNAL(timeout()), this, SLOT(serial_timeout_handler()));
+    connect(&serial_timeout, SIGNAL(timeout()), this, SLOT(serial_fasttimeout_handler()));
     connect(&serial_fast_timeout, SIGNAL(timeout()), this, SLOT(serial_fasttimeout_handler()));
     connect(&serial_second_timeout, SIGNAL(timeout()), this, SLOT(serial_secondTimeout_handler()));
 }
@@ -85,12 +86,10 @@ void Serial::serial_secondTimeout_handler()
         serial_close();
         serial_open();
         send_last();
-        //serial_fast_timeout.start(3*m_fast_timeout);
     }else{
         emit Log("fasttimeout while closed");
         m_database->SerialLog("Serial FastTimeoutHandler fasttimeout while closed");
     }
-    //serial_fast_timeout.start(m_fast_timeout*3);
 }
 
 bool Serial::serial_open()
@@ -177,8 +176,8 @@ int Serial::serial_CheckTelegram()
 
     //check if start index is presend
     if(m_recivedBytes[0] != 'S'){
-        emit errorLog("serial: not Startcodon");
-        m_database->SerialLog("recive telCheak not Startcodon");
+        emit errorLog("serial: no Startcodon");
+        m_database->SerialLog("recive telCheak no Startcodon");
         m_recivedBytes.remove(0,1);
         return -2;
     }
@@ -234,6 +233,7 @@ void Serial::serial_read_command()
           emit Log("recive Ping");
           emit errorLog("recive Ping");
           m_database->SerialLog("recive Ping");
+          continue;
         }
 
         if(m_recivedBytes[0] == 'Q'){
@@ -344,7 +344,8 @@ void Serial::serial_read_command()
                                   QString::number(NewCheckSumm)+
                                   ", recive: "+QString::number(m_recivedBytes[18])+")");
             m_recivedBytes.remove(0,m_TelegramLength);
-            m_database->SerialLog("recive telCheak checksumm error");
+            emit Log("recive telCheak checksumm error");
+            emit errorLog("recive telCheak checksumm error");
             continue;
         }
         m_database->append_recive_command(new_command);

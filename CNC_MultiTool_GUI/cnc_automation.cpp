@@ -135,6 +135,7 @@ void CNC_automation::G_Code_Start(QString fileName)
     m_database->m_G_Code_State = 2;
     emit Log("start g-code: "+fileName);
     m_database->FileLog("start g-code: "+fileName);
+    m_database->SerialLog("start g-code: "+fileName);
     m_fileName = fileName;
     //m_basefunctions->send_setPosition(0,0,m_database->m_Zmax_nozzel,0);
 

@@ -94,6 +94,7 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
+    m_database->SerialLog("Close of The Programm");
     m_database->saveSettings();
     delete ui;
 }
