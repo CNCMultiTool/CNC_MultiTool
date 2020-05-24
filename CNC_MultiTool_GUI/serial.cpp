@@ -215,8 +215,8 @@ void Serial::serial_read_command()
 
             if(m_database->m_HW_status == 1 && m_database->m_G_Code_State == 1)
                 m_Q_count--;
-            if(m_database->m_HW_status == 0 && m_database->cnc_send_commands.size()>0 && m_database->m_G_Code_State == 1)
-                m_Q_count--;
+            //if(m_database->m_HW_status == 0 && m_database->cnc_send_commands.size()>0 && m_database->m_G_Code_State == 1)
+                //m_Q_count--;
 
             if(m_Q_count<=0)
             {
@@ -228,17 +228,18 @@ void Serial::serial_read_command()
                     m_serial.write(QString("N").toUtf8());
                     m_serial.waitForBytesWritten(m_send_timeout);
                 }
-                if(m_database->m_HW_status == 0 && m_database->cnc_send_commands.size()>0 && m_database->m_G_Code_State == 1)
-                {
-                    emit Log("send new comand while idle");
-                    m_database->SerialLog("send new comand while idle");
-                    serial_send_command();
-                }
+            }
+            if(m_database->m_HW_status == 0 && m_database->cnc_send_commands.size()>0 && m_database->m_G_Code_State == 1)
+            {
+                emit Log("send new comand while idle");
+                m_database->SerialLog("send new comand while idle");
+                serial_send_command();
             }
             continue;
         }
 
         if(m_recivedBytes[0] == 'W'){
+            m_Q_count = 5;
             //emit Log("HW WORKING HW_status:"+QString::number(m_database->m_HW_status)+
                      //" G-Code:"+QString::number(m_database->m_G_Code_State)+
                      //" Queue:"+QString::number(m_database->cnc_send_commands.size())+
