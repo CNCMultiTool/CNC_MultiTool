@@ -840,19 +840,19 @@
      <item row="0" column="4">
       <widget class="QLabel" name="label_AccSteps">
        <property name="text">
-        <string>Acc Steps</string>
+        <string>BedTetmp (°C)</string>
        </property>
       </widget>
      </item>
      <item row="1" column="4">
-      <widget class="QLabel" name="label_accSteps">
+      <widget class="QLabel" name="label_bedTemp">
        <property name="text">
         <string>--</string>
        </property>
       </widget>
      </item>
      <item row="2" column="4">
-      <widget class="QSpinBox" name="spinBoxAccSteps">
+      <widget class="QSpinBox" name="spinBoxBedTemp">
        <property name="maximum">
         <number>999</number>
        </property>
@@ -874,19 +874,6 @@
     </property>
     <property name="text">
      <string>Connect</string>
-    </property>
-   </widget>
-   <widget class="QTextEdit" name="textEditLog">
-    <property name="enabled">
-     <bool>true</bool>
-    </property>
-    <property name="geometry">
-     <rect>
-      <x>520</x>
-      <y>10</y>
-      <width>501</width>
-      <height>441</height>
-     </rect>
     </property>
    </widget>
    <widget class="QComboBox" name="comboBoxComPortName">
@@ -950,7 +937,7 @@
      <rect>
       <x>520</x>
       <y>460</y>
-      <width>511</width>
+      <width>501</width>
       <height>151</height>
      </rect>
     </property>
@@ -1069,6 +1056,104 @@
      </item>
     </layout>
    </widget>
+   <widget class="QTabWidget" name="tabWidget">
+    <property name="geometry">
+     <rect>
+      <x>520</x>
+      <y>10</y>
+      <width>501</width>
+      <height>441</height>
+     </rect>
+    </property>
+    <property name="currentIndex">
+     <number>2</number>
+    </property>
+    <widget class="QWidget" name="tab">
+     <attribute name="title">
+      <string>Log</string>
+     </attribute>
+     <widget class="QTextEdit" name="textEditLog">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>501</width>
+        <height>421</height>
+       </rect>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="tab_2">
+     <attribute name="title">
+      <string>TempPlot</string>
+     </attribute>
+     <widget class="QCustomPlot" name="Plot_PID_Temp" native="true">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>491</width>
+        <height>411</height>
+       </rect>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="tab_3">
+     <attribute name="title">
+      <string>Stats</string>
+     </attribute>
+     <widget class="QWidget" name="verticalLayoutWidget">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>10</y>
+        <width>231</width>
+        <height>111</height>
+       </rect>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <item>
+        <widget class="QLabel" name="label_bedCalibP1">
+         <property name="text">
+          <string>TextLabel</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_bedCalibP2">
+         <property name="text">
+          <string>TextLabel</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_bedCalibP3">
+         <property name="text">
+          <string>TextLabel</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_bedCalibP4">
+         <property name="text">
+          <string>TextLabel</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_bedCalibP5">
+         <property name="text">
+          <string>TextLabel</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
@@ -1084,6 +1169,7 @@
      <string>Calibrations</string>
     </property>
     <addaction name="actionValues"/>
+    <addaction name="actionBedCalib"/>
    </widget>
    <widget class="QMenu" name="menuTests">
     <property name="title">
@@ -1092,8 +1178,16 @@
     <addaction name="actionexecute"/>
     <addaction name="actionsettings_repeattest"/>
    </widget>
+   <widget class="QMenu" name="menuPID">
+    <property name="title">
+     <string>PID</string>
+    </property>
+    <addaction name="actionSet_PID"/>
+    <addaction name="actionSet_PID_for_Bed"/>
+   </widget>
    <addaction name="menuCalibrations"/>
    <addaction name="menuTests"/>
+   <addaction name="menuPID"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QToolBar" name="toolBar">
@@ -1122,7 +1216,30 @@
     <string>settings repeattest</string>
    </property>
   </action>
+  <action name="actionSet_PID">
+   <property name="text">
+    <string>Set PID</string>
+   </property>
+  </action>
+  <action name="actionBedCalib">
+   <property name="text">
+    <string>BedCalib</string>
+   </property>
+  </action>
+  <action name="actionSet_PID_for_Bed">
+   <property name="text">
+    <string>Set PID for Bed</string>
+   </property>
+  </action>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QCustomPlot</class>
+   <extends>QWidget</extends>
+   <header>qcustomplot.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

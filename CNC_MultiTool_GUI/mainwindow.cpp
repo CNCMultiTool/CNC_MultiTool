@@ -13,11 +13,13 @@ MainWindow::MainWindow(QWidget *parent)
     ui->spinBoxSpeed->setValue(m_database->m_max_speed);
     ui->spinBoxFilament->setValue(m_database->m_soll_filament);
 
-    m_database->m_soll_speed = ui->spinBoxSpeed->value();
-    m_database->m_soll_temperatur = ui->spinBoxTemperatur->value();
-    m_database->m_soll_filament = ui->spinBoxFilament->value();
-
     m_database->loadSettings();
+    ui->spinBoxSpeed->setValue(m_database->m_soll_speed);
+    ui->spinBoxTemperatur->setValue(m_database->m_soll_temperatur);
+    ui->spinBoxFilament->setValue(m_database->m_soll_filament);
+    ui->spinBoxBedTemp->setValue(m_database->m_soll_bedTemp);
+
+
     //chek availabal port add to the comboBox
     const auto infos = QSerialPortInfo::availablePorts();
     for (const QSerialPortInfo &info : infos)
@@ -39,6 +41,10 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_basefunctions,SIGNAL(trigger_send()),m_serial,SLOT(serial_send_command()));
     connect(m_basefunctions,SIGNAL(show_send_queue()),this,SLOT(show_send_queue()));
     connect(m_basefunctions,SIGNAL(show_status()),this,SLOT(show_status()));
+    connect(m_basefunctions,SIGNAL(DataToGraph(float,float,float,float)),this,SLOT(addToGraph(float,float,float,float)));
+    connect(m_basefunctions,SIGNAL(show_alive()),this,SLOT(show_alive()));
+    connect(m_basefunctions,SIGNAL(z_calib_resullt_finish()),this,SLOT(show_z_calib_result()));
+
 
     connect(m_database,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_database,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
@@ -62,10 +68,34 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionValues,SIGNAL(triggered()),this,SLOT(calibratenValueBox()));
     connect(ui->actionsettings_repeattest,SIGNAL(triggered()),this,SLOT(repeattestValueBox()));
     connect(ui->actionexecute,SIGNAL(triggered()),this,SLOT(on_pushButton_repeattest_pressed()));
+    connect(ui->actionSet_PID,SIGNAL(triggered()),this,SLOT(PID_ValueBox()));
+    connect(ui->actionSet_PID_for_Bed,SIGNAL(triggered()),this,SLOT(PID_Bed_ValueBox()));
+    connect(ui->actionBedCalib,SIGNAL(triggered()),this,SLOT(bedCalibValueBox()));
+
+
+    //SEtupPlot
+    ui->Plot_PID_Temp->addGraph(); // blue line
+    ui->Plot_PID_Temp->graph(0)->setPen(QPen(QColor(40, 110, 255)));
+    ui->Plot_PID_Temp->addGraph(); // red line
+    ui->Plot_PID_Temp->graph(1)->setPen(QPen(QColor(255, 110, 40)));
+    ui->Plot_PID_Temp->addGraph(); // red line
+    ui->Plot_PID_Temp->graph(2)->setPen(QPen(QColor(60, 110, 40)));
+    ui->Plot_PID_Temp->addGraph(); // red line
+    ui->Plot_PID_Temp->graph(3)->setPen(QPen(QColor(255, 110, 200)));
+    time.start();
+    ui->Plot_PID_Temp->yAxis->setRange(-10, 260);
+    QSharedPointer<QCPAxisTickerTime> timeTicker(new QCPAxisTickerTime);
+    timeTicker->setTimeFormat("%h:%m:%s");
+    ui->Plot_PID_Temp->xAxis->setTicker(timeTicker);
+    ui->Plot_PID_Temp->axisRect()->setupFullAxesBox();
+
+    m_database->SerialLog("new Start of The Programm");
 }
 
 MainWindow::~MainWindow()
 {
+    m_database->SerialLog("Close of The Programm");
+    m_database->saveSettings();
     delete ui;
 }
 
@@ -87,6 +117,8 @@ void MainWindow::show_send_queue()
     if(m_database->cnc_send_commands.size()==0)
     {
         ui->label_Queue->setStyleSheet("background-color: red");
+        ui->pushButton_startGCode->setStyleSheet("background-color: red");
+        m_database->m_G_Code_State = 0;
     }else{
         ui->label_Queue->setStyleSheet("background-color: green");
     }
@@ -106,7 +138,7 @@ void MainWindow::show_settings()
     ui->label_actSpeed->setText(QString::number(m_database->m_act_speed)+"/"+QString::number(m_database->m_soll_speed));
     ui->label_actTemperatur->setText(QString::number(m_database->m_act_temperatur)+"/"+QString::number(m_database->m_soll_temperatur));
     ui->label_actFilament->setText(QString::number(m_database->m_act_filament)+"/"+QString::number(m_database->m_soll_filament));
-    ui->label_accSteps->setText(QString::number(m_database->m_soll_accSteps));
+    ui->label_bedTemp->setText(QString::number(m_database->m_act_bedTemp)+"/"+QString::number(m_database->m_soll_bedTemp));
 }
 
 void MainWindow::show_alive()
@@ -145,22 +177,25 @@ void MainWindow::show_endswitch(float X, float Y, float Z)
     endswitchButtonColor(Z,ui->pushButtonMoveZPos,ui->pushButtonMoveZNeg);
 }
 
+void MainWindow::show_z_calib_result()
+{
+    ui->label_bedCalibP1->setText("P1 X: "+QString::number(m_database->m_X1)+
+                                  "  Y: "+QString::number(m_database->m_Y1)+
+                                  "  Z: "+QString::number(m_database->m_Z1));
+    ui->label_bedCalibP2->setText("P2 X: "+QString::number(m_database->m_X2)+
+                                  "  Y: "+QString::number(m_database->m_Y2)+
+                                  "  Z: "+QString::number(m_database->m_Z2));
+    ui->label_bedCalibP3->setText("P3 X: "+QString::number(m_database->m_X3)+
+                                  "  Y: "+QString::number(m_database->m_Y3)+
+                                  "  Z: "+QString::number(m_database->m_Z3));
+    ui->label_bedCalibP4->setText("P4 X: "+QString::number(m_database->m_X4)+
+                                  "  Y: "+QString::number(m_database->m_Y4)+
+                                  "  Z: "+QString::number(m_database->m_Z4));
+    ui->label_bedCalibP5->setText("P5 Z error: "+QString::number(m_database->m_Z1_error - m_database->m_Z1));
+}
+
 void MainWindow::show_status()
 {
-    /*
-    if(m_database->m_HWisMoving)
-    {
-        ui->label_Queue_state->setStyleSheet("background-color: green");
-    }
-    else if(m_database->m_HWisHeating)
-    {
-        ui->label_Queue_state->setStyleSheet("background-color: yellow");
-    }
-    else
-    {
-        ui->label_Queue_state->setStyleSheet("background-color: red");
-    }
-    */
     switch(m_database->m_HW_status)
     {
     case 0:
@@ -208,9 +243,13 @@ void MainWindow::on_pushButtonSerialConnect_clicked()
     {
         Log("open serial");
         m_database->m_SerialPortName = ui->comboBoxComPortName->currentText();
-        m_database->m_HWisMoving = false;
         m_serial->serial_open();
         m_basefunctions->send_init();
+        m_basefunctions->send_PID(m_database->m_KP,m_database->m_KI,m_database->m_KD,m_database->m_POn);
+        m_basefunctions->send_Temp_Setting(m_database->m_R_vor,m_database->m_bValue,m_database->m_R_nen);
+        m_basefunctions->send_PID_Bed(m_database->m_KP,m_database->m_KI,m_database->m_KD,m_database->m_POn);
+        m_basefunctions->send_Temp_Setting_Bed(m_database->m_R_vor,m_database->m_bValue,m_database->m_R_nen);
+        m_basefunctions->send_settings(m_database->m_soll_speed,-1,m_database->m_soll_filament,m_database->m_soll_bedTemp);
     }
 }
 
@@ -330,8 +369,9 @@ void MainWindow::on_pushButtonSetSettings_pressed()
     float Speed = ui->spinBoxSpeed->value();
     float Temperatur = ui->spinBoxTemperatur->value();
     float Filament = ui->spinBoxFilament->value();
-    float Acc = ui->spinBoxAccSteps->value();
-    m_basefunctions->send_settings(Speed,Temperatur,Filament,Acc);
+    float BedTetmp = ui->spinBoxBedTemp->value();
+    m_database->set_soll_settings(Speed,Temperatur,Filament,BedTetmp);
+    m_basefunctions->send_settings(Speed,Temperatur,Filament,BedTetmp);
 }
 
 void MainWindow::on_pushButton_home_pressed()
@@ -413,7 +453,6 @@ void MainWindow::on_pushButton_clear_queue_clicked()
 void MainWindow::on_pushButton_trigger_next_clicked()
 {
     ui->textEditLog->append("trigger sending manuel");
-    m_database->m_HWisMoving = false;
     m_basefunctions->trigger_next_command();
     show_send_queue();
 }
@@ -485,6 +524,79 @@ void MainWindow::repeattestValueBox()
 
 }
 
+void MainWindow::bedCalibValueBox()
+{
+    Log("BedCalib");
+    QDialog dialog(this);
+    // Use a layout allowing to have a label next to each field
+    QFormLayout form(&dialog);
+
+    //float m_X1,m_Y1,m_Z1;
+    //float m_X2,m_Y2,m_Z2;
+    //float m_X3,m_Y3,m_Z3;
+    //float m_X4,m_Y4,m_Z4;
+
+    QDoubleSpinBox *DSpinBox_x1 = new QDoubleSpinBox(&dialog);
+    DSpinBox_x1->setRange(-9999999,999999);
+    DSpinBox_x1->setValue(m_database->m_X1);
+    form.addRow("P1 X", DSpinBox_x1);
+    QDoubleSpinBox *DSpinBox_y1 = new QDoubleSpinBox(&dialog);
+    DSpinBox_y1->setRange(-9999999,999999);
+    DSpinBox_y1->setValue(m_database->m_Y1);
+    form.addRow("P1 Y", DSpinBox_y1);
+
+    QDoubleSpinBox *DSpinBox_x2 = new QDoubleSpinBox(&dialog);
+    DSpinBox_x2->setRange(-9999999,999999);
+    DSpinBox_x2->setValue(m_database->m_X2);
+    form.addRow("P2 X", DSpinBox_x2);
+    QDoubleSpinBox *DSpinBox_y2 = new QDoubleSpinBox(&dialog);
+    DSpinBox_y2->setRange(-9999999,999999);
+    DSpinBox_y2->setValue(m_database->m_Y2);
+    form.addRow("P2 Y", DSpinBox_y2);
+
+    QDoubleSpinBox *DSpinBox_x3 = new QDoubleSpinBox(&dialog);
+    DSpinBox_x3->setRange(-9999999,999999);
+    DSpinBox_x3->setValue(m_database->m_X3);
+    form.addRow("P3 X", DSpinBox_x3);
+    QDoubleSpinBox *DSpinBox_y3 = new QDoubleSpinBox(&dialog);
+    DSpinBox_y3->setRange(-9999999,999999);
+    DSpinBox_y3->setValue(m_database->m_Y3);
+    form.addRow("P3 Y", DSpinBox_y3);
+
+    QDoubleSpinBox *DSpinBox_x4 = new QDoubleSpinBox(&dialog);
+    DSpinBox_x4->setRange(-9999999,999999);
+    DSpinBox_x4->setValue(m_database->m_X4);
+    form.addRow("P4 X", DSpinBox_x4);
+    QDoubleSpinBox *DSpinBox_y4 = new QDoubleSpinBox(&dialog);
+    DSpinBox_y4->setRange(-9999999,999999);
+    DSpinBox_y4->setValue(m_database->m_Y4);
+    form.addRow("P4 Y", DSpinBox_y4);
+
+    QDialogButtonBox buttonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel,
+                               Qt::Horizontal, &dialog);
+    form.addRow(&buttonBox);
+    QObject::connect(&buttonBox, SIGNAL(accepted()), &dialog, SLOT(accept()));
+    QObject::connect(&buttonBox, SIGNAL(rejected()), &dialog, SLOT(reject()));
+
+    // Show the dialog as modal
+    if (dialog.exec() == QDialog::Accepted) {
+        m_database->m_X1 = DSpinBox_x1->value();
+        m_database->m_Y1 = DSpinBox_y1->value();
+
+        m_database->m_X2 = DSpinBox_x2->value();
+        m_database->m_Y2 = DSpinBox_y2->value();
+
+        m_database->m_X3 = DSpinBox_x3->value();
+        m_database->m_Y3 = DSpinBox_y3->value();
+
+        m_database->m_X4 = DSpinBox_x4->value();
+        m_database->m_Y4 = DSpinBox_y4->value();
+
+        m_database->saveSettings();
+    }
+
+}
+
 void MainWindow::calibratenValueBox()
 {
     Log("show checkbox");
@@ -502,41 +614,20 @@ void MainWindow::calibratenValueBox()
     DSpinBox_size_Y->setRange(-9999999,999999);
     DSpinBox_size_Y->setValue(m_database->m_size_Y);
     form.addRow("Y Size", DSpinBox_size_Y);
-/*
-    //auto level values
-    QDoubleSpinBox *DSpinBox_X_max_Y_null = new QDoubleSpinBox(&dialog);
-    DSpinBox_X_max_Y_null->setRange(-9999999,999999);
-    DSpinBox_X_max_Y_null->setValue(m_database->m_error_X_max_Y_null);
-    form.addRow("Z error at X:max Y:0", DSpinBox_X_max_Y_null);
 
-    QDoubleSpinBox *DSpinBox_X_max_Y_max = new QDoubleSpinBox(&dialog);
-    DSpinBox_X_max_Y_max->setRange(-9999999,999999);
-    DSpinBox_X_max_Y_max->setValue(m_database->m_error_X_max_Y_max);
-    form.addRow("Z error at X:max Y:max", DSpinBox_X_max_Y_max);
+    //nozzel home high
+    QDoubleSpinBox *DSpinBox_TCP_X_inHome = new QDoubleSpinBox(&dialog);
+    DSpinBox_TCP_X_inHome->setRange(-9999999,999999);
+    DSpinBox_TCP_X_inHome->setValue(m_database->m_X_inHome);
+    form.addRow("Nozzel Home X", DSpinBox_TCP_X_inHome);
 
-    QDoubleSpinBox *DSpinBox_X_null_Y_max = new QDoubleSpinBox(&dialog);
-    DSpinBox_X_null_Y_max->setRange(-9999999,999999);
-    DSpinBox_X_null_Y_max->setValue(m_database->m_error_X_null_Y_max);
-    form.addRow("Z error at X:0 Y:max", DSpinBox_X_null_Y_max);
+    //nozzel home high
+    QDoubleSpinBox *DSpinBox_TCP_Y_inHome = new QDoubleSpinBox(&dialog);
+    DSpinBox_TCP_Y_inHome->setRange(-9999999,999999);
+    DSpinBox_TCP_Y_inHome->setValue(m_database->m_Y_inHome);
+    form.addRow("Nozzel Home Y", DSpinBox_TCP_Y_inHome);
 
-    QDoubleSpinBox *DSpinBox_X_null_Y_null = new QDoubleSpinBox(&dialog);
-    DSpinBox_X_null_Y_null->setRange(-9999999,999999);
-    DSpinBox_X_null_Y_null->setValue(m_database->m_error_X_null_Y_null);
-    form.addRow("Z error at X:0 Y:0", DSpinBox_X_null_Y_null);
-
-    QDoubleSpinBox *DSpinBox_angel_X = new QDoubleSpinBox(&dialog);
-    DSpinBox_angel_X->setRange(-9999999,999999);
-    DSpinBox_angel_X->setDecimals(6);
-    DSpinBox_angel_X->setValue(m_database->m_X_angel);
-    form.addRow("X Angle", DSpinBox_angel_X);
-
-    QDoubleSpinBox *DSpinBox_angel_Y = new QDoubleSpinBox(&dialog);
-    DSpinBox_angel_Y->setRange(-9999999,999999);
-    DSpinBox_angel_Y->setDecimals(6);
-    DSpinBox_angel_Y->setValue(m_database->m_Y_angel);
-    form.addRow("Y Angle", DSpinBox_angel_Y);
-*/
-    //nozzel hight
+    //nozzel home high
     QDoubleSpinBox *DSpinBox_TCP_higth = new QDoubleSpinBox(&dialog);
     DSpinBox_TCP_higth->setRange(-9999999,999999);
     DSpinBox_TCP_higth->setValue(m_database->m_Zmax_nozzel);
@@ -588,17 +679,10 @@ void MainWindow::calibratenValueBox()
         m_database->m_size_X = DSpinBox_size_X->value();
         m_database->m_size_Y = DSpinBox_size_Y->value();
 
-        //kalibration results
-        //m_database->m_error_X_max_Y_null = DSpinBox_X_max_Y_null->value();
-        //m_database->m_error_X_max_Y_max = DSpinBox_X_max_Y_max->value();
-        //m_database->m_error_X_null_Y_max = DSpinBox_X_null_Y_max->value();
-        //m_database->m_error_X_null_Y_null = DSpinBox_X_null_Y_null->value();
-
-        //correktion angel
-        //m_database->m_X_angel = DSpinBox_angel_X->value();
-        //m_database->m_Y_angel = DSpinBox_angel_Y->value();
         //TCP hight in home
         m_database->m_Zmax_nozzel = DSpinBox_TCP_higth->value();
+        m_database->m_X_inHome = DSpinBox_TCP_X_inHome->value();
+        m_database->m_Y_inHome = DSpinBox_TCP_Y_inHome->value();
         m_database->m_calibplateX = DSpinBox_calibplateX->value();
         m_database->m_calibplateY = DSpinBox_calibplateY->value();
         m_database->m_calibplateZ = DSpinBox_calibplateZ->value();
@@ -606,37 +690,200 @@ void MainWindow::calibratenValueBox()
         m_database->m_max_speed = DSpinBox_maxSpeed->value(); //mm per sec
         m_database->m_useCalibPlate = CheckBox_makeCalib->isChecked();
 
-
         m_database->saveSettings();
     }
 }
 
+void MainWindow::PID_Bed_ValueBox()
+{
+    Log("show checkbox");
+    QDialog dialog(this);
+    // Use a layout allowing to have a label next to each field
+    QFormLayout form(&dialog);
+
+    //KP
+    QDoubleSpinBox *DSpinBox_KP_Bed = new QDoubleSpinBox(&dialog);
+    DSpinBox_KP_Bed->setRange(-9999999,999999);
+    DSpinBox_KP_Bed->setDecimals(2);
+    DSpinBox_KP_Bed->setValue(m_database->m_KP_Bed);
+    form.addRow("KP", DSpinBox_KP_Bed);
+
+    //KI
+    QDoubleSpinBox *DSpinBox_KI_Bed = new QDoubleSpinBox(&dialog);
+    DSpinBox_KI_Bed->setRange(-9999999,999999);
+    DSpinBox_KI_Bed->setDecimals(2);
+    DSpinBox_KI_Bed->setValue(m_database->m_KI_Bed);
+    form.addRow("KI", DSpinBox_KI_Bed);
+
+    //KD
+    QDoubleSpinBox *DSpinBox_KD_Bed = new QDoubleSpinBox(&dialog);
+    DSpinBox_KD_Bed->setRange(-9999999,999999);
+    DSpinBox_KD_Bed->setDecimals(2);
+    DSpinBox_KD_Bed->setValue(m_database->m_KD_Bed);
+    form.addRow("KD", DSpinBox_KD_Bed);
+
+    //make nozzel calib
+    QCheckBox *CheckBox_POn_Bed = new QCheckBox(&dialog);
+    CheckBox_POn_Bed->setCheckState(m_database->m_POn_Bed == true ? Qt::CheckState::Checked : Qt::CheckState::Unchecked);
+    form.addRow("POn", CheckBox_POn_Bed);
+
+    //Vorwiederstand
+    QDoubleSpinBox *DSpinBox_m_R_vor_Bed = new QDoubleSpinBox(&dialog);
+    DSpinBox_m_R_vor_Bed->setRange(-9999999,999999);
+    DSpinBox_m_R_vor_Bed->setDecimals(2);
+    DSpinBox_m_R_vor_Bed->setValue(m_database->m_R_vor_Bed);
+    form.addRow("Vorwiederstand", DSpinBox_m_R_vor_Bed);
+
+    //Vorwiederstand
+    QDoubleSpinBox *DSpinBox_m_R_nen_Bed = new QDoubleSpinBox(&dialog);
+    DSpinBox_m_R_nen_Bed->setRange(-9999999,999999);
+    DSpinBox_m_R_nen_Bed->setDecimals(2);
+    DSpinBox_m_R_nen_Bed->setValue(m_database->m_R_nen_Bed);
+    form.addRow("Nennwiederstand", DSpinBox_m_R_nen_Bed);
+
+    //B Value
+    QDoubleSpinBox *DSpinBox_m_bValue_Bed = new QDoubleSpinBox(&dialog);
+    DSpinBox_m_bValue_Bed->setRange(-9999999,999999);
+    DSpinBox_m_bValue_Bed->setDecimals(2);
+    DSpinBox_m_bValue_Bed->setValue(m_database->m_bValue_Bed);
+    form.addRow("B-Wert_NTC", DSpinBox_m_bValue_Bed);
+
+
+    // Add some standard buttons (Cancel/Ok) at the bottom of the dialog
+    QDialogButtonBox buttonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel,
+                               Qt::Horizontal, &dialog);
+    form.addRow(&buttonBox);
+    QObject::connect(&buttonBox, SIGNAL(accepted()), &dialog, SLOT(accept()));
+    QObject::connect(&buttonBox, SIGNAL(rejected()), &dialog, SLOT(reject()));
+
+    // Show the dialog as modal
+    if (dialog.exec() == QDialog::Accepted) {
+        Log("save PID");
+        m_database->m_R_vor_Bed = DSpinBox_m_R_vor_Bed->value();
+        m_database->m_R_nen_Bed = DSpinBox_m_R_nen_Bed->value();
+        m_database->m_bValue_Bed = DSpinBox_m_bValue_Bed->value();
+
+        m_database->m_KP_Bed = DSpinBox_KP_Bed->value();
+        m_database->m_KI_Bed = DSpinBox_KI_Bed->value();
+        m_database->m_KD_Bed = DSpinBox_KD_Bed->value();
+
+        m_database->m_POn_Bed = CheckBox_POn_Bed->isChecked();
+
+        m_database->saveSettings();
+
+        m_basefunctions->send_PID_Bed(m_database->m_KP,m_database->m_KI,m_database->m_KD,m_database->m_POn);
+        m_basefunctions->send_Temp_Setting_Bed(m_database->m_R_vor,m_database->m_bValue,m_database->m_R_nen);
+    }
+}
+
+void MainWindow::PID_ValueBox()
+{
+    Log("show checkbox");
+    QDialog dialog(this);
+    // Use a layout allowing to have a label next to each field
+    QFormLayout form(&dialog);
+
+    //KP
+    QDoubleSpinBox *DSpinBox_KP = new QDoubleSpinBox(&dialog);
+    DSpinBox_KP->setRange(-9999999,999999);
+    DSpinBox_KP->setDecimals(2);
+    DSpinBox_KP->setValue(m_database->m_KP);
+    form.addRow("KP", DSpinBox_KP);
+
+    //KI
+    QDoubleSpinBox *DSpinBox_KI = new QDoubleSpinBox(&dialog);
+    DSpinBox_KI->setRange(-9999999,999999);
+    DSpinBox_KI->setDecimals(2);
+    DSpinBox_KI->setValue(m_database->m_KI);
+    form.addRow("KI", DSpinBox_KI);
+
+    //KD
+    QDoubleSpinBox *DSpinBox_KD = new QDoubleSpinBox(&dialog);
+    DSpinBox_KD->setRange(-9999999,999999);
+    DSpinBox_KD->setDecimals(2);
+    DSpinBox_KD->setValue(m_database->m_KD);
+    form.addRow("KD", DSpinBox_KD);
+
+    //make nozzel calib
+    QCheckBox *CheckBox_POn = new QCheckBox(&dialog);
+    CheckBox_POn->setCheckState(m_database->m_POn == true ? Qt::CheckState::Checked : Qt::CheckState::Unchecked);
+    form.addRow("POn", CheckBox_POn);
+
+    //Vorwiederstand
+    QDoubleSpinBox *DSpinBox_m_R_vor = new QDoubleSpinBox(&dialog);
+    DSpinBox_m_R_vor->setRange(-9999999,999999);
+    DSpinBox_m_R_vor->setDecimals(2);
+    DSpinBox_m_R_vor->setValue(m_database->m_R_vor);
+    form.addRow("Vorwiederstand", DSpinBox_m_R_vor);
+
+    //Vorwiederstand
+    QDoubleSpinBox *DSpinBox_m_R_nen = new QDoubleSpinBox(&dialog);
+    DSpinBox_m_R_nen->setRange(-9999999,999999);
+    DSpinBox_m_R_nen->setDecimals(2);
+    DSpinBox_m_R_nen->setValue(m_database->m_R_nen);
+    form.addRow("Nennwiederstand", DSpinBox_m_R_nen);
+
+    //B Value
+    QDoubleSpinBox *DSpinBox_m_bValue = new QDoubleSpinBox(&dialog);
+    DSpinBox_m_bValue->setRange(-9999999,999999);
+    DSpinBox_m_bValue->setDecimals(2);
+    DSpinBox_m_bValue->setValue(m_database->m_bValue);
+    form.addRow("B-Wert_NTC", DSpinBox_m_bValue);
+
+    //Plot site
+    QDoubleSpinBox *DSpinBox_m_plot_size = new QDoubleSpinBox(&dialog);
+    DSpinBox_m_plot_size->setRange(-9999999,999999);
+    DSpinBox_m_plot_size->setDecimals(2);
+    DSpinBox_m_plot_size->setValue(m_database->m_plot_size);
+    form.addRow("PlotSize", DSpinBox_m_plot_size);
+
+
+    // Add some standard buttons (Cancel/Ok) at the bottom of the dialog
+    QDialogButtonBox buttonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel,
+                               Qt::Horizontal, &dialog);
+    form.addRow(&buttonBox);
+    QObject::connect(&buttonBox, SIGNAL(accepted()), &dialog, SLOT(accept()));
+    QObject::connect(&buttonBox, SIGNAL(rejected()), &dialog, SLOT(reject()));
+
+    // Show the dialog as modal
+    if (dialog.exec() == QDialog::Accepted) {
+        Log("save PID");
+        m_database->m_R_vor = DSpinBox_m_R_vor->value();
+        m_database->m_R_nen = DSpinBox_m_R_nen->value();
+        m_database->m_bValue = DSpinBox_m_bValue->value();
+        m_database->m_plot_size = DSpinBox_m_plot_size->value();
+
+        m_database->m_KP = DSpinBox_KP->value();
+        m_database->m_KI = DSpinBox_KI->value();
+        m_database->m_KD = DSpinBox_KD->value();
+
+        m_database->m_POn = CheckBox_POn->isChecked();
+
+        m_database->saveSettings();
+
+        m_basefunctions->send_PID(m_database->m_KP,m_database->m_KI,m_database->m_KD,m_database->m_POn);
+        m_basefunctions->send_Temp_Setting(m_database->m_R_vor,m_database->m_bValue,m_database->m_R_nen);
+    }
+}
+
+void MainWindow::addToGraph(float T_100,float T_ntc,float PWM,float T_soll)
+{
+    double sec = time.elapsed()/1000;
+    ui->Plot_PID_Temp->graph(0)->addData(sec, T_100);
+    ui->Plot_PID_Temp->graph(1)->addData(sec, T_ntc);
+    ui->Plot_PID_Temp->graph(2)->addData(sec, PWM);
+    ui->Plot_PID_Temp->graph(3)->addData(sec, T_soll);
+    ui->Plot_PID_Temp->xAxis->setRange(sec, m_database->m_plot_size, Qt::AlignRight);
+    ui->Plot_PID_Temp->replot();
+}
+
+
 void MainWindow::on_pushButton_test_clicked()
 {
-    /*
-    QList<point> pointList;
-    point help;
-    help.Z = m_database->m_error_X_null_Y_null;
-    Log("P0:"+QString::number(m_database->m_error_X_null_Y_null));
-    pointList.append(help);
-    help.Z = m_database->m_error_X_max_Y_null;
-    Log("P1:"+QString::number(m_database->m_error_X_max_Y_null));
-    pointList.append(help);
-    help.Z = m_database->m_error_X_max_Y_max;
-    Log("P2:"+QString::number(m_database->m_error_X_max_Y_max));
-    pointList.append(help);
-    help.Z = m_database->m_error_X_null_Y_max;
-    Log("P3:"+QString::number(m_database->m_error_X_null_Y_max));
-    pointList.append(help);
-    help.Z = m_database->m_error_X_null_Y_null;
-    Log("P4:"+QString::number(m_database->m_error_X_null_Y_null));
-    pointList.append(help);
-
-    m_database->calc_correctionangel(pointList);
-    */
-    ui->textEditLog->append("cycletime cheack");
-    m_basefunctions->cycletimeTest();
-    m_basefunctions->trigger_next_command();
+    //ui->textEditLog->append("cycletime cheack");
+    //m_basefunctions->cycletimeTest();
+    //m_basefunctions->trigger_next_command();
+    m_serial->serial_fasttimeout_handler();
 }
 
 void MainWindow::on_doubleSpinBoxZOffset_valueChanged(const QString &arg1)

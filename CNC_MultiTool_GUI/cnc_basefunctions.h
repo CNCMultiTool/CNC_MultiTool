@@ -39,20 +39,27 @@ signals:
     void trigger_send();
     void show_send_queue();
     void show_status();
+    void DataToGraph(float T_100,float T_ntc,float PWM,float T_soll);
+    void show_alive();
+    void z_calib_resullt_finish();
 
 public slots:
     void send_init();
-
+    void send_PID(float P,float I,float D,float PO);
+    void send_Temp_Setting(float R_vor,float B_Value,float R_nen);
+    void send_PID_Bed(float P,float I,float D,float PO);
+    void send_Temp_Setting_Bed(float R_vor,float B_Value,float R_nen);
     void send_move(float X,float Y,float Z,float W);
-    void send_settings(float speed,float temperatur,float filament,float acc);
+    void send_settings(float speed,float temperatur,float filament,float bed_temp);
     void send_stop();
     void send_getPosition();
     void send_setPosition(float X,float Y,float Z,float W);
     void setPosition_inQ(float X,float Y,float Z,float W);
     void move_inQ(float X,float Y,float Z,float W);
-    void settings_inQ(float speed,float temperatur,float filament,float acc);
+    void settings_inQ(float speed,float temperatur,float filament,float bed_temp);
     void cycletimeTest();
     void process_command();
+
 };
 
 #endif // CNC_BASEFUNCTIONS_H

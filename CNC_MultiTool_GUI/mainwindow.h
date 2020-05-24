@@ -35,6 +35,7 @@ private:
     Serial *m_serial = new Serial(m_database);
     CNC_automation *m_automation = new CNC_automation(m_database,m_basefunctions);
 
+    QTime time;
     void endswitchButtonColor(float value,QPushButton *PosButton,QPushButton *NegButton);
     void send_move(float X,float Y,float Z,float W);
     void send_settings(float speed,float temperatur,float filament);
@@ -128,5 +129,10 @@ private slots:
     void on_pushButton_test_clicked();
     void on_doubleSpinBoxZOffset_valueChanged(const QString &arg1);
     void on_pushButton_nozzel_calib_clicked();
+    void PID_ValueBox();
+    void PID_Bed_ValueBox();
+    void bedCalibValueBox();
+    void addToGraph(float T_100,float T_ntc,float PWM,float T_soll);
+    void show_z_calib_result();
 };
 #endif // MAINWINDOW_H

@@ -43,9 +43,8 @@ public:
     void FileLog(QString value);
     void SerialLog(QString value);
 
-    bool m_HWisHeating;
-    bool m_HWisMoving;
     int m_HW_status; //0 = idle, 1 = moveing, 2 = heating
+    int m_G_Code_State; //0 = idle , 1= running, 2 = pause
 
 
     //values to send
@@ -53,7 +52,7 @@ public:
     float m_soll_speed;
     float m_soll_filament;
     float m_soll_temperatur;
-    float m_soll_accSteps;
+    float m_soll_bedTemp;
 
     //values recived
     //position
@@ -65,7 +64,7 @@ public:
     float m_act_speed;
     float m_act_filament;
     float m_act_temperatur;
-    float m_act_accSteps;
+    float m_act_bedTemp;
 
     //status
     float m_endswitch_X;
@@ -76,16 +75,18 @@ public:
     //max size of CNC
     float m_size_X;
     float m_size_Y;
-    //kalibration results
-    float m_error_X_max_Y_null;
-    float m_error_X_max_Y_max;
-    float m_error_X_null_Y_max;
-    float m_error_X_null_Y_null;
     //correktion angel
     float m_X_angel;
     float m_Y_angel;
+    //kalib
+    float m_X1,m_Y1,m_Z1,m_Z1_error;
+    float m_X2,m_Y2,m_Z2;
+    float m_X3,m_Y3,m_Z3;
+    float m_X4,m_Y4,m_Z4;
+
     //TCP hight in home
     float m_Zmax_nozzel;
+    float m_X_inHome,m_Y_inHome;
 
     float m_calibplateX;
     float m_calibplateY;
@@ -96,6 +97,18 @@ public:
 
     //max values
     float m_max_speed; //mm per sec
+
+    //PID
+    float m_KP,m_KI,m_KD;
+    bool m_POn;
+    float m_R_vor,m_R_nen, m_bValue;
+    int m_plot_size;
+
+    //PID
+    float m_KP_Bed,m_KI_Bed,m_KD_Bed;
+    bool m_POn_Bed;
+    float m_R_vor_Bed,m_R_nen_Bed, m_bValue_Bed;
+    int m_plot_size_Bed;
 
 
     //repeattest values
@@ -115,9 +128,6 @@ public:
     float calc_correction(float X,float Y);
 
     void test();
-
-    void set_HWisHeating(bool status);
-    void set_HWisMoving(bool status);
     
     void append_recive_command(cnc_command new_command);
 

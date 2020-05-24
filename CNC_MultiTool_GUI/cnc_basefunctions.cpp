@@ -3,13 +3,32 @@
 cnc_basefunctions::cnc_basefunctions(cnc_data *database)
 {
     m_database = database;
-    m_database->m_HWisMoving = false;
-    m_database->m_HWisHeating = false;
+    m_database->m_HW_status = 0;
 }
 
 void cnc_basefunctions::test()
 {
     emit Log("basefunction is alive");
+}
+
+void cnc_basefunctions::send_PID_Bed(float P,float I,float D,float PO)
+{
+    send_to_cnc('k',P,I,D,PO,1);
+}
+
+void cnc_basefunctions::send_Temp_Setting_Bed(float R_vor,float B_Value,float R_nen)
+{
+    send_to_cnc('h',R_vor,B_Value,R_nen,0,1);
+}
+
+void cnc_basefunctions::send_PID(float P,float I,float D,float PO)
+{
+    send_to_cnc('o',P,I,D,PO,1);
+}
+
+void cnc_basefunctions::send_Temp_Setting(float R_vor,float B_Value,float R_nen)
+{
+    send_to_cnc('z',R_vor,B_Value,R_nen,0,1);
 }
 
 void cnc_basefunctions::send_move(float X,float Y,float Z,float W)
@@ -57,14 +76,14 @@ void cnc_basefunctions::cycletimeTest()
     send_to_cnc('l',0,0,0,0,2);
 }
 
-void cnc_basefunctions::send_settings(float speed,float temperatur,float filament,float acc)
+void cnc_basefunctions::send_settings(float speed,float temperatur,float filament,float bed_temp)
 {
     float s = speed;
     float t = temperatur;
     float f = filament;
-    float a = acc;
+    float a = bed_temp;
     if(a<0)
-        a = m_database->m_soll_accSteps;
+        a = m_database->m_soll_bedTemp;
     if(s<0)
         s = m_database->m_soll_speed;
     if(s > m_database->m_max_speed)
@@ -89,7 +108,7 @@ void cnc_basefunctions::settings_inQ(float speed,float temperatur,float filament
     float f = filament;
     float a = acc;
     if(a<0)
-        a = m_database->m_soll_accSteps;
+        a = m_database->m_soll_bedTemp;
     if(s<0)
         s = m_database->m_soll_speed;
     if(s > m_database->m_max_speed)
@@ -113,7 +132,6 @@ void cnc_basefunctions::send_init()
 void cnc_basefunctions::send_stop()
 {
     send_to_cnc('b',0,0,0,0,4);
-    m_database->m_HWisMoving = false;
 }
 
 void cnc_basefunctions::send_getPosition()
@@ -163,9 +181,9 @@ void cnc_basefunctions::trigger_next_command()
         }
         int action = m_database->cnc_send_commands[0].action;
 
-        emit Log("trigger_next_command (action: "+
-                 QString::number(m_database->cnc_send_commands[0].action)+
-                ", command: "+QString(m_database->cnc_send_commands[0].command)+")");
+        //emit Log("trigger_next_command (action: "+
+        //         QString::number(m_database->cnc_send_commands[0].action)+
+        //        ", command: "+QString(m_database->cnc_send_commands[0].command)+")");
 
         if(action == 1||action == 2)
         {
@@ -179,8 +197,16 @@ void cnc_basefunctions::trigger_next_command()
             {
                 m_database->cnc_send_commands[0].value3 += m_database->m_z_offset;
                 //m_database->m_HWisMoving = true;
-                m_database->m_HW_status = 1;
+                if(n_com != 'p')
+                    m_database->m_HW_status = 1;
                 emit show_status();
+            }
+            if(n_com == 'w' || n_com == 's')
+            {
+                m_database->set_soll_settings(m_database->cnc_send_commands[0].value1,
+                        m_database->cnc_send_commands[0].value2,
+                        m_database->cnc_send_commands[0].value3,
+                        m_database->cnc_send_commands[0].value4);
             }
 
             emit trigger_send();
@@ -189,7 +215,7 @@ void cnc_basefunctions::trigger_next_command()
             speedOldPoint.Z = m_database->m_act_Z;
             speedTimer.restart();
             //m_database->m_HWisMoving = true;
-            m_database->m_HW_status = 1;
+            //m_database->m_HW_status = 1;
         }
         if(action == 3)//calib size safe max posi
         {
@@ -233,10 +259,6 @@ void cnc_basefunctions::trigger_next_command()
         {
             m_database->cnc_send_commands.pop_front();
             point temp_point;
-            m_database->m_error_X_max_Y_null = m_pointList[1].Z;
-            m_database->m_error_X_max_Y_max = m_pointList[2].Z;
-            m_database->m_error_X_null_Y_max = m_pointList[3].Z;
-            m_database->m_error_X_null_Y_null = m_pointList[4].Z;
             m_database->calc_correctionangel(m_pointList);
             for(int i=0;i<m_pointList.size();i++)
             {
@@ -245,6 +267,13 @@ void cnc_basefunctions::trigger_next_command()
                          " Y:"+QString::number(temp_point.Y)+
                          " Z:"+QString::number(temp_point.Z));
             }
+            m_database->m_Z1 = m_pointList[0].Z;
+            m_database->m_Z2 = m_pointList[1].Z;
+            m_database->m_Z3 = m_pointList[2].Z;
+            m_database->m_Z4 = m_pointList[3].Z;
+            m_database->m_Z1_error = m_pointList[4].Z;
+            emit z_calib_resullt_finish();
+
             trigger_next_command();
         }
         if(action == 9)//wait for heating
@@ -271,21 +300,20 @@ void cnc_basefunctions::process_command()
 
 void cnc_basefunctions::execute_command(char command,float value1,float value2,float value3,float value4)
 {
-    double tracDist;
+    //double tracDist;
     QString LogText;
     switch(command)
     {
     case 'm'://end of movemend
         m_database->set_position(value1,value2,value3,value4);
-        m_database->FileLog("INFO recived set position: X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
+        //m_database->FileLog("INFO recived set position: X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
         break;
     case 'c'://end of movemend and ready for next comand
-        tracDist = sqrt(qPow(speedOldPoint.X-value1,2)+qPow(speedOldPoint.Y-value2,2)+qPow(speedOldPoint.Z-value3,2));
-        emit Log("real traveled speed:"+QString::number((tracDist/speedTimer.elapsed())*1000)+" dist:"+QString::number(tracDist)+"mm time:"+QString::number(speedTimer.elapsed())+"ms soll_speed:"+QString::number(m_database->m_act_speed));
+        //tracDist = sqrt(qPow(speedOldPoint.X-value1,2)+qPow(speedOldPoint.Y-value2,2)+qPow(speedOldPoint.Z-value3,2));
+        //emit Log("real traveled speed:"+QString::number((tracDist/speedTimer.elapsed())*1000)+" dist:"+QString::number(tracDist)+"mm time:"+QString::number(speedTimer.elapsed())+"ms soll_speed:"+QString::number(m_database->m_act_speed));
 
         m_database->set_position(value1,value2,value3,value4);
-        m_database->set_HWisMoving(false);
-        m_database->FileLog("INFO recived set position and ready for next command: X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
+        //m_database->FileLog("INFO recived set position and ready for next command: X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
         //m_database->m_HWisMoving = false;
         m_database->m_HW_status = 0;
         emit show_status();
@@ -293,13 +321,14 @@ void cnc_basefunctions::execute_command(char command,float value1,float value2,f
         break;
     case 's'://set the actual settings
         m_database->set_settings(value1,value2,value3,value4);
-        m_database->FileLog("INFO recived current setting: speed:"+QString::number(value1)+" temperatur:"+QString::number(value2)+" filament:"+QString::number(value3)+" PWM:"+QString::number(value4));
+        //m_database->FileLog("INFO recived current setting: speed:"+QString::number(value1)+" temperatur:"+QString::number(value2)+" filament:"+QString::number(value3)+" ACCStep:"+QString::number(value4));
         trigger_next_command();
         break;
     case 'j'://set the actual settings
         m_database->set_settings(value1,value2,value3,value4);
-        m_database->FileLog("INFO recived current setting: speed:"+QString::number(value1)+" temperatur:"+QString::number(value2)+" filament:"+QString::number(value3)+" PWM:"+QString::number(value4));
-        //if(m_database->m_HWisHeating == true)
+        emit DataToGraph(m_database->m_act_bedTemp,m_database->m_act_temperatur,m_database->m_soll_bedTemp,m_database->m_soll_temperatur);
+        emit show_alive();
+        //m_database->FileLog("INFO recived current setting: speed:"+QString::number(value1)+" temperatur:"+QString::number(value2)+" filament:"+QString::number(value3)+" ACCStep:"+QString::number(value4));
         if(m_database->m_HW_status == 2)
         {
             float temp_dif = abs(m_database->m_act_temperatur - m_database->m_soll_temperatur);
@@ -311,7 +340,6 @@ void cnc_basefunctions::execute_command(char command,float value1,float value2,f
                 emit Log("end of the heating");
                 m_database->cnc_send_commands.pop_front();
                 trigger_next_command();
-                //m_database->m_HWisHeating = false;
                 m_database->m_HW_status = 0;
                 emit show_status();
             }
@@ -319,7 +347,7 @@ void cnc_basefunctions::execute_command(char command,float value1,float value2,f
         break;
     case 'e':
         m_database->set_endswitch(value1,value2,value3);
-        m_database->FileLog("INFO recived endswitches: X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
+        //m_database->FileLog("INFO recived endswitches: X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
         //emit Log("recive endswitch X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
         break;
     case 'l':
@@ -331,7 +359,26 @@ void cnc_basefunctions::execute_command(char command,float value1,float value2,f
         emit Log(LogText);
         m_database->FileLog(LogText);
         emit Log(LogText);
-        trigger_next_command();
+        break;
+    case 'o'://set PID values response
+        LogText = "new PID ";
+        LogText += " P :"+QString::number(value1);
+        LogText += " I :"+QString::number(value2);
+        LogText += " D :"+QString::number(value3);
+        LogText += " use POn :"+QString::number(value4);
+        emit Log(LogText);
+        m_database->FileLog(LogText);
+        emit Log(LogText);
+        break;
+    case 'u'://PID debug infos
+        LogText = "new PID ";
+        LogText += " soll_T :"+QString::number(value1);
+        LogText += " T_ntc :"+QString::number(value2);
+        LogText += " PWM :"+QString::number(value3);
+        LogText += " T_100 :"+QString::number(value4);
+        //emit Log(LogText);
+        //m_database->FileLog(LogText);
+        emit DataToGraph(value4,value2,value3,value1);
         break;
     case 'd':
         LogText = "DEBUG recived Debug";
