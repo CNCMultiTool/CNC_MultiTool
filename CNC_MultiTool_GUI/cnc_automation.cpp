@@ -203,7 +203,8 @@ void CNC_automation::G_Code_Parser()
     m_Y = 10;
     m_Z = m_database->m_Zmax_nozzel;
     m_W = 0;
-
+    m_F = m_F_max*60;
+    m_S = 220;
 
     //calib Z on calib plate
     if(m_database->m_useCalibPlate)

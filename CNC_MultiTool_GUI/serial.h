@@ -29,7 +29,7 @@ private:
 
     int m_send_timeout = 0;
     int m_recive_timeout = 0;
-    int m_fast_timeout = 200;
+    int m_fast_timeout = 70;
     int m_second_timeout_time = 50;
     int m_timeout = 200;
 
