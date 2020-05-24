@@ -247,6 +247,7 @@ void loop() {
   if(old_time_now>time_now)
   {
     send_debug(999,999,old_time_now,time_now);
+    old_time_now = time_now;
   }
   else
   {
