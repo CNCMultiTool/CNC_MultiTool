@@ -104,6 +104,31 @@ int temprelai = 2;
 PID myPID(&soll_T, &Output, &T, KP, KI, KD,P_ON_E, REVERSE);
 unsigned long WindowSize = 100;
 
+int sensorPin_Bed = A0;
+double bitwertNTC_Bed = 0;
+double widerstand1_Bed=690;                   //Ohm
+double bWert_Bed =3950;                           // B- Wert vom NTC
+double widerstandNTC_Bed =0;
+double kelvintemp_Bed = 273.15;                // 0°Celsius in Kelvin
+double Tn_Bed=kelvintemp_Bed + 25;                 //Nenntemperatur in Kelvin
+double Rn_Bed = 100000;
+double TKelvin_Bed = 0;                        //Die errechnete Isttemperatur
+double T_Bed = 0;
+
+//PID
+double Output_Bed;
+double KP_Bed = 35;
+double KI_Bed = 0.2;
+double KD_Bed= 750;
+double soll_T_Bed = 0;
+
+int temprelai_Bed = 3;
+
+//PID myPID(&soll_T, &Output, &T, KP, KI, KD,P_ON_M, REVERSE);
+PID myPID_Bed(&soll_T_Bed, &Output_Bed, &T_Bed, KP_Bed, KI_Bed, KD_Bed,P_ON_E, REVERSE);
+unsigned long WindowSize_Bed = 5000;
+unsigned long WindowStartSize_Bed = 0;
+
 int debug = 0;
 
 bool wait_for_response = true;
@@ -201,6 +226,11 @@ void setup() {
   myPID.SetSampleTime(WindowSize);
   myPID.SetMode(AUTOMATIC);
 
+  pinMode(temprelai_Bed,OUTPUT);
+  myPID_Bed.SetOutputLimits(0, WindowSize_Bed);
+  myPID_Bed.SetSampleTime(WindowSize_Bed);
+  myPID_Bed.SetMode(AUTOMATIC);
+
   pinMode(22,OUTPUT);
   pinMode(24,OUTPUT);
   pinMode(26,OUTPUT);
@@ -270,7 +300,7 @@ void loop() {
   if(cycle_time2 < time_now)
   {
     char bufS[1];
-    cycle_time2 = time_now + 50000;
+    cycle_time2 = time_now + 100000;
     if(sendPose == true)
       bufS[0] = {'Q'}; //wait for new task
     else
@@ -309,11 +339,17 @@ float checkEndswitch(struct StepMotorBig &StepM){
 void TempControle(){
   if(myPID.Compute())
   {
-    bitwertNTC = analogRead(A1);      // lese Analogwert an A0 aus
+    bitwertNTC = analogRead(sensorPin);      // lese Analogwert an A0 aus
     widerstandNTC = widerstand1*(((double)bitwertNTC/1024)/(1-((double)bitwertNTC/1024)));
     TKelvin = 1/((1/Tn)+((double)1/bWert)*log((double)widerstandNTC/Rn));
     T = TKelvin-kelvintemp;
     analogWrite(temprelai,Output);
+
+    bitwertNTC_Bed = analogRead(sensorPin_Bed);      // lese Analogwert an A0 aus
+    widerstandNTC_Bed = widerstand1_Bed*(((double)bitwertNTC_Bed/1024)/(1-((double)bitwertNTC_Bed/1024)));
+    TKelvin_Bed = 1/((1/Tn_Bed)+((double)1/bWert_Bed)*log((double)widerstandNTC_Bed/Rn_Bed));
+    T_Bed = TKelvin_Bed-kelvintemp_Bed;
+    
     if(debug == 1)
     {
       sendsettinginfo();
@@ -332,8 +368,31 @@ void TempControle(){
         sendsettinginfo();
     }
   }
+  /*
+  if(myPID_Bed.Compute())
+  {
+    WindowStartSize_Bed = millis();
+    bitwertNTC_Bed = analogRead(sensorPin_Bed);      // lese Analogwert an A0 aus
+    widerstandNTC_Bed = widerstand1_Bed*(((double)bitwertNTC_Bed/1024)/(1-((double)bitwertNTC_Bed/1024)));
+    TKelvin_Bed = 1/((1/Tn_Bed)+((double)1/bWert_Bed)*log((double)widerstandNTC_Bed/Rn_Bed));
+    T_Bed = TKelvin_Bed-kelvintemp_Bed;
+    //analogWrite(temprelai_Bed,Output_Bed);
+  }else{
+    if(WindowStartSize_Bed+Output_Bed>millis())
+      digitalWrite(temprelai_Bed,HIGH);
+    else
+      digitalWrite(temprelai_Bed,LOW);
+  }*/
+  if(soll_T_Bed < T_Bed)
+  {
+    digitalWrite(temprelai_Bed,HIGH);
+  }
+  else
+  {
+    digitalWrite(temprelai_Bed,LOW);
+  }
 
-
+    
 }
 void recive_msg(){
   msg_available = false;
@@ -343,7 +402,12 @@ void recive_msg(){
       sendconfirmpos();
       sendendswitch();
       break;
-    case 'z':
+    case 'z'://nozzel valus for NTC
+      widerstand1 = Buf.tel.value[0];
+      bWert = Buf.tel.value[1];
+      Rn = Buf.tel.value[2];
+      break;
+    case 'h'://Bed valus for NTC
       widerstand1 = Buf.tel.value[0];
       bWert = Buf.tel.value[1];
       Rn = Buf.tel.value[2];
@@ -380,14 +444,14 @@ void recive_msg(){
       Speed = Buf.tel.value[0];
       soll_T = Buf.tel.value[1];
       Wachse.steps_pmm = Buf.tel.value[2];
-      acceleration_steps = Buf.tel.value[3];
+      soll_T_Bed = Buf.tel.value[3];
       sendsetting();
       break;
     case 'w': //set speed temperatur and filament
       Speed = Buf.tel.value[0];
       soll_T = Buf.tel.value[1];
       Wachse.steps_pmm = Buf.tel.value[2];
-      acceleration_steps = Buf.tel.value[3];
+      soll_T_Bed = Buf.tel.value[3];
       sendsettinginfo();
       break;
     case 'b'://send stop
@@ -402,7 +466,7 @@ void recive_msg(){
     //case 'r':
       //serieltimeouthandler();
       //break;
-    case 'o'://change PID
+    case 'o'://change PID for nozzel
       KP = Buf.tel.value[0];
       KI = Buf.tel.value[1];
       KD = Buf.tel.value[2];
@@ -410,7 +474,15 @@ void recive_msg(){
         myPID.SetTunings(KP, KI, KD, P_ON_E);
       else
         myPID.SetTunings(KP, KI, KD, P_ON_M);  
-      sendPID(KP,KI,KD,Buf.tel.value[3]>0.5 ? 1:0);
+      break;
+    case 'k'://change PID for Bed
+      KP_Bed = Buf.tel.value[0];
+      KI_Bed = Buf.tel.value[1];
+      KD_Bed = Buf.tel.value[2];
+      if(Buf.tel.value[3]>0.5)
+        myPID_Bed.SetTunings(KP_Bed, KI_Bed, KD_Bed, P_ON_E);
+      else
+        myPID_Bed.SetTunings(KP_Bed, KI_Bed, KD_Bed, P_ON_M);  
       break;
     case 'd':
       debug = Buf.tel.value[0];
@@ -629,17 +701,13 @@ void sendConfirmAnswer(){
   send_variabelTestCommand('a',0,0,0,0);
 }
 void sendsetting(){
-  send_variabelTestCommand('s',Speed,T,Wachse.steps_pmm,soll_T);
+  send_variabelTestCommand('s',Speed,T,Wachse.steps_pmm,T_Bed);
 }
 void sendsettinginfo(){
-  send_variabelTestCommand('j',Speed,T,Wachse.steps_pmm,soll_T);
+  send_variabelTestCommand('j',Speed,T,Wachse.steps_pmm,T_Bed);
 }
 void sendcycletime(float a,float b,float c,float d){
   send_variabelTestCommand('l',a,b,c,d);
-  start_responstimer();
-}
-void sendPID(float a,float b,float c,float d){
-  send_variabelTestCommand('o',a,b,c,d);
   start_responstimer();
 }
 void sendPIDvalues(float a,float b,float c,float d){

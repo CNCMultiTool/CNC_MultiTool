@@ -840,19 +840,19 @@
      <item row="0" column="4">
       <widget class="QLabel" name="label_AccSteps">
        <property name="text">
-        <string>Acc Steps</string>
+        <string>BedTetmp (°C)</string>
        </property>
       </widget>
      </item>
      <item row="1" column="4">
-      <widget class="QLabel" name="label_accSteps">
+      <widget class="QLabel" name="label_bedTemp">
        <property name="text">
         <string>--</string>
        </property>
       </widget>
      </item>
      <item row="2" column="4">
-      <widget class="QSpinBox" name="spinBoxAccSteps">
+      <widget class="QSpinBox" name="spinBoxBedTemp">
        <property name="maximum">
         <number>999</number>
        </property>
@@ -1066,11 +1066,11 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>1</number>
+     <number>2</number>
     </property>
     <widget class="QWidget" name="tab">
      <attribute name="title">
-      <string>Tab 1</string>
+      <string>Log</string>
      </attribute>
      <widget class="QTextEdit" name="textEditLog">
       <property name="enabled">
@@ -1088,7 +1088,7 @@
     </widget>
     <widget class="QWidget" name="tab_2">
      <attribute name="title">
-      <string>Tab 2</string>
+      <string>TempPlot</string>
      </attribute>
      <widget class="QCustomPlot" name="Plot_PID_Temp" native="true">
       <property name="geometry">
@@ -1099,6 +1099,58 @@
         <height>411</height>
        </rect>
       </property>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="tab_3">
+     <attribute name="title">
+      <string>Stats</string>
+     </attribute>
+     <widget class="QWidget" name="verticalLayoutWidget">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>10</y>
+        <width>231</width>
+        <height>111</height>
+       </rect>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <item>
+        <widget class="QLabel" name="label_bedCalibP1">
+         <property name="text">
+          <string>TextLabel</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_bedCalibP2">
+         <property name="text">
+          <string>TextLabel</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_bedCalibP3">
+         <property name="text">
+          <string>TextLabel</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_bedCalibP4">
+         <property name="text">
+          <string>TextLabel</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_bedCalibP5">
+         <property name="text">
+          <string>TextLabel</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </widget>
     </widget>
    </widget>
@@ -1117,6 +1169,7 @@
      <string>Calibrations</string>
     </property>
     <addaction name="actionValues"/>
+    <addaction name="actionBedCalib"/>
    </widget>
    <widget class="QMenu" name="menuTests">
     <property name="title">
@@ -1130,6 +1183,7 @@
      <string>PID</string>
     </property>
     <addaction name="actionSet_PID"/>
+    <addaction name="actionSet_PID_for_Bed"/>
    </widget>
    <addaction name="menuCalibrations"/>
    <addaction name="menuTests"/>
@@ -1165,6 +1219,16 @@
   <action name="actionSet_PID">
    <property name="text">
     <string>Set PID</string>
+   </property>
+  </action>
+  <action name="actionBedCalib">
+   <property name="text">
+    <string>BedCalib</string>
+   </property>
+  </action>
+  <action name="actionSet_PID_for_Bed">
+   <property name="text">
+    <string>Set PID for Bed</string>
    </property>
   </action>
  </widget>

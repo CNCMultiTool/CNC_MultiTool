@@ -11,6 +11,16 @@ void cnc_basefunctions::test()
     emit Log("basefunction is alive");
 }
 
+void cnc_basefunctions::send_PID_Bed(float P,float I,float D,float PO)
+{
+    send_to_cnc('k',P,I,D,PO,1);
+}
+
+void cnc_basefunctions::send_Temp_Setting_Bed(float R_vor,float B_Value,float R_nen)
+{
+    send_to_cnc('h',R_vor,B_Value,R_nen,0,1);
+}
+
 void cnc_basefunctions::send_PID(float P,float I,float D,float PO)
 {
     send_to_cnc('o',P,I,D,PO,1);
@@ -66,14 +76,14 @@ void cnc_basefunctions::cycletimeTest()
     send_to_cnc('l',0,0,0,0,2);
 }
 
-void cnc_basefunctions::send_settings(float speed,float temperatur,float filament,float acc)
+void cnc_basefunctions::send_settings(float speed,float temperatur,float filament,float bed_temp)
 {
     float s = speed;
     float t = temperatur;
     float f = filament;
-    float a = acc;
+    float a = bed_temp;
     if(a<0)
-        a = m_database->m_soll_accSteps;
+        a = m_database->m_soll_bedTemp;
     if(s<0)
         s = m_database->m_soll_speed;
     if(s > m_database->m_max_speed)
@@ -98,7 +108,7 @@ void cnc_basefunctions::settings_inQ(float speed,float temperatur,float filament
     float f = filament;
     float a = acc;
     if(a<0)
-        a = m_database->m_soll_accSteps;
+        a = m_database->m_soll_bedTemp;
     if(s<0)
         s = m_database->m_soll_speed;
     if(s > m_database->m_max_speed)
@@ -187,7 +197,8 @@ void cnc_basefunctions::trigger_next_command()
             {
                 m_database->cnc_send_commands[0].value3 += m_database->m_z_offset;
                 //m_database->m_HWisMoving = true;
-                m_database->m_HW_status = 1;
+                if(n_com != 'p')
+                    m_database->m_HW_status = 1;
                 emit show_status();
             }
 
@@ -197,7 +208,7 @@ void cnc_basefunctions::trigger_next_command()
             speedOldPoint.Z = m_database->m_act_Z;
             speedTimer.restart();
             //m_database->m_HWisMoving = true;
-            m_database->m_HW_status = 1;
+            //m_database->m_HW_status = 1;
         }
         if(action == 3)//calib size safe max posi
         {
@@ -241,10 +252,6 @@ void cnc_basefunctions::trigger_next_command()
         {
             m_database->cnc_send_commands.pop_front();
             point temp_point;
-            m_database->m_error_X_max_Y_null = m_pointList[1].Z;
-            m_database->m_error_X_max_Y_max = m_pointList[2].Z;
-            m_database->m_error_X_null_Y_max = m_pointList[3].Z;
-            m_database->m_error_X_null_Y_null = m_pointList[4].Z;
             m_database->calc_correctionangel(m_pointList);
             for(int i=0;i<m_pointList.size();i++)
             {
@@ -253,6 +260,13 @@ void cnc_basefunctions::trigger_next_command()
                          " Y:"+QString::number(temp_point.Y)+
                          " Z:"+QString::number(temp_point.Z));
             }
+            m_database->m_Z1 = m_pointList[0].Z;
+            m_database->m_Z2 = m_pointList[1].Z;
+            m_database->m_Z3 = m_pointList[2].Z;
+            m_database->m_Z4 = m_pointList[3].Z;
+            m_database->m_Z1_error = m_pointList[4].Z;
+            emit z_calib_resullt_finish();
+
             trigger_next_command();
         }
         if(action == 9)//wait for heating
@@ -279,7 +293,7 @@ void cnc_basefunctions::process_command()
 
 void cnc_basefunctions::execute_command(char command,float value1,float value2,float value3,float value4)
 {
-    double tracDist;
+    //double tracDist;
     QString LogText;
     switch(command)
     {
@@ -305,7 +319,7 @@ void cnc_basefunctions::execute_command(char command,float value1,float value2,f
         break;
     case 'j'://set the actual settings
         m_database->set_settings(value1,value2,value3,value4);
-        emit DataToGraph(0,m_database->m_act_temperatur,0,m_database->m_soll_temperatur);
+        emit DataToGraph(m_database->m_act_bedTemp,m_database->m_act_temperatur,m_database->m_soll_bedTemp,m_database->m_soll_temperatur);
         emit show_alive();
         //m_database->FileLog("INFO recived current setting: speed:"+QString::number(value1)+" temperatur:"+QString::number(value2)+" filament:"+QString::number(value3)+" ACCStep:"+QString::number(value4));
         if(m_database->m_HW_status == 2)

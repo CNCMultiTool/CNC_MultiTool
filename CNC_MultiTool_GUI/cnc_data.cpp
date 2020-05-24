@@ -7,7 +7,7 @@ cnc_data::cnc_data()
     m_soll_speed = 0;
     m_soll_filament = 37;
     m_soll_temperatur = 0;
-    m_soll_accSteps = 0;
+    m_soll_bedTemp = 0;
     //values recived
     //position
     m_act_X = 0;
@@ -18,7 +18,7 @@ cnc_data::cnc_data()
     m_act_speed = 0;
     m_act_filament = m_soll_filament;
     m_act_temperatur = 0;
-    m_act_accSteps = 0;
+    m_act_bedTemp = 0;
 
     //status
     m_endswitch_X = 0;
@@ -36,12 +36,6 @@ cnc_data::cnc_data()
 
     m_X_angel = -0.00155619;
     m_Y_angel = 0.0023308;
-
-    //kalibration results
-    m_error_X_max_Y_null = 0;
-    m_error_X_max_Y_max = 0;
-    m_error_X_null_Y_max = 0;
-    m_error_X_null_Y_null = 0;
 
     m_max_speed = 25;
 
@@ -107,21 +101,21 @@ void cnc_data::set_position(float X,float Y,float Z,float W)
     emit show_position();
 }
 
-void cnc_data::set_settings(float speed,float temperatur,float filament,float soll_temperatur)
+void cnc_data::set_settings(float speed,float temperatur,float filament,float bed_temp)
 {
     m_act_speed = speed;
     m_act_temperatur = temperatur;
     m_act_filament = filament;
-    m_soll_temperatur = soll_temperatur;
+    m_act_bedTemp = bed_temp;
     emit show_settings();
 }
 
-void cnc_data::set_soll_settings(float speed,float temperatur,float filament,float acc)
+void cnc_data::set_soll_settings(float speed,float temperatur,float filament,float bedTemp)
 {
     m_soll_speed = speed;
     m_soll_temperatur = temperatur;
     m_soll_filament = filament;
-    m_soll_accSteps = acc;
+    m_soll_bedTemp = bedTemp;
     emit show_settings();
 }
 
@@ -151,15 +145,11 @@ void cnc_data::loadSettings()
     m_size_X = settings.value("m_size_X").toDouble();
     m_size_Y = settings.value("m_size_Y").toDouble();
     m_Zmax_nozzel = settings.value("m_Zmax_nozzel").toDouble();
+    m_X_inHome = settings.value("m_X_inHome").toDouble();
+    m_Y_inHome = settings.value("m_Y_inHome").toDouble();
 
     m_X_angel = settings.value("m_X_angel").toDouble();
     m_Y_angel = settings.value("m_Y_angel").toDouble();
-
-    //kalibration results
-    m_error_X_max_Y_null = settings.value("m_error_X_max_Y_null").toDouble();
-    m_error_X_max_Y_max = settings.value("m_error_X_max_Y_max").toDouble();
-    m_error_X_null_Y_max = settings.value("m_error_X_null_Y_max").toDouble();
-    m_error_X_null_Y_null = settings.value("m_error_X_null_Y_null").toDouble();
 
     m_max_speed = settings.value("m_max_speed").toDouble();
     m_calibplateX = settings.value("m_calibplateX").toDouble();
@@ -170,7 +160,17 @@ void cnc_data::loadSettings()
     m_soll_speed = settings.value("m_soll_speed").toDouble();
     m_soll_temperatur = settings.value("m_soll_temperatur").toDouble();
     m_soll_filament = settings.value("m_soll_filament").toDouble();
-    m_soll_accSteps = settings.value("m_soll_accSteps").toDouble();
+    m_soll_bedTemp = settings.value("m_soll_bedTemp").toDouble();
+
+    //kalib
+    m_X1 = settings.value("m_X1").toDouble();
+    m_Y1 = settings.value("m_Y1").toDouble();
+    m_X2 = settings.value("m_X2").toDouble();
+    m_Y2 = settings.value("m_Y2").toDouble();
+    m_X3 = settings.value("m_X3").toDouble();
+    m_Y3 = settings.value("m_Y3").toDouble();
+    m_X4 = settings.value("m_X4").toDouble();
+    m_Y4 = settings.value("m_Y4").toDouble();
 
     m_repeat1 = settings.value("m_repeat1").toInt();
     m_speed1 = settings.value("m_speed1").toInt();
@@ -180,6 +180,15 @@ void cnc_data::loadSettings()
     m_x12 = settings.value("m_x12").toDouble();
     m_y12 = settings.value("m_y12").toDouble();
     m_z12 = settings.value("m_z12").toDouble();
+
+    m_KP_Bed = settings.value("m_KP_Bed").toDouble();
+    m_KI_Bed = settings.value("m_KI_Bed").toDouble();
+    m_KD_Bed = settings.value("m_KD_Bed").toDouble();
+    m_POn_Bed = settings.value("m_POn_Bed").toBool();
+
+    m_R_vor = settings.value("m_R_vor_Bed").toDouble();
+    m_R_nen = settings.value("m_R_nen_Bed").toDouble();
+    m_bValue = settings.value("m_bValue_Bed").toDouble();
 
     m_KP = settings.value("m_KP").toDouble();
     m_KI = settings.value("m_KI").toDouble();
@@ -197,16 +206,13 @@ void cnc_data::saveSettings()
     QSettings settings("CNC_settings.ini", QSettings::IniFormat);
     settings.setValue("m_size_X",m_size_X);
     settings.setValue("m_size_Y",m_size_Y);
+
     settings.setValue("m_Zmax_nozzel",m_Zmax_nozzel);
+    settings.setValue("m_X_inHome",m_X_inHome);
+    settings.setValue("m_Y_inHome",m_Y_inHome);
 
     settings.setValue("m_X_angel",m_X_angel);
     settings.setValue("m_Y_angel",m_Y_angel);
-
-    //kalibration results
-    settings.setValue("m_error_X_max_Y_null",m_error_X_max_Y_null);
-    settings.setValue("m_error_X_max_Y_max",m_error_X_max_Y_max);
-    settings.setValue("m_error_X_null_Y_max", m_error_X_null_Y_max);
-    settings.setValue("m_error_X_null_Y_null",m_error_X_null_Y_null);
 
     settings.setValue("m_max_speed",m_max_speed);
     settings.setValue("m_calibplateX",m_calibplateX);
@@ -217,7 +223,16 @@ void cnc_data::saveSettings()
     settings.setValue("m_soll_speed",m_soll_speed);
     settings.setValue("m_soll_temperatur",m_soll_temperatur);
     settings.setValue("m_soll_filament",m_soll_filament);
-    settings.setValue("m_soll_accSteps",m_soll_accSteps);
+    settings.setValue("m_soll_bedTemp",m_soll_bedTemp);
+
+    settings.setValue("m_X1",m_X1);
+    settings.setValue("m_Y1",m_Y1);
+    settings.setValue("m_X2",m_X2);
+    settings.setValue("m_Y2",m_Y2);
+    settings.setValue("m_X3",m_X3);
+    settings.setValue("m_Y3",m_Y3);
+    settings.setValue("m_X4",m_X4);
+    settings.setValue("m_Y4",m_Y4);
 
     settings.setValue("m_repeat1",m_repeat1);
     settings.setValue("m_speed1",m_speed1);
@@ -227,6 +242,15 @@ void cnc_data::saveSettings()
     settings.setValue("m_x12",m_x12);
     settings.setValue("m_y12",m_y12);
     settings.setValue("m_z12",m_z12);
+
+    settings.setValue("m_KP_Bed",m_KP_Bed);
+    settings.setValue("m_KI_Bed",m_KI_Bed);
+    settings.setValue("m_KD_Bed",m_KD_Bed);
+    settings.setValue("m_POn_Bed",m_POn_Bed);
+
+    settings.setValue("m_R_vor_Bed",m_R_vor_Bed);
+    settings.setValue("m_R_nen_Bed",m_R_nen_Bed);
+    settings.setValue("m_bValue_Bed",m_bValue_Bed);
 
     settings.setValue("m_KP",m_KP);
     settings.setValue("m_KI",m_KI);

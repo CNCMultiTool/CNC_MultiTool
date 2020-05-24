@@ -220,7 +220,7 @@ void Serial::serial_read_command()
 
             if(m_Q_count<=0)
             {
-                m_Q_count = 10;
+                m_Q_count = 5;
                 if(m_database->m_HW_status == 1 && m_database->m_G_Code_State == 1)
                 {
                     emit Log("request last send from arduino");
