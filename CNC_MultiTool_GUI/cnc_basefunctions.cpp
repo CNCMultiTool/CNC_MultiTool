@@ -201,6 +201,13 @@ void cnc_basefunctions::trigger_next_command()
                     m_database->m_HW_status = 1;
                 emit show_status();
             }
+            if(n_com == 'w' || n_com == 's')
+            {
+                m_database->set_soll_settings(m_database->cnc_send_commands[0].value1,
+                        m_database->cnc_send_commands[0].value2,
+                        m_database->cnc_send_commands[0].value3,
+                        m_database->cnc_send_commands[0].value4);
+            }
 
             emit trigger_send();
             speedOldPoint.X = m_database->m_act_X;

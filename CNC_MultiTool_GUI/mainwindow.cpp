@@ -88,6 +88,8 @@ MainWindow::MainWindow(QWidget *parent)
     timeTicker->setTimeFormat("%h:%m:%s");
     ui->Plot_PID_Temp->xAxis->setTicker(timeTicker);
     ui->Plot_PID_Temp->axisRect()->setupFullAxesBox();
+
+    m_database->SerialLog("new Start of The Programm");
 }
 
 MainWindow::~MainWindow()
@@ -367,6 +369,7 @@ void MainWindow::on_pushButtonSetSettings_pressed()
     float Temperatur = ui->spinBoxTemperatur->value();
     float Filament = ui->spinBoxFilament->value();
     float BedTetmp = ui->spinBoxBedTemp->value();
+    m_database->set_soll_settings(Speed,Temperatur,Filament,BedTetmp);
     m_basefunctions->send_settings(Speed,Temperatur,Filament,BedTetmp);
 }
 
@@ -675,15 +678,6 @@ void MainWindow::calibratenValueBox()
         m_database->m_size_X = DSpinBox_size_X->value();
         m_database->m_size_Y = DSpinBox_size_Y->value();
 
-        //kalibration results
-        //m_database->m_error_X_max_Y_null = DSpinBox_X_max_Y_null->value();
-        //m_database->m_error_X_max_Y_max = DSpinBox_X_max_Y_max->value();
-        //m_database->m_error_X_null_Y_max = DSpinBox_X_null_Y_max->value();
-        //m_database->m_error_X_null_Y_null = DSpinBox_X_null_Y_null->value();
-
-        //correktion angel
-        //m_database->m_X_angel = DSpinBox_angel_X->value();
-        //m_database->m_Y_angel = DSpinBox_angel_Y->value();
         //TCP hight in home
         m_database->m_Zmax_nozzel = DSpinBox_TCP_higth->value();
         m_database->m_X_inHome = DSpinBox_TCP_X_inHome->value();
@@ -694,7 +688,6 @@ void MainWindow::calibratenValueBox()
         //max values
         m_database->m_max_speed = DSpinBox_maxSpeed->value(); //mm per sec
         m_database->m_useCalibPlate = CheckBox_makeCalib->isChecked();
-
 
         m_database->saveSettings();
     }
@@ -886,9 +879,10 @@ void MainWindow::addToGraph(float T_100,float T_ntc,float PWM,float T_soll)
 
 void MainWindow::on_pushButton_test_clicked()
 {
-    ui->textEditLog->append("cycletime cheack");
-    m_basefunctions->cycletimeTest();
-    m_basefunctions->trigger_next_command();
+    //ui->textEditLog->append("cycletime cheack");
+    //m_basefunctions->cycletimeTest();
+    //m_basefunctions->trigger_next_command();
+    m_serial->serial_fasttimeout_handler();
 }
 
 void MainWindow::on_doubleSpinBoxZOffset_valueChanged(const QString &arg1)

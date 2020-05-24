@@ -300,7 +300,7 @@ void loop() {
   if(cycle_time2 < time_now)
   {
     char bufS[1];
-    cycle_time2 = time_now + 100000;
+    cycle_time2 = time_now + 50000;
     if(sendPose == true)
       bufS[0] = {'Q'}; //wait for new task
     else
@@ -749,7 +749,14 @@ void read_Telegram(){
   char bufBig[19];
   for(int i=0;i<25&&Serial.available();i++)
   {
-    if(Serial.peek() == 'T')//bestätigung des letzden komandos
+    if(Serial.peek() == 'P')//bestätigung des letzden komandos
+    {
+      Serial.readBytes(bufS,1);
+      bufS[0] = 'P';
+      Serial.write(bufS,1);
+      return;
+    }
+    else if(Serial.peek() == 'T')//bestätigung des letzden komandos
     {
       Serial.readBytes(bufS,1);
       lastSend[0]= '\0';
@@ -775,6 +782,7 @@ void read_Telegram(){
       bufS[0] = 'T';//if telegram ok send T as respons
       Serial.write(bufS,1);
       msg_available = true;
+      return;
     }
     else
     {

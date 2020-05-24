@@ -11,8 +11,8 @@ CNC_automation::CNC_automation(cnc_data *database,cnc_basefunctions *basefunctio
     m_Y = 0;
     m_Z = 0;
     m_W = 0;
-    m_S = 0;
-    m_F = 0;
+    m_S = 220;
+    m_F = m_F_max*60;
 }
 
 CNC_automation::~CNC_automation()

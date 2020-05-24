@@ -6,6 +6,7 @@ Serial::Serial(cnc_data *database)
     m_database = database;
     connect(&serial_timeout, SIGNAL(timeout()), this, SLOT(serial_timeout_handler()));
     connect(&serial_fast_timeout, SIGNAL(timeout()), this, SLOT(serial_fasttimeout_handler()));
+    connect(&serial_second_timeout, SIGNAL(timeout()), this, SLOT(serial_secondTimeout_handler()));
 }
 
 
@@ -13,6 +14,7 @@ Serial::~Serial()
 {
     serial_timeout.stop();
     serial_fast_timeout.stop();
+    serial_second_timeout.stop();
 }
 
 void Serial::send_last()
@@ -34,6 +36,7 @@ void Serial::stop_timeouts()
 {
     serial_timeout.stop();
     serial_fast_timeout.stop();
+    serial_second_timeout.stop();
 }
 
 void Serial::serial_timeout_handler()
@@ -60,9 +63,23 @@ void Serial::serial_timeout_handler()
 
 void Serial::serial_fasttimeout_handler()
 {
-    m_database->SerialLog("Serial FastTimeoutHandler called after: " +QString::number(fast_Timeout_time.elapsed())+" "+QString(m_recivedBytes));
-    emit errorLog("Serial FastTimeoutHandler called after: " +QString::number(fast_Timeout_time.elapsed())+" "+QString(m_recivedBytes));
-    emit Log("Serial FastTimeoutHandler called after: " +QString::number(fast_Timeout_time.elapsed()));
+  //start second timout
+  stop_timeouts();
+  m_serial.write(QString("P").toUtf8());
+  m_serial.waitForBytesWritten(m_send_timeout);
+  serial_second_timeout.start(m_second_timeout_time);
+  m_database->SerialLog("Serial fastTimeout occure: Send Ping");
+  emit errorLog("Serial fastTimeout occure: Send Ping");
+  emit Log("Serial fastTimeout occure: Send Ping");
+
+}
+
+void Serial::serial_secondTimeout_handler()
+{
+    stop_timeouts();
+    m_database->SerialLog("Serial secondTimeout_handler called after: " +QString::number(fast_Timeout_time.elapsed())+" "+QString(m_recivedBytes));
+    emit errorLog("Serial secondTimeout_handler called after: " +QString::number(fast_Timeout_time.elapsed())+" "+QString(m_recivedBytes));
+    emit Log("Serial secondTimeout_handler called after: " +QString::number(fast_Timeout_time.elapsed()));
     if(m_serial.isOpen())
     {
         serial_close();
@@ -73,7 +90,7 @@ void Serial::serial_fasttimeout_handler()
         emit Log("fasttimeout while closed");
         m_database->SerialLog("Serial FastTimeoutHandler fasttimeout while closed");
     }
-    serial_fast_timeout.start(m_fast_timeout*3);
+    //serial_fast_timeout.start(m_fast_timeout*3);
 }
 
 bool Serial::serial_open()
@@ -137,6 +154,10 @@ int Serial::serial_CheckTelegram()
         //m_database->SerialLog("recive telCheak no bytes to check");
         return -5;
     }
+    if(m_recivedBytes[0] == 'P')//answer on Ping
+    {
+        return 0;
+    }
     if(m_recivedBytes[0] == 'Q')//std alive and idle signal
     {
         return 0;
@@ -178,6 +199,8 @@ void Serial::serial_read_command()
 {
     for(int i = 0;i<20;i++)
     {
+        serial_fast_timeout.stop();
+        serial_fast_timeout.start(m_fast_timeout);
         //emit Log("in recive loop");
         char command = ' ';
         unsigned char checkSumm = 0;
@@ -203,6 +226,16 @@ void Serial::serial_read_command()
             continue;
         }
 
+        if(m_recivedBytes[0] == 'P')
+        {
+          m_recivedBytes.remove(0,1);
+          serial_second_timeout.stop();
+          serial_fast_timeout.stop();
+          emit Log("recive Ping");
+          emit errorLog("recive Ping");
+          m_database->SerialLog("recive Ping");
+        }
+
         if(m_recivedBytes[0] == 'Q'){
             //emit Log("HW IDLE HW_status:"+QString::number(m_database->m_HW_status)+
                      //" G-Code:"+QString::number(m_database->m_G_Code_State)+
@@ -215,12 +248,12 @@ void Serial::serial_read_command()
 
             if(m_database->m_HW_status == 1 && m_database->m_G_Code_State == 1)
                 m_Q_count--;
-            //if(m_database->m_HW_status == 0 && m_database->cnc_send_commands.size()>0 && m_database->m_G_Code_State == 1)
-                //m_Q_count--;
+            if(m_database->m_HW_status == 0 && m_database->cnc_send_commands.size()>0 && m_database->m_G_Code_State == 1)
+                m_Q_count--;
 
             if(m_Q_count<=0)
             {
-                m_Q_count = 5;
+                m_Q_count = 10;
                 if(m_database->m_HW_status == 1 && m_database->m_G_Code_State == 1)
                 {
                     emit Log("request last send from arduino");
@@ -228,18 +261,19 @@ void Serial::serial_read_command()
                     m_serial.write(QString("N").toUtf8());
                     m_serial.waitForBytesWritten(m_send_timeout);
                 }
+                if(m_database->m_HW_status == 0 && m_database->cnc_send_commands.size()>0 && m_database->m_G_Code_State == 1)
+                {
+                    emit Log("send new comand while idle");
+                    m_database->SerialLog("send new comand while idle");
+                    serial_send_command();
+                }
             }
-            if(m_database->m_HW_status == 0 && m_database->cnc_send_commands.size()>0 && m_database->m_G_Code_State == 1)
-            {
-                emit Log("send new comand while idle");
-                m_database->SerialLog("send new comand while idle");
-                serial_send_command();
-            }
+
             continue;
         }
 
         if(m_recivedBytes[0] == 'W'){
-            m_Q_count = 5;
+            m_Q_count = 10;
             //emit Log("HW WORKING HW_status:"+QString::number(m_database->m_HW_status)+
                      //" G-Code:"+QString::number(m_database->m_G_Code_State)+
                      //" Queue:"+QString::number(m_database->cnc_send_commands.size())+
@@ -267,11 +301,9 @@ void Serial::serial_read_command()
             continue;
         }
 
-
         QByteArray respose = QString("T").toUtf8();
         m_serial.write(respose);
         m_serial.waitForBytesWritten(m_send_timeout);
-        //m_database->SerialLog("recive send T");
 
         command = char(m_recivedBytes[1]);
         for(int i=0;i<m_TelegramLength-2;i++)
@@ -289,7 +321,6 @@ void Serial::serial_read_command()
         LogText += QString::number(checkSumm);
         //m_database->SerialLog("recive S telegram "+LogText);
         emit Log("INFO recive:"+LogText);
-
 
         //empfangene daten in cnc_command verpacken und an empfangs queue packen
         cnc_command new_command;
@@ -316,13 +347,10 @@ void Serial::serial_read_command()
             m_database->SerialLog("recive telCheak checksumm error");
             continue;
         }
-
-
         m_database->append_recive_command(new_command);
         //entvernen des gelesenene telegramms
         m_recivedBytes.remove(0,m_TelegramLength);
     }
-    //emit Log("exit recive loop");
 }
 
 
