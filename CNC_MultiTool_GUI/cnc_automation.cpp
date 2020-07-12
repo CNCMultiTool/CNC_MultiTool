@@ -5,7 +5,7 @@ CNC_automation::CNC_automation(cnc_data *database,cnc_basefunctions *basefunctio
     m_pause = false;
     m_database = database;
     m_basefunctions = basefunctions;
-    m_F_max = 50;
+    m_F_max = m_database->m_max_speed;
     m_F_old = 0;
     m_X = 0;
     m_Y = 0;

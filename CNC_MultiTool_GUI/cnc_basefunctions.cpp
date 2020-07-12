@@ -11,6 +11,11 @@ void cnc_basefunctions::test()
     emit Log("basefunction is alive");
 }
 
+void cnc_basefunctions::send_acc(float acc)
+{
+    send_to_cnc('a',acc,0,0,0,1);
+}
+
 void cnc_basefunctions::send_PID_Bed(float P,float I,float D,float PO)
 {
     send_to_cnc('k',P,I,D,PO,1);
@@ -78,11 +83,15 @@ void cnc_basefunctions::cycletimeTest()
 
 void cnc_basefunctions::send_settings(float speed,float temperatur,float filament,float bed_temp)
 {
+    if(speed > m_database->m_max_speed)
+        speed = m_database->m_max_speed;
     send_to_cnc('w',speed,temperatur,filament,bed_temp,1);
 }
 
 void cnc_basefunctions::settings_inQ(float speed,float temperatur,float filament,float bed_temp)
 {
+    if(speed > m_database->m_max_speed)
+        speed = m_database->m_max_speed;
     send_to_cnc('s',speed,temperatur,filament,bed_temp,2);
 }
 
@@ -296,6 +305,9 @@ void cnc_basefunctions::execute_command(char command,float value1,float value2,f
         m_database->set_settings(value1,value2,value3,value4);
         //m_database->FileLog("INFO recived current setting: speed:"+QString::number(value1)+" temperatur:"+QString::number(value2)+" filament:"+QString::number(value3)+" ACCStep:"+QString::number(value4));
         trigger_next_command();
+        break;
+    case 'a'://set the actual settings
+        m_database->m_max_acc = value1;
         break;
     case 'j'://set the actual settings
         m_database->set_settings(value1,value2,value3,value4);

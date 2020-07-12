@@ -12,26 +12,6 @@ union {
   char buf[19];
 } Buf,SenBuf;
 
-struct StepMotorMedi {
-  //Settings
-  int pin1;
-  int pin2;
-  int pin3;
-  int pin4;
-  int pinNull;
-  int pinPos;
-  double steps_pmm;//steps pro mm
-
-  int motor_step;//0 - 3 gerade anliegender stepper schritt
-  //processing
-  long act_step;//actueller position der achse in step
-  long soll_step;//
-  double act_posi;//actuelle position in mm
-  double soll_posi;//soll position in mm
-  unsigned long time_pstep;
-  unsigned long time_next_step;
-};
-
 struct StepMotorBig {
   //Settings
   int pinENA;
@@ -48,16 +28,25 @@ struct StepMotorBig {
   double act_posi;//actuelle position in mm
   double soll_posi;//soll position in mm
   unsigned long time_pstep;
-  unsigned long time_next_step; 
-  
-  //rampen
-  //unsigned long ist_time_pstep;
-  unsigned long step_div;
-  unsigned long ramp_step; 
-};
-int acceleration_steps = 0;
+  unsigned long time_next_step;
+  unsigned long step_div; 
 
-struct StepMotorMedi Wachse;
+  double Se;
+  double Vm;
+  double Bm;
+}; 
+
+double acc = 0;
+double Speed = 30; //mm pro minute
+double Se;
+double Vm;
+double dist;
+double ges_time;
+double tb;
+double te;
+double tv;
+
+struct StepMotorBig Wachse;
 struct StepMotorBig Xachse;
 struct StepMotorBig Yachse;
 struct StepMotorBig Zachse;
@@ -66,9 +55,7 @@ bool msg_available;
 
 char lastSend[19];
 
-double Speed = 30; //mm pro minute
-double dist;
-double ges_time;
+
 
 unsigned long time_now = micros();
 unsigned long cycle_time = micros();
@@ -193,12 +180,10 @@ void setup() {
   Wachse.act_step = 0;
   Wachse.time_next_step = 0;
   Wachse.time_pstep = 0;
-  Wachse.motor_step = 0;
   Wachse.steps_pmm = 35;
-  Wachse.pin1 = 29;
-  Wachse.pin2 = 31;
-  Wachse.pin3 = 33;
-  Wachse.pin4 = 35;
+  Wachse.pinENA = 31;
+  Wachse.pinDIR = 33;
+  Wachse.pinPUL = 35;
     
   pinMode(Xachse.pinENA,OUTPUT);
   pinMode(Xachse.pinDIR,OUTPUT);
@@ -218,10 +203,9 @@ void setup() {
   pinMode(Zachse.pinNull,INPUT_PULLUP);
   pinMode(Zachse.pinPositiv,INPUT_PULLUP);
   
-  pinMode(Wachse.pin1,OUTPUT);
-  pinMode(Wachse.pin2,OUTPUT);
-  pinMode(Wachse.pin3,OUTPUT);
-  pinMode(Wachse.pin4,OUTPUT);
+  pinMode(Wachse.pinENA,OUTPUT);
+  pinMode(Wachse.pinDIR,OUTPUT);
+  pinMode(Wachse.pinPUL,OUTPUT);
 
   pinMode(temprelai,OUTPUT);
   myPID.SetOutputLimits(0, 255);
@@ -281,7 +265,7 @@ void loop() {
   treiberBig(Xachse);
   treiberBig(Yachse);
   treiberBig(Zachse);
-  treiberMedi(Wachse);
+  treiberBig(Wachse);
 
   if(Xachse.soll_step == Xachse.act_step){
     if(Yachse.soll_step == Yachse.act_step){
@@ -312,8 +296,7 @@ void loop() {
   }
 }
 
-bool is_time_over(unsigned long value)
-{
+bool is_time_over(unsigned long value){
   if(value < threshold && time_now > threshold)
   {
     return 0;
@@ -364,11 +347,6 @@ void TempControle(){
     T = TKelvin-kelvintemp;
     analogWrite(temprelai,Output);
 
-    bitwertNTC_Bed = analogRead(sensorPin_Bed);      // lese Analogwert an A0 aus
-    widerstandNTC_Bed = widerstand1_Bed*(((double)bitwertNTC_Bed/1024)/(1-((double)bitwertNTC_Bed/1024)));
-    TKelvin_Bed = 1/((1/Tn_Bed)+((double)1/bWert_Bed)*log((double)widerstandNTC_Bed/Rn_Bed));
-    T_Bed = TKelvin_Bed-kelvintemp_Bed;
-    
     if(debug == 1)
     {
       sendsettinginfo();
@@ -384,20 +362,23 @@ void TempControle(){
       {
         cycle_time1 = time_now + 5000000;
       }
-        sendsettinginfo();
+      
+      bitwertNTC_Bed = analogRead(sensorPin_Bed);      // lese Analogwert an A0 aus
+      widerstandNTC_Bed = widerstand1_Bed*(((double)bitwertNTC_Bed/1024)/(1-((double)bitwertNTC_Bed/1024)));
+      TKelvin_Bed = 1/((1/Tn_Bed)+((double)1/bWert_Bed)*log((double)widerstandNTC_Bed/Rn_Bed));
+      T_Bed = TKelvin_Bed-kelvintemp_Bed;
+      if(soll_T_Bed+5 < T_Bed)
+      {
+        digitalWrite(temprelai_Bed,HIGH);
+      }
+      else if(soll_T_Bed-5 > T_Bed)
+      {
+        digitalWrite(temprelai_Bed,LOW);
+      }
+
+      sendsettinginfo();
     }
-  }
-
-  if(soll_T_Bed < T_Bed)
-  {
-    digitalWrite(temprelai_Bed,HIGH);
-  }
-  else
-  {
-    digitalWrite(temprelai_Bed,LOW);
-  }
-
-    
+  }    
 }
 void recive_msg(){
   msg_available = false;
@@ -458,6 +439,10 @@ void recive_msg(){
       Wachse.steps_pmm = Buf.tel.value[2];
       soll_T_Bed = Buf.tel.value[3];
       sendsettinginfo();
+      break;
+    case 'a':
+      acc = Buf.tel.value[0];
+      sendAcc(acc,0,0,0);
       break;
     case 'b'://send stop
       act_equal_soll();
@@ -531,6 +516,8 @@ void setPose(){
   Zachse.soll_step = Zachse.act_step;
   Wachse.soll_step = Wachse.act_step;
 }
+
+
 //berechnet die  parameter für eine bewegung für eine achse
 void getMoveParams(){
   dist = sqrt(pow(Xachse.soll_posi-Xachse.act_posi,2)+pow(Yachse.soll_posi-Yachse.act_posi,2)+pow(Zachse.soll_posi-Zachse.act_posi,2)); //gesamtdistans
@@ -539,151 +526,114 @@ void getMoveParams(){
   }
   ges_time = (dist/Speed)*1000000;
   //send_debug(dist,Speed,ges_time,0);
+  if(acc!=0)
+  {
+    //get longest singel dist
+    Se = abs(Xachse.soll_posi-Xachse.act_posi);
+    if(Se<abs(Yachse.soll_posi-Yachse.act_posi))
+      Se = abs(Yachse.soll_posi-Yachse.act_posi);
+    if(Se<abs(Zachse.soll_posi-Zachse.act_posi))
+      Se = abs(Zachse.soll_posi-Zachse.act_posi);
+    //calc max speed
+    if(Speed>sqrt(Se*acc))
+      Speed = sqrt(Se*acc);
+
+    tb = Speed/acc;
+    te = Se/Speed+tb;
+    tv = te - tb;
+    sendAcc(acc,tb,tv,te);
+    sendAcc(acc,Se,Speed,acc);
+  }
   BigM_move_params(Xachse);
   BigM_move_params(Yachse);
   BigM_move_params(Zachse);
-  MediM_move_params(Wachse);  
+  BigM_move_params(Wachse);  
 }
+
 void BigM_move_params(struct StepMotorBig &StepM){
   StepM.soll_step = StepM.soll_posi*float(StepM.steps_pmm);
   StepM.step_div = abs(StepM.soll_step-StepM.act_step);
   StepM.time_pstep = ges_time/StepM.step_div;
   StepM.time_next_step = time_now;
-  StepM.ramp_step = 0;
-  //send_debug(StepM.soll_step,StepM.act_step,StepM.step_div,StepM.time_pstep);
-}
-void MediM_move_params(struct StepMotorMedi &StepM){
-  StepM.soll_step = StepM.soll_posi*StepM.steps_pmm;
-  StepM.time_pstep = ges_time/abs(StepM.soll_step-StepM.act_step);
-  StepM.time_next_step = time_now;
-}
-unsigned long calc_steptime(struct StepMotorBig &StepM){
-  unsigned long curr_step = StepM.step_div-abs(StepM.soll_step-StepM.act_step);
-  unsigned long ist_time_pstep = StepM.time_pstep;
-  double soll_speed = (1/double(StepM.time_pstep)) * 100;
-  double next_speed;
-  int state = 0;
-  //send_debug(StepM.step_div,curr_step,soll_speed,acceleration_steps);
-  if(StepM.step_div/2<curr_step)//abbremsen
+  if(acc!=0)
   {
-    state = 3;
-    if(abs(StepM.step_div-curr_step) <= acceleration_steps)
-    {
-      state = 4;
-      next_speed = (soll_speed/double(acceleration_steps))*double((abs(StepM.step_div-(curr_step+1))+1));
-      ist_time_pstep = 1/(next_speed/100);
-    }
+    StepM.Se = abs(StepM.soll_posi-StepM.act_posi);
+    StepM.Vm = StepM.Se/(te-tb);
+    StepM.Bm = StepM.Vm/tb;
   }
-  else    //beschleunigung
-  {
-    state = 1;
-    if(curr_step < acceleration_steps)
-    {
-      state = 2;
-      next_speed = (soll_speed/double(acceleration_steps))*double(acceleration_steps-(acceleration_steps-curr_step)+1);
-      ist_time_pstep = 1/(next_speed/100);
-    }
-  }      
+}
+
+int checkForNextStep(struct StepMotorBig &StepM){
+  double t = (time_now-StepM.time_next_step)/1000000.0;
+  double soll_dist;
+  if(t<tb)
+    soll_dist = (StepM.Bm*pow(t,2)/2);
+  else if(t>=tb&&t<=tv)
+    soll_dist = StepM.Vm*t-(pow(StepM.Vm,2)/StepM.Bm)/2;
+  else
+    soll_dist = StepM.Vm*(te-tb)-(StepM.Bm/2)*pow(te-t,2);
   
-  if(ist_time_pstep>10000){
-    ist_time_pstep=10000;
-  }
-  //send_debug(ist_time_pstep,next_speed,state,curr_step);
-  return(ist_time_pstep);
+  double dist_left_to_move = abs(StepM.soll_step-StepM.act_step)/StepM.steps_pmm;
+  double dist_to_move = abs(StepM.step_div)/StepM.steps_pmm;
+  if(soll_dist>(dist_to_move-dist_left_to_move))
+    return 1;
+  return 0;
 }
+
 ///////////////////////////////////fürt einen schrit aus und gibt den actuellen an////////////////////////////7
 void treiberBig(struct StepMotorBig &StepM){
-  if(is_time_over(StepM.time_next_step)){
-    if(StepM.soll_step>StepM.act_step){
-      //one stapp forward
-      digitalWrite(StepM.pinENA,LOW);
-      digitalWrite(StepM.pinDIR,HIGH);
-      digitalWrite(StepM.pinPUL,LOW);
-      digitalWrite(StepM.pinPUL,HIGH);
-      if(acceleration_steps == 0)
-      {
-        StepM.time_next_step += StepM.time_pstep;
-      }
-      else
-      {
-        StepM.time_next_step += calc_steptime(StepM);
-      }
-      StepM.act_step++;
-    }else if(StepM.soll_step<StepM.act_step){
-      //one stepp back
-      digitalWrite(StepM.pinENA,LOW);
-      digitalWrite(StepM.pinDIR,LOW);
-      digitalWrite(StepM.pinPUL,LOW);
-      digitalWrite(StepM.pinPUL,HIGH);
-      //StepM.time_next_step += StepM.time_pstep;
-      StepM.time_next_step += calc_steptime(StepM);
-      StepM.act_step--;
-    }else if(is_time_over(StepM.time_next_step+500000)){
-      //turn motor off
-      digitalWrite(StepM.pinENA,HIGH);
-    }else{
-      //turn motor off
-      digitalWrite(StepM.pinPUL,HIGH);
-      digitalWrite(StepM.pinDIR,LOW);
-    }
-  }
-}
-void treiberMedi(struct StepMotorMedi &StepM){
-  if(is_time_over(StepM.time_next_step)){
-    if(StepM.soll_step>StepM.act_step){
-      //one stapp forward
-      StepMedi(StepM,1);
-      StepM.time_next_step += StepM.time_pstep;
-      StepM.act_step++;
-    }else if(StepM.soll_step<StepM.act_step){
-      //one stepp back
-      StepMedi(StepM,-1);
-      StepM.time_next_step += StepM.time_pstep;
-      StepM.act_step--;
-    }else if(is_time_over(StepM.time_next_step+5000000)){
-      //turn motor off
-      digitalWrite(StepM.pin1, LOW);
-      digitalWrite(StepM.pin2, LOW);
-      digitalWrite(StepM.pin3, LOW);
-      digitalWrite(StepM.pin4, LOW);
-    }
-  }
-}
-void StepMedi(struct StepMotorMedi &StepM,int direct){
-  StepM.motor_step += direct;
-  if (StepM.motor_step > 3){
-    StepM.motor_step = 0;
-  }else if (StepM.motor_step < 0){
-    StepM.motor_step = 3;
-  }
-  switch (StepM.motor_step)
+  if(acc == 0)
   {
-    case 0:    // 1010
-      digitalWrite(StepM.pin1, HIGH);
-      digitalWrite(StepM.pin2, LOW);
-      digitalWrite(StepM.pin3, HIGH);
-      digitalWrite(StepM.pin4, LOW);
-      break;
-    case 1:    // 0110
-      digitalWrite(StepM.pin1, LOW);
-      digitalWrite(StepM.pin2, HIGH);
-      digitalWrite(StepM.pin3, HIGH);
-      digitalWrite(StepM.pin4, LOW);
-      break;
-    case 2:    //0101
-      digitalWrite(StepM.pin1, LOW);
-      digitalWrite(StepM.pin2, HIGH);
-      digitalWrite(StepM.pin3, LOW);
-      digitalWrite(StepM.pin4, HIGH);
-      break;
-    case 3:    //1001
-      digitalWrite(StepM.pin1, HIGH);
-      digitalWrite(StepM.pin2, LOW);
-      digitalWrite(StepM.pin3, LOW);
-      digitalWrite(StepM.pin4, HIGH);
-      break;
+    if(is_time_over(StepM.time_next_step)){
+      StepM.time_next_step += StepM.time_pstep;
+      if(StepM.soll_step>StepM.act_step){
+        //one stapp forward
+        digitalWrite(StepM.pinENA,LOW);
+        digitalWrite(StepM.pinDIR,HIGH);
+        digitalWrite(StepM.pinPUL,LOW);
+        digitalWrite(StepM.pinPUL,HIGH);
+        StepM.act_step++;
+      }else if(StepM.soll_step<StepM.act_step){
+        //one stepp back
+        digitalWrite(StepM.pinENA,LOW);
+        digitalWrite(StepM.pinDIR,LOW);
+        digitalWrite(StepM.pinPUL,LOW);
+        digitalWrite(StepM.pinPUL,HIGH);
+        StepM.act_step--;
+      }else if(is_time_over(StepM.time_next_step+500000)){
+        //turn motor off
+        digitalWrite(StepM.pinENA,HIGH);
+      }else{
+        //turn motor off
+        digitalWrite(StepM.pinPUL,HIGH);
+        digitalWrite(StepM.pinDIR,LOW);
+      }
+    }
+  }else{
+    if(checkForNextStep(StepM)){
+      if(StepM.soll_step>StepM.act_step){
+        //one stapp forward
+        digitalWrite(StepM.pinENA,LOW);
+        digitalWrite(StepM.pinDIR,HIGH);
+        digitalWrite(StepM.pinPUL,LOW);
+        digitalWrite(StepM.pinPUL,HIGH);
+        StepM.act_step++;
+      }else if(StepM.soll_step<StepM.act_step){
+        //one stepp back
+        digitalWrite(StepM.pinENA,LOW);
+        digitalWrite(StepM.pinDIR,LOW);
+        digitalWrite(StepM.pinPUL,LOW);
+        digitalWrite(StepM.pinPUL,HIGH);
+        StepM.act_step--;
+      }
+      else if(StepM.soll_step==StepM.act_step)
+      {
+        digitalWrite(StepM.pinENA,HIGH);
+      }
+    }
   }
 }
+
 //Serial Send Funktions///////////////////////////////////////////////////////////////////
 void send_debug(float a,float b,float c,float d){
   send_variabelTestCommand('d',a,b,c,d);
@@ -719,6 +669,12 @@ void sendPIDvalues(float a,float b,float c,float d){
   send_variabelTestCommand('u',a,b,c,d);
   start_responstimer();
 }
+
+void sendAcc(float a,float b,float c,float d){
+  send_variabelTestCommand('a',a,b,c,d);
+  start_responstimer();
+}
+
 void send_variabelTestCommand(char C, float val1, float val2, float val3, float val4){
   SenBuf.tel.comand = C;
   SenBuf.tel.value[0] = val1;
