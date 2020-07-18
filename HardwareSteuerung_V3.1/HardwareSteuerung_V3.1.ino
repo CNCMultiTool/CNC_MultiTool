@@ -523,12 +523,14 @@ void setPose(){
 //berechnet die  parameter für eine bewegung für eine achse
 void getMoveParams(){
   dist = sqrt(pow(Xachse.soll_posi-Xachse.act_posi,2)+pow(Yachse.soll_posi-Yachse.act_posi,2)+pow(Zachse.soll_posi-Zachse.act_posi,2)); //gesamtdistans
+  ges_time = (dist/Speed)*1000000.0;
   if(dist == 0){
-    dist = abs(Wachse.soll_posi-Wachse.act_posi)*15;
+    dist = abs(Wachse.soll_posi-Wachse.act_posi);
+    ges_time = (dist/Speed)*1000000.0;
+    send_debug(dist,Speed,dist/Speed,Wachse.steps_pmm);
   }
-  ges_time = (dist/Speed)*1000000;
-  //send_debug(dist,Speed,ges_time,0);
-  if(acc!=0)
+
+  if(acc!=0 && Speed>Speed_min)
   {
     //get longest singel dist
     Se = abs(Xachse.soll_posi-Xachse.act_posi);
@@ -536,6 +538,8 @@ void getMoveParams(){
       Se = abs(Yachse.soll_posi-Yachse.act_posi);
     if(Se<abs(Zachse.soll_posi-Zachse.act_posi))
       Se = abs(Zachse.soll_posi-Zachse.act_posi);
+    if(Se<abs(Wachse.soll_posi-Wachse.act_posi))
+      Se = abs(Wachse.soll_posi-Wachse.act_posi);
     //calc max speed
 
     Speed_dif = Speed - Speed_min;
@@ -553,17 +557,16 @@ void getMoveParams(){
   BigM_move_params(Xachse);
   BigM_move_params(Yachse);
   BigM_move_params(Zachse);
-  BigM_move_params(Wachse);  
+  BigM_move_params(Wachse); 
 }
-
 void BigM_move_params(struct StepMotorBig &StepM){
   StepM.soll_step = StepM.soll_posi*float(StepM.steps_pmm);
   StepM.step_div = abs(StepM.soll_step-StepM.act_step);
   StepM.time_pstep = ges_time/StepM.step_div;
   StepM.time_next_step = time_now;
-  if(acc!=0)
+  if(acc!=0 && Speed>Speed_min)
   {
-    StepM.Vmin = Speed_min;
+    StepM.Vmin = (StepM.Vm/Speed_use) * Speed_min;
     StepM.Se = abs(StepM.soll_posi-StepM.act_posi);
     StepM.Vm = StepM.Se/(te-tb);
     StepM.Bm = (StepM.Vm-StepM.Vmin)/tb;
@@ -573,11 +576,10 @@ void BigM_move_params(struct StepMotorBig &StepM){
     //sendAcc(acc,StepM.Bm,StepM.Sb,StepM.Sv);
   }
 }
-
 unsigned long timeNextStep(struct StepMotorBig &StepM){
   unsigned long t_p_step = StepM.time_pstep;
   double V;
-  if(acc == 0)
+  if(acc==0 || Speed<=Speed_min)
     t_p_step = StepM.time_pstep;
   else
   {
@@ -594,7 +596,6 @@ unsigned long timeNextStep(struct StepMotorBig &StepM){
   }
   return t_p_step;
 }
-
 ///////////////////////////////////fürt einen schrit aus und gibt den actuellen an////////////////////////////7
 void treiberBig(struct StepMotorBig &StepM){
   if(is_time_over(StepM.time_next_step)){
@@ -624,7 +625,6 @@ void treiberBig(struct StepMotorBig &StepM){
     }
   }
 }
-
 //Serial Send Funktions///////////////////////////////////////////////////////////////////
 void send_debug(float a,float b,float c,float d){
   send_variabelTestCommand('d',a,b,c,d);
@@ -660,12 +660,10 @@ void sendPIDvalues(float a,float b,float c,float d){
   send_variabelTestCommand('u',a,b,c,d);
   start_responstimer();
 }
-
 void sendAcc(float a,float b,float c,float d){
   send_variabelTestCommand('a',a,b,c,d);
   start_responstimer();
 }
-
 void send_variabelTestCommand(char C, float val1, float val2, float val3, float val4){
   SenBuf.tel.comand = C;
   SenBuf.tel.value[0] = val1;
@@ -683,7 +681,6 @@ void start_responstimer(){
 void stop_responstimer(){
   wait_for_response = false;
 }
-
 void sendLast(){
   char bufS[1];
   if(lastSend[0 != '\0'])
