@@ -39,6 +39,7 @@ cnc_data::cnc_data()
 
     m_max_speed = 25;
     m_max_acc = 25;
+    m_speed_min = 5;
 
     m_plot_size = 250;
 
@@ -154,6 +155,7 @@ void cnc_data::loadSettings()
 
     m_max_speed = settings.value("m_max_speed").toDouble();
     m_max_acc = settings.value("m_max_acc").toDouble();
+    m_max_acc = settings.value("m_speed_min").toDouble();
     m_calibplateX = settings.value("m_calibplateX").toDouble();
     m_calibplateY = settings.value("m_calibplateY").toDouble();
     m_calibplateZ =  settings.value("m_calibplateZ").toDouble();
@@ -218,6 +220,7 @@ void cnc_data::saveSettings()
 
     settings.setValue("m_max_speed",m_max_speed);
     settings.setValue("m_max_acc",m_max_acc);
+    settings.setValue("m_speed_min",m_speed_min);
     settings.setValue("m_calibplateX",m_calibplateX);
     settings.setValue("m_calibplateY",m_calibplateY);
     settings.setValue("m_calibplateZ",m_calibplateZ);

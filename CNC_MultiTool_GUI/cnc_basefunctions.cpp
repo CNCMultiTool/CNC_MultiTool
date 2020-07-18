@@ -11,9 +11,9 @@ void cnc_basefunctions::test()
     emit Log("basefunction is alive");
 }
 
-void cnc_basefunctions::send_acc(float acc)
+void cnc_basefunctions::send_acc(float acc,float speed_min)
 {
-    send_to_cnc('a',acc,0,0,0,1);
+    send_to_cnc('a',acc,speed_min,0,0,1);
 }
 
 void cnc_basefunctions::send_PID_Bed(float P,float I,float D,float PO)

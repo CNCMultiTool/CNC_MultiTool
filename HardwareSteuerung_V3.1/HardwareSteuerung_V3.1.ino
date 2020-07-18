@@ -33,11 +33,17 @@ struct StepMotorBig {
 
   double Se;
   double Vm;
+  double Vmin;
   double Bm;
+  double Sb;
+  double Sv;
 }; 
 
 double acc = 0;
 double Speed = 30; //mm pro minute
+double Speed_use;
+double Speed_min = 5; //mm pro minute
+double Speed_dif;
 double Se;
 double Vm;
 double dist;
@@ -227,7 +233,6 @@ void setup() {
   cycle_time2 = 0;
   cycle_time3 = 0;
 }
-
 void loop() {
   time_now = micros();
   if(old_time_now>time_now)
@@ -295,7 +300,6 @@ void loop() {
     Serial.write(bufS,1);
   }
 }
-
 bool is_time_over(unsigned long value){
   if(value < threshold && time_now > threshold)
   {
@@ -442,7 +446,8 @@ void recive_msg(){
       break;
     case 'a':
       acc = Buf.tel.value[0];
-      sendAcc(acc,0,0,0);
+      Speed_min = Buf.tel.value[1];
+      sendAcc(acc,Speed_min,0,0);
       break;
     case 'b'://send stop
       act_equal_soll();
@@ -480,7 +485,6 @@ void recive_msg(){
       break;
   }
 }
-
 //strops the movement (set soll pos equal act pos)
 void act_equal_soll(){
   Xachse.soll_step = Xachse.act_step;
@@ -516,8 +520,6 @@ void setPose(){
   Zachse.soll_step = Zachse.act_step;
   Wachse.soll_step = Wachse.act_step;
 }
-
-
 //berechnet die  parameter für eine bewegung für eine achse
 void getMoveParams(){
   dist = sqrt(pow(Xachse.soll_posi-Xachse.act_posi,2)+pow(Yachse.soll_posi-Yachse.act_posi,2)+pow(Zachse.soll_posi-Zachse.act_posi,2)); //gesamtdistans
@@ -535,14 +537,18 @@ void getMoveParams(){
     if(Se<abs(Zachse.soll_posi-Zachse.act_posi))
       Se = abs(Zachse.soll_posi-Zachse.act_posi);
     //calc max speed
-    if(Speed>sqrt(Se*acc))
-      Speed = sqrt(Se*acc);
 
-    tb = Speed/acc;
+    Speed_dif = Speed - Speed_min;
+    if(Speed>sqrt(Se*acc))
+      Speed_use = sqrt(Se*acc);
+    else
+      Speed_use = Speed;
+    if(Speed<Speed_min)
+      Speed_use = Speed;
+      
+    tb = Speed_dif/acc;
     te = Se/Speed+tb;
     tv = te - tb;
-    sendAcc(acc,tb,tv,te);
-    sendAcc(acc,Se,Speed,acc);
   }
   BigM_move_params(Xachse);
   BigM_move_params(Yachse);
@@ -557,79 +563,64 @@ void BigM_move_params(struct StepMotorBig &StepM){
   StepM.time_next_step = time_now;
   if(acc!=0)
   {
+    StepM.Vmin = Speed_min;
     StepM.Se = abs(StepM.soll_posi-StepM.act_posi);
     StepM.Vm = StepM.Se/(te-tb);
-    StepM.Bm = StepM.Vm/tb;
+    StepM.Bm = (StepM.Vm-StepM.Vmin)/tb;
+    StepM.Sb = StepM.Bm*pow(tb,2)/2+StepM.Vmin*tb;
+    StepM.Sv = StepM.Se-StepM.Sb;
+    //sendAcc(acc,StepM.Vmin,StepM.Vm,StepM.Se);
+    //sendAcc(acc,StepM.Bm,StepM.Sb,StepM.Sv);
   }
 }
 
-int checkForNextStep(struct StepMotorBig &StepM){
-  double t = (time_now-StepM.time_next_step)/1000000.0;
-  double soll_dist;
-  if(t<tb)
-    soll_dist = (StepM.Bm*pow(t,2)/2);
-  else if(t>=tb&&t<=tv)
-    soll_dist = StepM.Vm*t-(pow(StepM.Vm,2)/StepM.Bm)/2;
+unsigned long timeNextStep(struct StepMotorBig &StepM){
+  unsigned long t_p_step = StepM.time_pstep;
+  double V;
+  if(acc == 0)
+    t_p_step = StepM.time_pstep;
   else
-    soll_dist = StepM.Vm*(te-tb)-(StepM.Bm/2)*pow(te-t,2);
-  
-  double dist_left_to_move = abs(StepM.soll_step-StepM.act_step)/StepM.steps_pmm;
-  double dist_to_move = abs(StepM.step_div)/StepM.steps_pmm;
-  if(soll_dist>(dist_to_move-dist_left_to_move))
-    return 1;
-  return 0;
+  {
+    
+    double S = (abs(StepM.step_div) - abs(StepM.soll_step-StepM.act_step))/StepM.steps_pmm;
+    if(S <= StepM.Sb)
+      V = StepM.Vmin + ((StepM.Vm-StepM.Vmin)/StepM.Sb)*S;
+    else if(S > StepM.Sb && S < StepM.Sv)
+      V = StepM.Vm;
+    else if(S >= StepM.Sv)
+      V = StepM.Vm - ((StepM.Vm-StepM.Vmin)/StepM.Sb)*(S-StepM.Sv);
+    t_p_step = 1000000.0/(StepM.steps_pmm*V);
+    //sendAcc(acc,V,S,StepM.step_div);
+  }
+  return t_p_step;
 }
 
 ///////////////////////////////////fürt einen schrit aus und gibt den actuellen an////////////////////////////7
 void treiberBig(struct StepMotorBig &StepM){
-  if(acc == 0)
-  {
-    if(is_time_over(StepM.time_next_step)){
-      StepM.time_next_step += StepM.time_pstep;
-      if(StepM.soll_step>StepM.act_step){
-        //one stapp forward
-        digitalWrite(StepM.pinENA,LOW);
-        digitalWrite(StepM.pinDIR,HIGH);
-        digitalWrite(StepM.pinPUL,LOW);
-        digitalWrite(StepM.pinPUL,HIGH);
-        StepM.act_step++;
-      }else if(StepM.soll_step<StepM.act_step){
-        //one stepp back
-        digitalWrite(StepM.pinENA,LOW);
-        digitalWrite(StepM.pinDIR,LOW);
-        digitalWrite(StepM.pinPUL,LOW);
-        digitalWrite(StepM.pinPUL,HIGH);
-        StepM.act_step--;
-      }else if(is_time_over(StepM.time_next_step+500000)){
-        //turn motor off
-        digitalWrite(StepM.pinENA,HIGH);
-      }else{
-        //turn motor off
-        digitalWrite(StepM.pinPUL,HIGH);
-        digitalWrite(StepM.pinDIR,LOW);
-      }
-    }
-  }else{
-    if(checkForNextStep(StepM)){
-      if(StepM.soll_step>StepM.act_step){
-        //one stapp forward
-        digitalWrite(StepM.pinENA,LOW);
-        digitalWrite(StepM.pinDIR,HIGH);
-        digitalWrite(StepM.pinPUL,LOW);
-        digitalWrite(StepM.pinPUL,HIGH);
-        StepM.act_step++;
-      }else if(StepM.soll_step<StepM.act_step){
-        //one stepp back
-        digitalWrite(StepM.pinENA,LOW);
-        digitalWrite(StepM.pinDIR,LOW);
-        digitalWrite(StepM.pinPUL,LOW);
-        digitalWrite(StepM.pinPUL,HIGH);
-        StepM.act_step--;
-      }
-      else if(StepM.soll_step==StepM.act_step)
-      {
-        digitalWrite(StepM.pinENA,HIGH);
-      }
+  if(is_time_over(StepM.time_next_step)){
+    if(StepM.soll_step>StepM.act_step){
+      //one stapp forward
+      digitalWrite(StepM.pinENA,LOW);
+      digitalWrite(StepM.pinDIR,HIGH);
+      digitalWrite(StepM.pinPUL,LOW);
+      digitalWrite(StepM.pinPUL,HIGH);
+      StepM.act_step++;
+      StepM.time_next_step += timeNextStep(StepM);
+    }else if(StepM.soll_step<StepM.act_step){
+      //one stepp back
+      digitalWrite(StepM.pinENA,LOW);
+      digitalWrite(StepM.pinDIR,LOW);
+      digitalWrite(StepM.pinPUL,LOW);
+      digitalWrite(StepM.pinPUL,HIGH);
+      StepM.act_step--;
+      StepM.time_next_step += timeNextStep(StepM);
+    }else if(is_time_over(StepM.time_next_step+500000)){
+      //turn motor off
+      digitalWrite(StepM.pinENA,HIGH);
+    }else{
+      //turn motor off
+      digitalWrite(StepM.pinPUL,HIGH);
+      digitalWrite(StepM.pinDIR,LOW);
     }
   }
 }

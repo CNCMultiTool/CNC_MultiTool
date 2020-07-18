@@ -45,7 +45,7 @@ signals:
 
 public slots:
     void send_init();
-    void send_acc(float acc);
+    void send_acc(float acc, float speed_min);
     void send_PID(float P,float I,float D,float PO);
     void send_Temp_Setting(float R_vor,float B_Value,float R_nen);
     void send_PID_Bed(float P,float I,float D,float PO);
