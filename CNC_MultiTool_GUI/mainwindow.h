@@ -63,6 +63,7 @@ signals:
 private slots:
     void Log(const QString &s);
     void errorLog(const QString &s);
+    void DebugLog(const QString &s);
 
     void show_position();
     void show_settings();

@@ -38,6 +38,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(m_basefunctions,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_basefunctions,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
+    connect(m_basefunctions,SIGNAL(DebugLog(QString)),this,SLOT(DebugLog(QString)));
     connect(m_basefunctions,SIGNAL(trigger_send()),m_serial,SLOT(serial_send_command()));
     connect(m_basefunctions,SIGNAL(show_send_queue()),this,SLOT(show_send_queue()));
     connect(m_basefunctions,SIGNAL(show_status()),this,SLOT(show_status()));
@@ -103,6 +104,12 @@ void MainWindow::Log(const QString &s)
 {
     QString text = QDateTime::currentDateTime().toString("hh:mm:ss.zzz ") + s;
     ui->textEditLog->append(text);
+}
+
+void MainWindow::DebugLog(const QString &s)
+{
+    QString text = QDateTime::currentDateTime().toString("hh:mm:ss.zzz ") + s;
+    ui->textEditDebugLog->append(text);
 }
 
 void MainWindow::errorLog(const QString &s)
@@ -250,6 +257,7 @@ void MainWindow::on_pushButtonSerialConnect_clicked()
         m_basefunctions->send_PID_Bed(m_database->m_KP,m_database->m_KI,m_database->m_KD,m_database->m_POn);
         m_basefunctions->send_Temp_Setting_Bed(m_database->m_R_vor,m_database->m_bValue,m_database->m_R_nen);
         m_basefunctions->send_settings(m_database->m_soll_speed,-1,m_database->m_soll_filament,m_database->m_soll_bedTemp);
+        m_basefunctions->send_acc(m_database->m_max_acc,m_database->m_speed_min);
     }
 }
 
@@ -666,6 +674,18 @@ void MainWindow::calibratenValueBox()
     DSpinBox_maxSpeed->setValue(m_database->m_max_speed);
     form.addRow("Max Speed mm/s", DSpinBox_maxSpeed);
 
+    //acc
+    QDoubleSpinBox *DSpinBox_max_acc = new QDoubleSpinBox(&dialog);
+    DSpinBox_max_acc->setRange(-9999999,999999);
+    DSpinBox_max_acc->setValue(m_database->m_max_acc);
+    form.addRow("Max Acc mm/s^2", DSpinBox_max_acc);
+
+    //acc
+    QDoubleSpinBox *DSpinBox_speed_min = new QDoubleSpinBox(&dialog);
+    DSpinBox_speed_min->setRange(-9999999,999999);
+    DSpinBox_speed_min->setValue(m_database->m_speed_min);
+    form.addRow("Min Speed mm/s^2", DSpinBox_speed_min);
+
     // Add some standard buttons (Cancel/Ok) at the bottom of the dialog
     QDialogButtonBox buttonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel,
                                Qt::Horizontal, &dialog);
@@ -688,7 +708,12 @@ void MainWindow::calibratenValueBox()
         m_database->m_calibplateZ = DSpinBox_calibplateZ->value();
         //max values
         m_database->m_max_speed = DSpinBox_maxSpeed->value(); //mm per sec
+        m_database->m_max_acc = DSpinBox_max_acc->value(); //mm per sec sec
+        m_database->m_speed_min = DSpinBox_speed_min->value(); //mm per sec
+
         m_database->m_useCalibPlate = CheckBox_makeCalib->isChecked();
+
+        m_basefunctions->send_acc(m_database->m_max_acc,m_database->m_speed_min);
 
         m_database->saveSettings();
     }

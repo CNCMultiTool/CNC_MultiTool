@@ -11,6 +11,11 @@ void cnc_basefunctions::test()
     emit Log("basefunction is alive");
 }
 
+void cnc_basefunctions::send_acc(float acc,float speed_min)
+{
+    send_to_cnc('a',acc,speed_min,0,0,1);
+}
+
 void cnc_basefunctions::send_PID_Bed(float P,float I,float D,float PO)
 {
     send_to_cnc('k',P,I,D,PO,1);
@@ -78,50 +83,16 @@ void cnc_basefunctions::cycletimeTest()
 
 void cnc_basefunctions::send_settings(float speed,float temperatur,float filament,float bed_temp)
 {
-    float s = speed;
-    float t = temperatur;
-    float f = filament;
-    float a = bed_temp;
-    if(a<0)
-        a = m_database->m_soll_bedTemp;
-    if(s<0)
-        s = m_database->m_soll_speed;
-    if(s > m_database->m_max_speed)
-        s = m_database->m_max_speed;
-    if(t<0)
-        t = m_database->m_soll_temperatur;
-    if(f<0)
-        f = m_database->m_soll_filament;
-    if(f<1)
-        f = 1;
-
-
-    m_database->set_soll_settings(s,t,f,a);
-    //send_to_cnc('s',s,t,f,0,1);
-    send_to_cnc('w',s,t,f,a,1);
+    if(speed > m_database->m_max_speed)
+        speed = m_database->m_max_speed;
+    send_to_cnc('w',speed,temperatur,filament,bed_temp,1);
 }
 
-void cnc_basefunctions::settings_inQ(float speed,float temperatur,float filament,float acc)
+void cnc_basefunctions::settings_inQ(float speed,float temperatur,float filament,float bed_temp)
 {
-    float s = speed;
-    float t = temperatur;
-    float f = filament;
-    float a = acc;
-    if(a<0)
-        a = m_database->m_soll_bedTemp;
-    if(s<0)
-        s = m_database->m_soll_speed;
-    if(s > m_database->m_max_speed)
-        s = m_database->m_max_speed;
-    if(t<0)
-        t = m_database->m_soll_temperatur;
-    if(f<0)
-        f = m_database->m_soll_filament;
-    if(f<1)
-        f = 1;
-
-    m_database->set_soll_settings(s,t,f,a);
-    send_to_cnc('s',s,t,f,0,2);
+    if(speed > m_database->m_max_speed)
+        speed = m_database->m_max_speed;
+    send_to_cnc('s',speed,temperatur,filament,bed_temp,2);
 }
 
 void cnc_basefunctions::send_init()
@@ -181,17 +152,8 @@ void cnc_basefunctions::trigger_next_command()
         }
         int action = m_database->cnc_send_commands[0].action;
 
-        //emit Log("trigger_next_command (action: "+
-        //         QString::number(m_database->cnc_send_commands[0].action)+
-        //        ", command: "+QString(m_database->cnc_send_commands[0].command)+")");
-
         if(action == 1||action == 2)
         {
-            //if(m_database->m_HWisMoving)//did not send next command while HW is working
-            //{
-            //    emit Log("Hardware is Working");
-            //    return;
-            //}
             char n_com = m_database->cnc_send_commands[0].command;
             if(n_com == 'm' || n_com == 'j' ||n_com == 'p')
             {
@@ -203,6 +165,28 @@ void cnc_basefunctions::trigger_next_command()
             }
             if(n_com == 'w' || n_com == 's')
             {
+                float s = m_database->cnc_send_commands[0].value1;
+                float t = m_database->cnc_send_commands[0].value2;
+                float f = m_database->cnc_send_commands[0].value3;
+                float b = m_database->cnc_send_commands[0].value4;
+                if(b<0)
+                    b = m_database->m_soll_bedTemp;
+                if(s<0)
+                    s = m_database->m_soll_speed;
+                if(s > m_database->m_max_speed)
+                    s = m_database->m_max_speed;
+                if(t<0)
+                    t = m_database->m_soll_temperatur;
+                if(f<0)
+                    f = m_database->m_soll_filament;
+                if(f<1)
+                    f = 1;
+
+                m_database->cnc_send_commands[0].value1 = s;
+                m_database->cnc_send_commands[0].value2 = t;
+                m_database->cnc_send_commands[0].value3 = f;
+                m_database->cnc_send_commands[0].value4 = b;
+
                 m_database->set_soll_settings(m_database->cnc_send_commands[0].value1,
                         m_database->cnc_send_commands[0].value2,
                         m_database->cnc_send_commands[0].value3,
@@ -313,8 +297,6 @@ void cnc_basefunctions::execute_command(char command,float value1,float value2,f
         //emit Log("real traveled speed:"+QString::number((tracDist/speedTimer.elapsed())*1000)+" dist:"+QString::number(tracDist)+"mm time:"+QString::number(speedTimer.elapsed())+"ms soll_speed:"+QString::number(m_database->m_act_speed));
 
         m_database->set_position(value1,value2,value3,value4);
-        //m_database->FileLog("INFO recived set position and ready for next command: X:"+QString::number(value1)+" Y:"+QString::number(value2)+" Z:"+QString::number(value3)+" W:"+QString::number(value4));
-        //m_database->m_HWisMoving = false;
         m_database->m_HW_status = 0;
         emit show_status();
         trigger_next_command();
@@ -323,6 +305,9 @@ void cnc_basefunctions::execute_command(char command,float value1,float value2,f
         m_database->set_settings(value1,value2,value3,value4);
         //m_database->FileLog("INFO recived current setting: speed:"+QString::number(value1)+" temperatur:"+QString::number(value2)+" filament:"+QString::number(value3)+" ACCStep:"+QString::number(value4));
         trigger_next_command();
+        break;
+    case 'a'://set the actual settings
+        m_database->m_max_acc = value1;
         break;
     case 'j'://set the actual settings
         m_database->set_settings(value1,value2,value3,value4);
@@ -388,6 +373,30 @@ void cnc_basefunctions::execute_command(char command,float value1,float value2,f
         LogText += " value 4 :"+QString::number(value4);
         m_database->FileLog(LogText);
         emit Log(LogText);
+        if(value1 == 1)
+            emit DebugLog("tb: "+QString::number(value2)+" tv: "+QString::number(value3)+" te: "+QString::number(value4));
+        if(value1 == 2)
+            emit DebugLog("Se: "+QString::number(value2)+" acc: "+QString::number(value3)+" Speed_use: "+QString::number(value4));
+        if(value1 == 3)
+            emit DebugLog("Vmin: "+QString::number(value2)+" Vm: "+QString::number(value3)+" Se: "+QString::number(value4));
+        if(value1 == 4)
+            emit DebugLog("Bm: "+QString::number(value2)+" Sb: "+QString::number(value3)+" Sv: "+QString::number(value4));
+        if(value1 == 5)
+            emit DebugLog("Acc Time: "+QString::number(value2)+" : "+QString::number(value3)+" dist: "+QString::number(value4));
+        if(value1 == 6)
+            emit DebugLog("Dcc time: "+QString::number(value2)+" : "+QString::number(value3)+" dist: "+QString::number(value4));
+        if(value1 == 7)
+            emit DebugLog("V: "+QString::number(value2)+" S: "+QString::number(value3)+" T: "+QString::number(value4));
+        if(value1 == 37)
+            emit DebugLog("X Tmove: "+QString::number(value2));
+        if(value1 == 43)
+            emit DebugLog("Y Tmove: "+QString::number(value2));
+        if(value1 == 49)
+            emit DebugLog("Z Tmove: "+QString::number(value2));
+        if(value1 == 31)
+            emit DebugLog("W Tmove: "+QString::number(value2));
+
+
         break;
     default:
         m_database->FileLog("unknown kommand from Arduino");

@@ -5,7 +5,7 @@ CNC_automation::CNC_automation(cnc_data *database,cnc_basefunctions *basefunctio
     m_pause = false;
     m_database = database;
     m_basefunctions = basefunctions;
-    m_F_max = 50;
+    m_F_max = m_database->m_max_speed;
     m_F_old = 0;
     m_X = 0;
     m_Y = 0;
@@ -311,6 +311,16 @@ void CNC_automation::G_Code_Parser()
         {
             m_basefunctions->settings_inQ(m_F/60,m_S,-1,-1);
             m_basefunctions->wait_for_heating();
+            m_validCommand = true;
+        }
+        if(isCommand("M190",newLine))//set Bed Temperatur
+        {
+            m_basefunctions->settings_inQ(m_F/60,-1,-1,m_S);
+            m_validCommand = true;
+        }
+        if(isCommand("M140",newLine))//set Bed Temperatur
+        {
+            m_basefunctions->settings_inQ(m_F/60,-1,-1,m_S);
             m_validCommand = true;
         }
         if(!m_validCommand)

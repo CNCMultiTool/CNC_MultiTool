@@ -97,6 +97,8 @@ public:
 
     //max values
     float m_max_speed; //mm per sec
+    float m_max_acc; //max acc
+    float m_speed_min;
 
     //PID
     float m_KP,m_KI,m_KD;
