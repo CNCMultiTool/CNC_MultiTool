@@ -36,6 +36,7 @@ private:
 signals:
     void Log(const QString &s);
     void errorLog(const QString &s);
+    void DebugLog(const QString &s);
     void trigger_send();
     void show_send_queue();
     void show_status();

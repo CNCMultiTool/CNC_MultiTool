@@ -373,6 +373,30 @@ void cnc_basefunctions::execute_command(char command,float value1,float value2,f
         LogText += " value 4 :"+QString::number(value4);
         m_database->FileLog(LogText);
         emit Log(LogText);
+        if(value1 == 1)
+            emit DebugLog("tb: "+QString::number(value2)+" tv: "+QString::number(value3)+" te: "+QString::number(value4));
+        if(value1 == 2)
+            emit DebugLog("Se: "+QString::number(value2)+" acc: "+QString::number(value3)+" Speed_use: "+QString::number(value4));
+        if(value1 == 3)
+            emit DebugLog("Vmin: "+QString::number(value2)+" Vm: "+QString::number(value3)+" Se: "+QString::number(value4));
+        if(value1 == 4)
+            emit DebugLog("Bm: "+QString::number(value2)+" Sb: "+QString::number(value3)+" Sv: "+QString::number(value4));
+        if(value1 == 5)
+            emit DebugLog("Acc Time: "+QString::number(value2)+" : "+QString::number(value3)+" dist: "+QString::number(value4));
+        if(value1 == 6)
+            emit DebugLog("Dcc time: "+QString::number(value2)+" : "+QString::number(value3)+" dist: "+QString::number(value4));
+        if(value1 == 7)
+            emit DebugLog("V: "+QString::number(value2)+" S: "+QString::number(value3)+" T: "+QString::number(value4));
+        if(value1 == 37)
+            emit DebugLog("X Tmove: "+QString::number(value2));
+        if(value1 == 43)
+            emit DebugLog("Y Tmove: "+QString::number(value2));
+        if(value1 == 49)
+            emit DebugLog("Z Tmove: "+QString::number(value2));
+        if(value1 == 31)
+            emit DebugLog("W Tmove: "+QString::number(value2));
+
+
         break;
     default:
         m_database->FileLog("unknown kommand from Arduino");

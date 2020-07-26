@@ -155,7 +155,7 @@ void cnc_data::loadSettings()
 
     m_max_speed = settings.value("m_max_speed").toDouble();
     m_max_acc = settings.value("m_max_acc").toDouble();
-    m_max_acc = settings.value("m_speed_min").toDouble();
+    m_speed_min = settings.value("m_speed_min").toDouble();
     m_calibplateX = settings.value("m_calibplateX").toDouble();
     m_calibplateY = settings.value("m_calibplateY").toDouble();
     m_calibplateZ =  settings.value("m_calibplateZ").toDouble();

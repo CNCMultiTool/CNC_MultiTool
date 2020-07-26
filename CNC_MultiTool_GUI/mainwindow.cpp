@@ -38,6 +38,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(m_basefunctions,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_basefunctions,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
+    connect(m_basefunctions,SIGNAL(DebugLog(QString)),this,SLOT(DebugLog(QString)));
     connect(m_basefunctions,SIGNAL(trigger_send()),m_serial,SLOT(serial_send_command()));
     connect(m_basefunctions,SIGNAL(show_send_queue()),this,SLOT(show_send_queue()));
     connect(m_basefunctions,SIGNAL(show_status()),this,SLOT(show_status()));
@@ -103,6 +104,12 @@ void MainWindow::Log(const QString &s)
 {
     QString text = QDateTime::currentDateTime().toString("hh:mm:ss.zzz ") + s;
     ui->textEditLog->append(text);
+}
+
+void MainWindow::DebugLog(const QString &s)
+{
+    QString text = QDateTime::currentDateTime().toString("hh:mm:ss.zzz ") + s;
+    ui->textEditDebugLog->append(text);
 }
 
 void MainWindow::errorLog(const QString &s)

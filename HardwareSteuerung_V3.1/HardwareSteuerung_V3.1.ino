@@ -37,11 +37,14 @@ struct StepMotorBig {
   double Bm;
   double Sb;
   double Sv;
+  double Tmove;
+  int sendonce;
 }; 
 
 double acc = 0;
 double Speed = 30; //mm pro minute
 double Speed_use;
+double Speed_max;
 double Speed_min = 5; //mm pro minute
 double Speed_dif;
 double Se;
@@ -540,20 +543,26 @@ void getMoveParams(){
       Se = abs(Zachse.soll_posi-Zachse.act_posi);
     if(Se<abs(Wachse.soll_posi-Wachse.act_posi))
       Se = abs(Wachse.soll_posi-Wachse.act_posi);
-    //calc max speed
 
-    Speed_dif = Speed - Speed_min;
-    if(Speed>sqrt(Se*acc))
-      Speed_use = sqrt(Se*acc);
-    else
-      Speed_use = Speed;
-    if(Speed<Speed_min)
-      Speed_use = Speed;
+
+    Speed_use = (Se*1000000.0)/ges_time;
+    //calc max speed
+    //if(Speed_max>sqrt(Se*acc))
+    //  Speed_use = Speed_min;
+    //else
+    //  Speed_use = Speed_max;
       
+    //if(Speed_use<Speed_min)
+    //  Speed_use = Speed_min;
+
+    Speed_dif = Speed_use - Speed_min;
+    
     tb = Speed_dif/acc;
-    te = Se/Speed+tb;
+    te = Se/Speed_use+tb;
     tv = te - tb;
   }
+  //send_variabelTestCommand('d',1,tb,tv,te);
+  //send_variabelTestCommand('d',2,Se,acc,Speed_use);
   BigM_move_params(Xachse);
   BigM_move_params(Yachse);
   BigM_move_params(Zachse);
@@ -564,40 +573,61 @@ void BigM_move_params(struct StepMotorBig &StepM){
   StepM.step_div = abs(StepM.soll_step-StepM.act_step);
   StepM.time_pstep = ges_time/StepM.step_div;
   StepM.time_next_step = time_now;
-  if(acc!=0 && Speed>Speed_min)
+  if(acc!=0 && Speed_use>Speed_min)
   {
-    StepM.Vmin = (StepM.Vm/Speed_use) * Speed_min;
     StepM.Se = abs(StepM.soll_posi-StepM.act_posi);
-    StepM.Vm = StepM.Se/(te-tb);
-    StepM.Bm = (StepM.Vm-StepM.Vmin)/tb;
+    StepM.Vmin = (Speed_min/Se) * StepM.Se;
+    StepM.Vm = StepM.Se/tv-StepM.Vmin;
+    StepM.Bm = StepM.Vm/tb;
     StepM.Sb = StepM.Bm*pow(tb,2)/2+StepM.Vmin*tb;
     StepM.Sv = StepM.Se-StepM.Sb;
-    //sendAcc(acc,StepM.Vmin,StepM.Vm,StepM.Se);
-    //sendAcc(acc,StepM.Bm,StepM.Sb,StepM.Sv);
+    StepM.Tmove = time_now;
+    StepM.sendonce = 0;
   }
+  //send_variabelTestCommand('d',3,StepM.Vmin,StepM.Vm,StepM.Se);
+  //send_variabelTestCommand('d',4,StepM.Bm,StepM.Sb,StepM.Sv);
+  
 }
 unsigned long timeNextStep(struct StepMotorBig &StepM){
   unsigned long t_p_step = StepM.time_pstep;
   double V;
-  if(acc==0 || Speed<=Speed_min)
+  if(acc==0 || Speed_use<=Speed_min)
     t_p_step = StepM.time_pstep;
   else
   {
-    
-    double S = (abs(StepM.step_div) - abs(StepM.soll_step-StepM.act_step))/StepM.steps_pmm;
-    if(S <= StepM.Sb)
-      V = StepM.Vmin + ((StepM.Vm-StepM.Vmin)/StepM.Sb)*S;
-    else if(S > StepM.Sb && S < StepM.Sv)
-      V = StepM.Vm;
-    else if(S >= StepM.Sv)
-      V = StepM.Vm - ((StepM.Vm-StepM.Vmin)/StepM.Sb)*(S-StepM.Sv);
+    double S = ((float)abs(StepM.step_div) - (float)abs(StepM.soll_step-StepM.act_step))/(float)StepM.steps_pmm;
+    if(S <= StepM.Sb && S <= (StepM.Se/2))
+      V = StepM.Vmin + ((StepM.Vm)/StepM.Sb)*S;
+    //else if(S > StepM.Sb && S < StepM.Sv)
+    //  V = StepM.Vmin + StepM.Vm;
+    else if(S >= StepM.Sv && S > (StepM.Se/2))
+      V = StepM.Vmin + StepM.Vm - (StepM.Vm/StepM.Sb)*(S-StepM.Sv);
+    else
+      V = StepM.Vmin + StepM.Vm;
     t_p_step = 1000000.0/(StepM.steps_pmm*V);
-    //sendAcc(acc,V,S,StepM.step_div);
+    //send_variabelTestCommand('d',7,V,S,(time_now-StepM.Tmove)/1000000);
+    /*
+    if(S > StepM.Sb && StepM.sendonce == 0)
+    {
+      send_variabelTestCommand('d',5,StepM.pinENA,(time_now-StepM.Tmove)/1000000,StepM.Sb);
+      StepM.sendonce = 1;
+    }
+    if(S > StepM.Sv && StepM.sendonce == 1)
+    {
+      send_variabelTestCommand('d',6,StepM.pinENA,(time_now-StepM.Tmove)/1000000,StepM.Sv);
+      StepM.sendonce = 2;
+    }
+    */
   }
   return t_p_step;
 }
 ///////////////////////////////////fürt einen schrit aus und gibt den actuellen an////////////////////////////7
 void treiberBig(struct StepMotorBig &StepM){
+  /*if(StepM.Tmove != 0 && StepM.soll_step==StepM.act_step)
+  {
+    send_variabelTestCommand('d',StepM.pinENA,(time_now-StepM.Tmove)/1000000,0,0);
+    StepM.Tmove = 0;
+  }*/
   if(is_time_over(StepM.time_next_step)){
     if(StepM.soll_step>StepM.act_step){
       //one stapp forward
