@@ -39,8 +39,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_basefunctions,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_basefunctions,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
     connect(m_basefunctions,SIGNAL(DebugLog(QString)),this,SLOT(DebugLog(QString)));
-    connect(m_basefunctions,SIGNAL(trigger_send()),m_serial,SLOT(serial_send_command()));
-    connect(m_basefunctions,SIGNAL(show_send_queue()),this,SLOT(show_send_queue()));
+    connect(m_basefunctions,SIGNAL(show_send_mes(QString)),m_serial,SLOT(serial_send(QString)));
     connect(m_basefunctions,SIGNAL(show_status()),this,SLOT(show_status()));
     connect(m_basefunctions,SIGNAL(DataToGraph(float,float,float,float)),this,SLOT(addToGraph(float,float,float,float)));
     connect(m_basefunctions,SIGNAL(show_alive()),this,SLOT(show_alive()));
@@ -404,7 +403,7 @@ void MainWindow::on_pushButton_Zcalib_pressed()
 
 void MainWindow::on_pushButton_browseGCode_pressed()
 {
-    m_serial->stop_timeouts();
+
     QString directory = QDir::toNativeSeparators(QFileDialog::getOpenFileName(this, tr("Open File"),QDir::currentPath(),tr("G-Code (*.gcode)")));
 
     Log(directory);
@@ -461,7 +460,7 @@ void MainWindow::on_pushButton_clear_queue_clicked()
 void MainWindow::on_pushButton_trigger_next_clicked()
 {
     ui->textEditLog->append("trigger sending manuel");
-    m_basefunctions->trigger_next_command();
+    //m_basefunctions->trigger_next_command();
     show_send_queue();
 }
 
@@ -908,7 +907,7 @@ void MainWindow::on_pushButton_test_clicked()
     //ui->textEditLog->append("cycletime cheack");
     //m_basefunctions->cycletimeTest();
     //m_basefunctions->trigger_next_command();
-    m_serial->serial_fasttimeout_handler();
+
 }
 
 void MainWindow::on_doubleSpinBoxZOffset_valueChanged(const QString &arg1)
