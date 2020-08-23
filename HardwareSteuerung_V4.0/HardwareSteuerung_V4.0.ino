@@ -95,7 +95,8 @@ int temprelai_Bed = 3;
 enum eGCodeState{
   GCodeRun,
   GCodePause,
-  GCodeStop  
+  GCodeStop, 
+  GCodeCreate 
 };
 enum eComandName{
   FAIL,
@@ -114,13 +115,14 @@ enum eComandName{
   Q104,//Continue G-Code
   Q105,//Abord G-code
   Q106,//get list of File on SD Card
-  Q107//Delete File
+  Q107,//Delete File
+  XXX
 };
 struct sComand {
   eComandName eIndent;
   char cName[6];
 };
-sComand lComandList[16] = {
+sComand lComandList[17] = {
   {G1,"G1"},
   {G9,"G9"},
   {G92,"G92"},
@@ -136,7 +138,8 @@ sComand lComandList[16] = {
   {Q104,"Q104"},//Continue G-Code
   {Q105,"Q105"},//Abord G-code
   {Q106,"Q106"},//get list of File on SD Card
-  {Q107,"Q107"}//Delete File 
+  {Q107,"Q107"},//Delete File
+  {XXX,"XXX"}
 };
 char reciveBuf[128];
 unsigned int reciveWindex = 0; 
@@ -268,7 +271,8 @@ void setup() {
 void loop(){
   // put your main code here, to run repeatedly:
   time_now = micros();
-  checkCommandFromSerial();
+  //read Line From
+  checkCommandFromSerial();   
 
   TempControle();
   
@@ -298,6 +302,7 @@ void loop(){
   //read next G-Code Line from File if exist
   if(GState == GCodeRun && motors_in_move == 0)
   {
+    Serial.println("main: read GCODE line");
     executeNextGCodeLine(SDreadLine());
   }
 }
@@ -511,52 +516,74 @@ int treiberBig(struct StepMotorBig &StepM){
   }
   return 0;
 }
-//read G-Code from SD-Card
+//SD Card Functions
+void start_gcode(char fileName[]){
+  if(open_file(fileName)==0){
+    GState = GCodeRun;
+  }else{
+    Serial.println("start_gcode: File not exist");
+  }
+}
 int open_file(char fileName[]){
-  *strchr(fileName,'\n') = '\0';
-  char* newFileName = fileName+5;
-  if(!SD.exists(newFileName))
+  if(!myFile)
+    myFile.close();
+  if(!SD.exists(fileName))
     return -1;
-  myFile = SD.open(newFileName);
+  myFile = SD.open(fileName);
   if(myFile)
     return 0;
   else
     return -1;
 }
 int create_file(char fileName[]){
-  *strchr(fileName,'\n') = '\0';
-  char* newFileName = fileName+5;
-  if(SD.exists(newFileName))
-    SD.remove(newFileName);
-  myFile = SD.open(newFileName, FILE_WRITE);
-
-  myFile.println("G92 X0 Y0 Z0 E0");
-  myFile.println("G1 X10 Y0 Z0 E0");
-  myFile.println("G1 X0 Y10 Z0 E0");
-  myFile.println("G1 X0 Y0 Z10 E0");
-  myFile.println("G1 X0 Y0 Z0 E10");
-    
-  if(myFile)
-    return 0;
-  else
-    return -1;
+  if(!myFile)
+    myFile.close();
+  if(SD.exists(fileName))
+    SD.remove(fileName);
+  myFile = SD.open(fileName, FILE_WRITE);
+  GState = GCodeCreate;
+  if(myFile){
+    Serial.println("create_file: start");
+  }else{
+    Serial.println("create_file: fail to open");
+  }
+}
+void writeToSD(char* command_line){
+  char wort[10];
+  char* command_end = strchr(command_line,' ');
+  Serial.println("write to SD Card");
+  if(command_end != 0){
+    int command_length = command_end - command_line;
+    strncpy(wort, command_line, command_length);
+    wort[command_length] = '\0';
+    if(strcmp("Q102",wort)==0)
+    {
+      Serial.println("Finish Create File");
+      close_file();
+      GState = GCodeStop;
+      return;
+    }
+  }
+  myFile.print(command_line);
 }
 int close_file(){
+  if(myFile)
     myFile.close();
-    return 0;
+  return 0;
 }
 int remove_file(char fileName[]){
-  *strchr(fileName,'\n') = '\0';
-  char* newFileName = fileName+5;
-  if(SD.exists(newFileName)){
-    SD.remove(newFileName);
+  if(!myFile)
+    myFile.close();
+  if(SD.exists(fileName)){
+    SD.remove(fileName);
+    Serial.print("remove_file: delete ");
+    Serial.println(fileName);
     return 0;
   }
+  Serial.println("remove_file: file not exist");
   return -1;
 }
-void printDirectory(){
-  File dir;
-  int numTabs = 1;
+void printDirectory(File dir, int numTabs) {
   while (true) {
 
     File entry =  dir.openNextFile();
@@ -568,21 +595,21 @@ void printDirectory(){
       Serial.print('\t');
     }
     Serial.print(entry.name());
-    //if (entry.isDirectory()) {
-     // Serial.println("/");
-     // printDirectory(entry, numTabs + 1);
-    //} else {
+    if (entry.isDirectory()) {
+      Serial.println("/");
+      printDirectory(entry, numTabs + 1);
+    } else {
       // files have sizes, directories do not
       Serial.print("\t\t");
       Serial.println(entry.size(), DEC);
-    //}
+    }
     entry.close();
   }
 }
 char* SDreadLine(){
   static char newLine[128];
   newLine[0] = '\0';
-  if(myFile)
+  if(myFile&&myFile.available())
   {
     int write_idx = 0;
     char read_buf;
@@ -599,7 +626,7 @@ char* SDreadLine(){
           read_buf = myFile.read();
         }
         newLine[write_idx] = '\0';
-        return newLine;      
+        return newLine;
       }
       else
       {//read chars from file and safe it
@@ -615,6 +642,7 @@ char* SDreadLine(){
   }
   return newLine;
 }
+//Lineparsing Functions
 void checkCommandFromSerial(){
   //read a G-Code line from the Serial and execute it
   char caLine[1];
@@ -631,7 +659,11 @@ void checkCommandFromSerial(){
       //Serial.print("checkCommandFromSerial ");
       //Serial.print(reciveBuf);
       //Serial.println(strlen(reciveBuf));
-      executeNextGCodeLine(reciveBuf);
+      if(GState == GCodeCreate)
+        writeToSD(reciveBuf);
+      else
+        executeNextGCodeLine(reciveBuf);
+        
       memset(&reciveBuf[0], 0, sizeof(reciveBuf));
     }
   }
@@ -698,11 +730,25 @@ void LineParser(char* command_line,double* X,double* Y,double* Z,double* E,doubl
     wort = strtok(NULL, trennzeichen);
   }
 }
+char* getName(char* command_line){
+  char trennzeichen[] = " ";
+  char *wort;
+  wort = strtok(command_line, trennzeichen);
+  //Serial.println(wort);
+  wort = strtok(NULL, trennzeichen);
+  //Serial.println(wort);  
+  if(wort != NULL){
+    //Serial.print("getName ");
+    //Serial.println(wort);
+    return wort;
+  }
+  return NULL;
+}
 void executeNextGCodeLine(char* GLine){
   double x = 0,y = 0,z = 0,e = 0,s = 0,f = 0;
   char * GLineCopy;
-  //Serial.print("executeNextGCodeLine ");
-  //Serial.println(GLine);
+  Serial.print("executeNextGCodeLine ");
+  Serial.println(GLine);
   switch(ComandParser(GLine))
   {
     case G1://G1 move
@@ -746,16 +792,16 @@ void executeNextGCodeLine(char* GLine){
       break;
     case Q100://Execute G-Code if File exist
       Serial.println("executeNextGCodeLine: Q100 found");
-      Serial.println(GLine);
-      if(open_file(GLine)==0){GState = GCodeRun;}
+      start_gcode(getName(GLine));
       break;
     case Q101://open file to write G-Code in it
       Serial.println("executeNextGCodeLine: Q101 found");
-      create_file(GLine);
+      create_file(getName(GLine));
       break;
     case Q102://close file after write G-Code
       Serial.println("executeNextGCodeLine: Q102 found");
       close_file();
+      GState = GCodeStop;
       break;
     case Q103://Pause G-Code
       Serial.println("executeNextGCodeLine: Q103found");
@@ -770,16 +816,20 @@ void executeNextGCodeLine(char* GLine){
       GState = GCodeStop;
       close_file();
       break;
-    case Q106://get list of File on SD Card
-      Serial.println("executeNextGCodeLine: Q106 found");
-      printDirectory();
-      break;
+    //warum auch immer muss Q107 for Q106 sitzen sons wird Q107 nicht gefunden
     case Q107://Delete File
       Serial.println("executeNextGCodeLine: Q107 found");
-      remove_file(GLine+5);
+      remove_file(getName(GLine));
       break;
+    case Q106://get list of File on SD Card
+      Serial.println("executeNextGCodeLine: Q106 found");
+      File root = SD.open("/");
+      printDirectory(root, 0);
+      break;
+
     case FAIL:
       Serial.println("executeNextGCodeLine: no command found FAIL");
+      break;
     default:
       Serial.println("executeNextGCodeLine: no command found");  
   }
