@@ -100,6 +100,7 @@ enum eGCodeState{
 };
 enum eComandName{
   FAIL,
+  XXX,
   G1,//move
   G9,//stop
   G92,//set position to
@@ -116,7 +117,6 @@ enum eComandName{
   Q105,//Abord G-code
   Q106,//get list of File on SD Card
   Q107,//Delete File
-  XXX
 };
 struct sComand {
   eComandName eIndent;
@@ -250,12 +250,12 @@ void setup() {
 
   if (!SD.begin(53)) {
     while (true) {
-      Serial.println("SD initialization failed!");
+      //Serial.println("SD initialization failed!");
     }
   }
   else
   {
-    Serial.println("SD initializ");
+    //Serial.println("SD initializ");
   }
 
   //if(SD.exists("test.txt")){
@@ -267,7 +267,6 @@ void setup() {
   //if(myFile) {
   Serial.println("RESTART Arduino compleated");
 }
-
 void loop(){
   // put your main code here, to run repeatedly:
   time_now = micros();
@@ -286,6 +285,7 @@ void loop(){
 
   if(motors_in_move == 0){
     if(send_once == false){
+      char num[10];
       send_once = true;
       Serial.print("X: ");
       Serial.print(Xachse.soll_posi);
@@ -296,16 +296,17 @@ void loop(){
       Serial.print(" E: ");
       Serial.print(Eachse.soll_posi);
       Serial.print(" F: ");
-      Serial.println(Speed);
+      Serial.println(Speed); 
     }
   }
   //read next G-Code Line from File if exist
   if(GState == GCodeRun && motors_in_move == 0)
   {
-    Serial.println("main: read GCODE line");
+    //Serial.println("main: read GCODE line");
     executeNextGCodeLine(SDreadLine());
   }
 }
+
 bool is_time_over(unsigned long value){
   if(value < threshold && time_now > threshold)
   {
@@ -747,10 +748,12 @@ char* getName(char* command_line){
 void executeNextGCodeLine(char* GLine){
   double x = 0,y = 0,z = 0,e = 0,s = 0,f = 0;
   char * GLineCopy;
-  Serial.print("executeNextGCodeLine ");
-  Serial.println(GLine);
+  //Serial.print("executeNextGCodeLine ");
+  //Serial.println(GLine);
   switch(ComandParser(GLine))
   {
+    case XXX:
+      break;
     case G1://G1 move
       Serial.println("executeNextGCodeLine: G1 found");
       LineParser(GLine,&Xachse.soll_posi,&Yachse.soll_posi,
@@ -815,8 +818,8 @@ void executeNextGCodeLine(char* GLine){
       Serial.println("executeNextGCodeLine: Q105 found");
       GState = GCodeStop;
       close_file();
-      break;
-    //warum auch immer muss Q107 for Q106 sitzen sons wird Q107 nicht gefunden
+      break;  
+      //warum auch immer muss Q107 for Q106 sitzen sons wird Q107 nicht gefunden
     case Q107://Delete File
       Serial.println("executeNextGCodeLine: Q107 found");
       remove_file(getName(GLine));
@@ -826,11 +829,11 @@ void executeNextGCodeLine(char* GLine){
       File root = SD.open("/");
       printDirectory(root, 0);
       break;
-
     case FAIL:
       Serial.println("executeNextGCodeLine: no command found FAIL");
       break;
     default:
       Serial.println("executeNextGCodeLine: no command found");  
+      //addToSend("executeNextGCodeLine: no command found"); 
   }
 }
