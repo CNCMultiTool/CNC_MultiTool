@@ -135,5 +135,6 @@ private slots:
     void bedCalibValueBox();
     void addToGraph(float T_100,float T_ntc,float PWM,float T_soll);
     void show_z_calib_result();
+
 };
 #endif // MAINWINDOW_H
