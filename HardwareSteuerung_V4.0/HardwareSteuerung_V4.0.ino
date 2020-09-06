@@ -3,7 +3,7 @@
 #include <string.h>
 #include <PID_v1.h>
 
-
+char myStr[128];
 struct StepMotorBig {
   //Settings
   int pinENA;
@@ -32,7 +32,6 @@ struct StepMotorBig {
   double Sb;
   double Sv;
   double Tmove;
-  int sendonce;
 };
 
 struct StepMotorBig Xachse;
@@ -260,18 +259,9 @@ void setup() {
       Serial.println("SD initialization failed!");
     }
   }
-  else
-  {
+  else{
     Serial.println("SD initializ");
   }
-
-  //if(SD.exists("test.txt")){
-  //  SD.remove("test.txt");
-  //}
-  //myFile = SD.open("test.txt", FILE_WRITE);
-  //myFile->println("G92 X0 Y0 Z0 E0");
-  //myFile->close();
-  //if(myFile) {
   Serial.println("RESTART Arduino compleated");
 }
 void loop(){
@@ -292,7 +282,6 @@ void loop(){
 
   if(motors_in_move == 0){
     if(send_once == false){
-      char num[10];
       send_once = true;
       Serial.print("posX");
       Serial.print(Xachse.soll_posi);
@@ -305,9 +294,7 @@ void loop(){
     }
   }
   //read next G-Code Line from File if exist
-  if(GState == GCodeRun && motors_in_move == 0)
-  {
-    //Serial.println("main: read GCODE line");
+  if(GState == GCodeRun && motors_in_move == 0){
     if(moveHome == false)
       executeNextGCodeLine(SDreadLine(GFile));
     else
@@ -446,8 +433,7 @@ void getMoveParams(){
   if(dist == 0){
     dist = abs(Eachse.soll_posi-Eachse.act_posi);
     ges_time = (dist/Speed)*1000000.0;
-  }
-
+  }   
   if(acc_max!=0 && Speed>Speed_min)
   {
     //get longest singel dist
@@ -484,7 +470,6 @@ void BigM_move_params(struct StepMotorBig &StepM){
     StepM.Sb = StepM.Bm*pow(tb,2)/2+StepM.Vmin*tb;
     StepM.Sv = StepM.Se-StepM.Sb;
     StepM.Tmove = time_now;
-    StepM.sendonce = 0;
   }
 }
 unsigned long timeNextStep(struct StepMotorBig &StepM){
@@ -740,8 +725,6 @@ void LineParser(char* command_line,double* X,double* Y,double* Z,double* E,doubl
       case 'X':    
         wort++;
         *X = atof(wort);
-        //Serial.print("LineParser X ");
-        //Serial.println(*X);
         break;
       case 'Y':
         wort++;
@@ -762,6 +745,8 @@ void LineParser(char* command_line,double* X,double* Y,double* Z,double* E,doubl
       case 'F':
         wort++;
         *F = atof(wort)/60;
+        Serial.print("LineParser F ");
+        Serial.println(*F);
         break;
     }
     wort = strtok(NULL, trennzeichen);
@@ -825,7 +810,7 @@ void executeNextGCodeLine(char* GLine){
       break;  
     case Q10://Q10 set move params
       Serial.println("executeNextGCodeLine: Q10 found");
-      LineParser(GLine,&acc_max,&Speed_max,&Speed_min,&e,&s,&f);
+      LineParser(GLine,&acc_max,&Speed_min,&Speed_max,&e,&s,&f);
       break;
     case Q20://Q20 set NTC values
       Serial.println("executeNextGCodeLine: Q20 found");
