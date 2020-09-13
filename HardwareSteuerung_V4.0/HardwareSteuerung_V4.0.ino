@@ -283,14 +283,16 @@ void loop(){
   if(motors_in_move == 0){
     if(send_once == false){
       send_once = true;
-      Serial.print("posX");
-      Serial.print(Xachse.soll_posi);
-      Serial.print(" Y");
-      Serial.print(Yachse.soll_posi);
-      Serial.print(" Z");
-      Serial.print(Zachse.soll_posi);
-      Serial.print(" E");
-      Serial.println(Eachse.soll_posi);
+      //if(GState != GCodeRun){
+        Serial.print("posX");
+        Serial.print(Xachse.soll_posi);
+        Serial.print(" Y");
+        Serial.print(Yachse.soll_posi);
+        Serial.print(" Z");
+        Serial.print(Zachse.soll_posi);
+        Serial.print(" E");
+        Serial.println(Eachse.soll_posi);
+      //}
     }
   }
   //read next G-Code Line from File if exist
@@ -769,6 +771,7 @@ char* getName(char* command_line){
 void executeNextGCodeLine(char* GLine){
   double x = 0,y = 0,z = 0,e = 0,s = 0,f = 0;
   char * GLineCopy;
+  double fila=-999;
   //Serial.print("executeNextGCodeLine ");
   //Serial.println(GLine);
   switch(ComandParser(GLine))
@@ -777,14 +780,14 @@ void executeNextGCodeLine(char* GLine){
       Serial.println("test");
       break;
     case G1://G1 move
-      Serial.println("executeNextGCodeLine: G1 found");
+      //Serial.println("executeNextGCodeLine: G1 found");
       LineParser(GLine,&Xachse.soll_posi,&Yachse.soll_posi,
         &Zachse.soll_posi,&Eachse.soll_posi,&s,&Speed);
       getMoveParams();
       send_once = false;
       break;
     case G9://G9 stop
-      Serial.println("executeNextGCodeLine: G9 found");
+      //Serial.println("executeNextGCodeLine: G9 found");
       act_equal_soll();
       send_once = false;
       break;
@@ -794,7 +797,7 @@ void executeNextGCodeLine(char* GLine){
       start_gcode(HomeFile,"HOME.TXT");
       break;
     case G92://G92 set positioning
-      Serial.println("executeNextGCodeLine: G92 found");
+      //Serial.println("executeNextGCodeLine: G92 found");
       LineParser(GLine,&Xachse.act_posi,&Yachse.act_posi,
         &Zachse.act_posi,&Eachse.act_posi,&s,&f);
       setPose();
@@ -810,7 +813,7 @@ void executeNextGCodeLine(char* GLine){
       break;  
     case Q10://Q10 set move params
       Serial.println("executeNextGCodeLine: Q10 found");
-      LineParser(GLine,&acc_max,&Speed_min,&Speed_max,&e,&s,&f);
+      LineParser(GLine,&acc_max,&Speed_min,&Speed_max,&e,&fila,&f);
       break;
     case Q20://Q20 set NTC values
       Serial.println("executeNextGCodeLine: Q20 found");
@@ -851,17 +854,18 @@ void executeNextGCodeLine(char* GLine){
       Serial.println("executeNextGCodeLine: Q105 found");
       GState = GCodeStop;
       close_file(GFile);
+      break;
+    case Q106://get list of File on SD Card
+      Serial.println("executeNextGCodeLine: Q106 found");
+      File root = SD.open("/");
+      printDirectory(GFile,root, 0);
       break;  
       //warum auch immer muss Q107 for Q106 sitzen sons wird Q107 nicht gefunden
     case Q107://Delete File
       Serial.println("executeNextGCodeLine: Q107 found");
       remove_file(GFile,getName(GLine));
       break;
-    case Q106://get list of File on SD Card
-      Serial.println("executeNextGCodeLine: Q106 found");
-      File root = SD.open("/");
-      printDirectory(GFile,root, 0);
-      break;
+
     case FAIL:
       Serial.println("executeNextGCodeLine: no command found FAIL");
       break;
@@ -869,4 +873,5 @@ void executeNextGCodeLine(char* GLine){
       Serial.println("executeNextGCodeLine: no command found");  
       //addToSend("executeNextGCodeLine: no command found"); 
   }
+  if(fila!=-999){Eachse.steps_pmm=fila;}
 }
