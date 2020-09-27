@@ -26,12 +26,12 @@ struct StepMotorBig {
   unsigned long step_div; 
   //acc variablen
   double Se;
-  double Vm;
+  double Vsoll;
   double Vmin;
   double Bm;
   double Sb;
   double Sv;
-  double Tmove;
+  double f;
 };
 
 struct StepMotorBig Xachse;
@@ -39,15 +39,11 @@ struct StepMotorBig Yachse;
 struct StepMotorBig Zachse;
 struct StepMotorBig Eachse;
 
-double acc_max = 0;
-double Speed = 10; //mm pro minute
-double Speed_use;
-double Speed_max = 30;
-double Speed_min = 5; //mm pro minute
-double Speed_dif;
-double Se;
-double Vm;
-double dist;
+double SeGes;
+double BmGes = 0;
+double Vmin = 5;
+double Vsoll = 20;
+double Vmax = 30;
 double ges_time;
 double tb;
 double te;
@@ -283,16 +279,25 @@ void loop(){
   if(motors_in_move == 0){
     if(send_once == false){
       send_once = true;
+      //Serial.print("befor Xpos ");
+      //Serial.print(Xachse.act_posi);
+      //Serial.print(" Xstep ");
+      //Serial.println(Xachse.act_step);
       act_steps_to_act_posi();
+      //Serial.print("after Xpos ");
+      //Serial.print(Xachse.act_posi);
+      //Serial.print(" Xstep ");
+      //Serial.println(Xachse.act_step);
+      
       if(GState != GCodeRun){
         Serial.print("posX");
-        Serial.print(Xachse.soll_posi);
+        Serial.print(Xachse.act_posi);
         Serial.print(" Y");
-        Serial.print(Yachse.soll_posi);
+        Serial.print(Yachse.act_posi);
         Serial.print(" Z");
-        Serial.print(Zachse.soll_posi);
+        Serial.print(Zachse.act_posi);
         Serial.print(" E");
-        Serial.println(Eachse.soll_posi);
+        Serial.println(Eachse.act_posi);
       }
     }
   }
@@ -406,16 +411,16 @@ void act_equal_soll(){
   Eachse.soll_posi = Eachse.act_posi;
 }
 void act_steps_to_act_posi(){
-  Xachse.act_posi = (double)Xachse.act_step/Xachse.steps_pmm;
-  Yachse.act_posi = (double)Yachse.act_step/Yachse.steps_pmm;
-  Zachse.act_posi = (double)Zachse.act_step/Zachse.steps_pmm;
-  Eachse.act_posi = (double)Eachse.act_step/Eachse.steps_pmm;
+  Xachse.act_posi = double(Xachse.act_step)/double(Xachse.steps_pmm);
+  Yachse.act_posi = double(Yachse.act_step)/double(Yachse.steps_pmm);
+  Zachse.act_posi = double(Zachse.act_step)/double(Zachse.steps_pmm);
+  Eachse.act_posi = double(Eachse.act_step)/double(Eachse.steps_pmm);
 }
 void act_posi_to_act_steps(){
-  Xachse.act_step = (double)Xachse.act_posi*Xachse.steps_pmm;
-  Yachse.act_step = (double)Yachse.act_posi*Yachse.steps_pmm;
-  Zachse.act_step = (double)Zachse.act_posi*Zachse.steps_pmm;
-  Eachse.act_step = (double)Eachse.act_posi*Eachse.steps_pmm;
+  Xachse.act_step = Xachse.act_posi*Xachse.steps_pmm;
+  Yachse.act_step = Yachse.act_posi*Yachse.steps_pmm;
+  Zachse.act_step = Zachse.act_posi*Zachse.steps_pmm;
+  Eachse.act_step = Eachse.act_posi*Eachse.steps_pmm;
 }
 void setPose(){
   Xachse.soll_posi = Xachse.act_posi;
@@ -430,17 +435,44 @@ void setPose(){
 }
 //berechnet die  parameter für eine bewegung für eine achse
 void getMoveParams(){
-  if(Speed_max<Speed){Speed = Speed_max;}
-  dist = sqrt(pow(Xachse.soll_posi-Xachse.act_posi,2)+pow(Yachse.soll_posi-Yachse.act_posi,2)+pow(Zachse.soll_posi-Zachse.act_posi,2)); //gesamtdistans
-  ges_time = (dist/Speed)*1000000.0;
-  if(dist == 0){
-    dist = abs(Eachse.soll_posi-Eachse.act_posi);
-    ges_time = (dist/Speed)*1000000.0;
+  if(Vmax<Vsoll){Vsoll = Vmax;}
+  SeGes = sqrt(pow(Xachse.soll_posi-Xachse.act_posi,2)+pow(Yachse.soll_posi-Yachse.act_posi,2)+pow(Zachse.soll_posi-Zachse.act_posi,2)); //gesamtdistans
+  ges_time = (SeGes/Vsoll)*1000000.0;
+  if(SeGes == 0){
+    SeGes = abs(Eachse.soll_posi-Eachse.act_posi);
+    ges_time = (SeGes/Vsoll)*10000000.0;
+  }  
+  if(BmGes!=0){
+    tb = (Vsoll-Vmin)/BmGes;
+    te = SeGes/Vsoll+tb;
+    tv = te - tb;
+    /*
+    Serial.print("Vsoll ");
+    Serial.print(Vsoll);
+    Serial.print(" Vmin ");
+    Serial.print(Vmin);
+    Serial.print(" BmGes ");
+    Serial.print(BmGes);
+    Serial.print(" tb ");
+    Serial.print(tb);
+    Serial.print(" te ");
+    Serial.print(te);
+    Serial.print(" tv ");
+    Serial.print(tv);
+    */
   }
-//  Serial.print("gesTime ");
-//  Serial.print(ges_time);
-//  Serial.print(" dist ");
-//  Serial.println(dist);
+    /*
+    Serial.print(" Xachse.soll_posi ");
+    Serial.print(Xachse.soll_posi);
+    Serial.print(" Xachse.act_posi ");
+    Serial.print(Xachse.act_posi);
+    Serial.print(" Xdiff ");
+    Serial.print(abs(Xachse.soll_posi-Xachse.act_posi));
+    Serial.print(" SeGes ");
+    Serial.print(SeGes);
+    Serial.print(" ges_time ");
+    Serial.println(ges_time);
+    */
   BigM_move_params(Xachse);
   BigM_move_params(Yachse);
   BigM_move_params(Zachse);
@@ -451,10 +483,56 @@ void BigM_move_params(struct StepMotorBig &StepM){
   StepM.step_div = abs(StepM.soll_step-StepM.act_step);
   StepM.time_pstep = ges_time/StepM.step_div;
   StepM.time_next_step = time_now;
+  if(BmGes!=0){
+    StepM.Se = float(StepM.step_div)/float(StepM.steps_pmm);
+    StepM.f = StepM.Se/SeGes;
+    StepM.Vmin = StepM.f*Vmin;
+    StepM.Vsoll = StepM.f*Vsoll;
+    StepM.Bm = StepM.f*BmGes;
+    StepM.Sb = StepM.Bm*pow(tb,2)/2+StepM.Vmin*tb;
+    StepM.Sv = abs(StepM.Se-StepM.Sb);
+    /*
+    Serial.print("StepM.Se ");
+    Serial.print(StepM.Se);
+    Serial.print(" StepM.f ");
+    Serial.print(StepM.f);
+    Serial.print("StepM.Vmin ");
+    Serial.print(StepM.Vmin);
+    Serial.print(" StepM.Vsoll ");
+    Serial.print(StepM.Vsoll);
+    Serial.print("StepM.Bm ");
+    Serial.print(StepM.Bm);
+    Serial.print(" StepM.Sb ");
+    Serial.print(StepM.Sb);
+    Serial.print(" StepM.Sv ");
+    Serial.println(StepM.Sv);
+    */
+  }
 }
 unsigned long timeToStep(struct StepMotorBig &StepM){
   unsigned long t_p_step = StepM.time_pstep;
-  t_p_step = StepM.time_pstep;
+  if(BmGes!=0)
+  {
+    double S = (float)(abs(StepM.step_div) - abs(StepM.soll_step-StepM.act_step))/(float)StepM.steps_pmm;
+    double V;
+    if(S <= (StepM.Se/2)){
+      V = StepM.Vmin + ((StepM.Vsoll-StepM.Vmin)/StepM.Sb)*S;
+      //Serial.print("V be ");
+      //Serial.print(V);
+    }else{
+      V = StepM.Vmin + (StepM.Vsoll-StepM.Vmin) - ((StepM.Vsoll-StepM.Vmin)/StepM.Sb)*(S-StepM.Sv);
+      //Serial.print("V br ");
+      //Serial.print(V);
+    }
+    if(V>StepM.Vsoll){V = StepM.Vsoll;}
+    if(V<StepM.Vmin){V = StepM.Vmin;}
+    //Serial.print(" S ");
+    //Serial.print(S);
+    //Serial.print(" V ");
+    //Serial.println(V);
+    t_p_step = 1000000.0/(StepM.steps_pmm*V);
+
+  }
   return t_p_step;
 }
 ///////////////////////////////////führt einen schrit aus und gibt den aktuellen an////////////////////////////7
@@ -481,7 +559,7 @@ int treiberBig(struct StepMotorBig &StepM){
       digitalWrite(StepM.pinENA,HIGH);
     }
   }
-  if(StepM.soll_step!=StepM.act_step && !is_time_over(StepM.time_next_step+20000)){
+  if(StepM.soll_step!=StepM.act_step){// && !is_time_over(StepM.time_next_step+20000)){
     return 1;
   }else{
     return 0;
@@ -739,7 +817,7 @@ void executeNextGCodeLine(char* GLine){
     case G1://G1 move
       //Serial.println("executeNextGCodeLine: G1 found");
       LineParser(GLine,&Xachse.soll_posi,&Yachse.soll_posi,
-        &Zachse.soll_posi,&Eachse.soll_posi,&s,&Speed);
+        &Zachse.soll_posi,&Eachse.soll_posi,&s,&Vsoll);
       getMoveParams();
       send_once = false;
       break;
@@ -770,7 +848,7 @@ void executeNextGCodeLine(char* GLine){
       break;  
     case Q10://Q10 set move params
       Serial.println("executeNextGCodeLine: Q10 found");
-      LineParser(GLine,&acc_max,&Speed_min,&Speed_max,&e,&fila,&f);
+      LineParser(GLine,&BmGes,&Vmin,&Vmax,&e,&fila,&f);
       break;
     case Q20://Q20 set NTC values
       Serial.println("executeNextGCodeLine: Q20 found");
