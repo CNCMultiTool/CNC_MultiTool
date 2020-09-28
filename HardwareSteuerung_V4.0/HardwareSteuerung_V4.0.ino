@@ -615,7 +615,7 @@ void writeToSD(File &myFile,char* command_line){
   }
   //Serial.println("writeToSD: befor write");
   myFile.print(command_line);
-  Serial.println("writeToSD: nextLine");
+  //Serial.println("writeToSD: nextLine");
 }
 int close_file(File &myFile){
   myFile.close();
@@ -807,6 +807,7 @@ void executeNextGCodeLine(char* GLine){
   double x = 0,y = 0,z = 0,e = 0,s = 0,f = 0;
   char * GLineCopy;
   double fila=-999;
+  double soll_speed=-999;
   //Serial.print("executeNextGCodeLine ");
   //Serial.println(GLine);
   switch(ComandParser(GLine))
@@ -817,7 +818,7 @@ void executeNextGCodeLine(char* GLine){
     case G1://G1 move
       //Serial.println("executeNextGCodeLine: G1 found");
       LineParser(GLine,&Xachse.soll_posi,&Yachse.soll_posi,
-        &Zachse.soll_posi,&Eachse.soll_posi,&s,&Vsoll);
+        &Zachse.soll_posi,&Eachse.soll_posi,&s,&soll_speed);
       getMoveParams();
       send_once = false;
       break;
@@ -841,14 +842,28 @@ void executeNextGCodeLine(char* GLine){
     case M104://M104 set hotend temperatur
       Serial.println("executeNextGCodeLine: M104 found");
       LineParser(GLine,&x,&y,&z,&e,&soll_T,&f);
+      Serial.print("M104 S");
+      Serial.println(soll_T);
       break;
     case M140://M140 set hotend temperatur
-      Serial.println("executeNextGCodeLine: M140 found");
+      //Serial.println("executeNextGCodeLine: M140 found");
       LineParser(GLine,&x,&y,&z,&e,&soll_T_Bed,&f);
+      Serial.print("M140 S");
+      Serial.println(soll_T_Bed);
       break;  
     case Q10://Q10 set move params
       Serial.println("executeNextGCodeLine: Q10 found");
       LineParser(GLine,&BmGes,&Vmin,&Vmax,&e,&fila,&f);
+      if(fila!=-999){Eachse.steps_pmm = fila;}
+      else{fila = Eachse.steps_pmm;}
+      Serial.print("Q10 X");
+      Serial.print(BmGes);
+      Serial.print(" Y");
+      Serial.print(Vmin);
+      Serial.print(" Z");
+      Serial.print(Vmax);
+      Serial.print(" S");
+      Serial.println(fila);
       break;
     case Q20://Q20 set NTC values
       Serial.println("executeNextGCodeLine: Q20 found");
@@ -890,6 +905,10 @@ void executeNextGCodeLine(char* GLine){
       GState = GCodeStop;
       close_file(GFile);
       break;
+    case Q107://Delete File
+      Serial.println("executeNextGCodeLine: Q107 found");
+      remove_file(GFile,getName(GLine));
+      break;
     case Q106://get list of File on SD Card
       Serial.println("executeNextGCodeLine: Q106 found");
       File root = SD.open("/");
@@ -908,5 +927,11 @@ void executeNextGCodeLine(char* GLine){
       Serial.println("executeNextGCodeLine: no command found");  
       //addToSend("executeNextGCodeLine: no command found"); 
   }
-  if(fila!=-999){Eachse.steps_pmm=fila;}
+  
+  if(soll_speed!=-999){
+    Vsoll=soll_speed;
+    Serial.print("G1 F");
+    Serial.println(Vsoll);
+  }
+  
 }
