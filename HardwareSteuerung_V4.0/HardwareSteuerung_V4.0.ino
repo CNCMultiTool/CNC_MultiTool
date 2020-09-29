@@ -34,6 +34,18 @@ struct StepMotorBig {
   double f;
 };
 
+struct timeing{
+  unsigned long Start;
+  unsigned long Min;
+  unsigned long Max;
+  unsigned long Average;
+  unsigned long Count;
+  unsigned long CntOvrAve;
+  unsigned long CntOvrDoubleAve;
+};
+
+timeing cicle,cicle1;
+
 struct StepMotorBig Xachse;
 struct StepMotorBig Yachse;
 struct StepMotorBig Zachse;
@@ -263,11 +275,8 @@ void setup() {
 void loop(){
   // put your main code here, to run repeatedly:
   time_now = micros();
-  //read Line From
+  //read Line From Serial 
   checkCommandFromSerial();   
-
-  TempControle();
-  
   checkEndswitches();
   //motors drive
   motors_in_move = 0;
@@ -277,18 +286,11 @@ void loop(){
   motors_in_move += treiberBig(Eachse);
 
   if(motors_in_move == 0){
+    TempControle();
     if(send_once == false){
+      timeDeb(&cicle,0,1);
       send_once = true;
-      //Serial.print("befor Xpos ");
-      //Serial.print(Xachse.act_posi);
-      //Serial.print(" Xstep ");
-      //Serial.println(Xachse.act_step);
       act_steps_to_act_posi();
-      //Serial.print("after Xpos ");
-      //Serial.print(Xachse.act_posi);
-      //Serial.print(" Xstep ");
-      //Serial.println(Xachse.act_step);
-      
       if(GState != GCodeRun){
         Serial.print("posX");
         Serial.print(Xachse.act_posi);
@@ -300,14 +302,72 @@ void loop(){
         Serial.println(Eachse.act_posi);
       }
     }
+    timeDeb(&cicle,1,0);
+  }else{
+    timeDeb(&cicle,0,0);
   }
   //read next G-Code Line from File if exist
   if(GState == GCodeRun && motors_in_move == 0){
-    if(moveHome == false)
+    if(moveHome == false){
+      timeDeb_start(&cicle1);
       executeNextGCodeLine(SDreadLine(GFile));
-    else
+      timeDeb_stop(&cicle1);
+      timeDeb(&cicle1,0,1);
+    }else{
       executeNextGCodeLine(SDreadLine(HomeFile));
+    }
+  }else{
+    timeDeb(&cicle1,1,0);
   }
+}
+
+void timeDeb(timeing *c,bool ini,bool show){
+  if(ini){
+    c->Start = time_now;
+    c->Min = 4294967295;
+    c->Max = 0;
+    c->Average = 0;
+    c->Count = 0;
+    c->CntOvrAve = 0;
+    c->CntOvrDoubleAve = 0;
+    return;
+  }
+  if(!show){
+    unsigned long dif = micros() - c->Start;
+    if(dif<c->Min){c->Min = dif;}
+    if(dif>c->Max){c->Max = dif;}
+    c->Count++;
+    c->Average = c->Average+dif;
+    if(dif > c->Average/c->Count){c->CntOvrAve++;}
+    if(dif > (c->Average*2)/c->Count){c->CntOvrDoubleAve++;}
+  }else{
+    Serial.print(" Min ");
+    Serial.print(c->Min);
+    Serial.print(" Max ");
+    Serial.print(c->Max);
+    Serial.print(" Average ");
+    Serial.print(c->Average/c->Count);
+    Serial.print(" CntOvrAve ");
+    Serial.print(c->CntOvrAve);
+    Serial.print(" CntOvrDoubleAve ");
+    Serial.print(c->CntOvrDoubleAve);
+    Serial.print(" Count ");
+    Serial.println(c->Count);
+  }
+  c->Start = micros();
+}
+
+void timeDeb_start(timeing *c){
+  c->Start = micros();
+}
+void timeDeb_stop(timeing *c){
+  unsigned long dif = micros() - c->Start;
+  if(dif<c->Min){c->Min = dif;}
+  if(dif>c->Max){c->Max = dif;}
+  c->Count++;
+  c->Average = c->Average+dif;
+  if(dif > c->Average/c->Count){c->CntOvrAve++;}
+  if(dif > (c->Average*2)/c->Count){c->CntOvrDoubleAve++;}
 }
 
 bool is_time_over(unsigned long value){
@@ -374,14 +434,8 @@ void TempControle(){
       Serial.print(soll_T_Bed);
       Serial.print(" TBist");
       Serial.println(T_Bed);
-      //if(abs(T-soll_T)>2)
-      //{
-      //  cycle_time1 = time_now + 1000000;
-      //}
-      //else
-      //{
-        cycle_time1 = time_now + 5000000;
-      //}
+      
+      cycle_time1 = time_now + 5000000;
       
       bitwertNTC_Bed = analogRead(sensorPin_Bed);      // lese Analogwert an A0 aus
       widerstandNTC_Bed = widerstand1_Bed*(((double)bitwertNTC_Bed/1024)/(1-((double)bitwertNTC_Bed/1024)));
@@ -446,43 +500,21 @@ void getMoveParams(){
     tb = (Vsoll-Vmin)/BmGes;
     te = SeGes/Vsoll+tb;
     tv = te - tb;
-    /*
-    Serial.print("Vsoll ");
-    Serial.print(Vsoll);
-    Serial.print(" Vmin ");
-    Serial.print(Vmin);
-    Serial.print(" BmGes ");
-    Serial.print(BmGes);
-    Serial.print(" tb ");
-    Serial.print(tb);
-    Serial.print(" te ");
-    Serial.print(te);
-    Serial.print(" tv ");
-    Serial.print(tv);
-    */
   }
-    /*
-    Serial.print(" Xachse.soll_posi ");
-    Serial.print(Xachse.soll_posi);
-    Serial.print(" Xachse.act_posi ");
-    Serial.print(Xachse.act_posi);
-    Serial.print(" Xdiff ");
-    Serial.print(abs(Xachse.soll_posi-Xachse.act_posi));
-    Serial.print(" SeGes ");
-    Serial.print(SeGes);
-    Serial.print(" ges_time ");
-    Serial.println(ges_time);
-    */
   BigM_move_params(Xachse);
   BigM_move_params(Yachse);
   BigM_move_params(Zachse);
-  BigM_move_params(Eachse); 
+  BigM_move_params(Eachse);
+  Xachse.time_next_step = micros();
+  Yachse.time_next_step = micros();
+  Zachse.time_next_step = micros();
+  Eachse.time_next_step = micros();
 }
 void BigM_move_params(struct StepMotorBig &StepM){
   StepM.soll_step = StepM.soll_posi*float(StepM.steps_pmm);
   StepM.step_div = abs(StepM.soll_step-StepM.act_step);
   StepM.time_pstep = ges_time/StepM.step_div;
-  StepM.time_next_step = time_now;
+  StepM.time_next_step = micros();
   if(BmGes!=0){
     StepM.Se = float(StepM.step_div)/float(StepM.steps_pmm);
     StepM.f = StepM.Se/SeGes;
@@ -491,22 +523,6 @@ void BigM_move_params(struct StepMotorBig &StepM){
     StepM.Bm = StepM.f*BmGes;
     StepM.Sb = StepM.Bm*pow(tb,2)/2+StepM.Vmin*tb;
     StepM.Sv = abs(StepM.Se-StepM.Sb);
-    /*
-    Serial.print("StepM.Se ");
-    Serial.print(StepM.Se);
-    Serial.print(" StepM.f ");
-    Serial.print(StepM.f);
-    Serial.print("StepM.Vmin ");
-    Serial.print(StepM.Vmin);
-    Serial.print(" StepM.Vsoll ");
-    Serial.print(StepM.Vsoll);
-    Serial.print("StepM.Bm ");
-    Serial.print(StepM.Bm);
-    Serial.print(" StepM.Sb ");
-    Serial.print(StepM.Sb);
-    Serial.print(" StepM.Sv ");
-    Serial.println(StepM.Sv);
-    */
   }
 }
 unsigned long timeToStep(struct StepMotorBig &StepM){
@@ -517,21 +533,12 @@ unsigned long timeToStep(struct StepMotorBig &StepM){
     double V;
     if(S <= (StepM.Se/2)){
       V = StepM.Vmin + ((StepM.Vsoll-StepM.Vmin)/StepM.Sb)*S;
-      //Serial.print("V be ");
-      //Serial.print(V);
     }else{
       V = StepM.Vmin + (StepM.Vsoll-StepM.Vmin) - ((StepM.Vsoll-StepM.Vmin)/StepM.Sb)*(S-StepM.Sv);
-      //Serial.print("V br ");
-      //Serial.print(V);
     }
     if(V>StepM.Vsoll){V = StepM.Vsoll;}
     if(V<StepM.Vmin){V = StepM.Vmin;}
-    //Serial.print(" S ");
-    //Serial.print(S);
-    //Serial.print(" V ");
-    //Serial.println(V);
     t_p_step = 1000000.0/(StepM.steps_pmm*V);
-
   }
   return t_p_step;
 }
@@ -559,7 +566,7 @@ int treiberBig(struct StepMotorBig &StepM){
       digitalWrite(StepM.pinENA,HIGH);
     }
   }
-  if(StepM.soll_step!=StepM.act_step){// && !is_time_over(StepM.time_next_step+20000)){
+  if(StepM.soll_step!=StepM.act_step){
     return 1;
   }else{
     return 0;
