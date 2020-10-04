@@ -114,6 +114,8 @@ enum eComandName{
   G92,//set position to
   M104,//set hotend temperature
   M140,//set bed temperatur
+  M109,//set hotend temperature
+  M190,//set bed temperatur
   Q10,//max Accelaration//acc- max- min- speed
   Q20,//max speed//bitwertNTC widerstandNTC widerstand1   for hotend
   Q21,//min speed//P I D ON for hotend
@@ -131,13 +133,15 @@ struct sComand {
   eComandName eIndent;
   char cName[6];
 };
-sComand lComandList[19] = {
+sComand lComandList[21] = {
   {G1,"G1"},
   {G9,"G9"},
   {G28,"G28"},
   {G92,"G92"},
   {M104,"M104"},
   {M140,"M140"},
+  {M109,"M109"},
+  {M190,"M190"},
   {Q10,"Q10"},
   {Q20,"Q20"},
   {Q21,"Q21"}, 
@@ -288,10 +292,10 @@ void loop(){
   if(motors_in_move == 0){
     TempControle();
     if(send_once == false){
-      timeDeb(&cicle,0,1);
+      //timeDeb(&cicle,0,1);
       send_once = true;
       act_steps_to_act_posi();
-      if(GState != GCodeRun){
+      if(GState != GCodeRun || moveHome == true){
         Serial.print("posX");
         Serial.print(Xachse.act_posi);
         Serial.print(" Y");
@@ -302,22 +306,22 @@ void loop(){
         Serial.println(Eachse.act_posi);
       }
     }
-    timeDeb(&cicle,1,0);
+    //timeDeb(&cicle,1,0);
   }else{
-    timeDeb(&cicle,0,0);
+    //timeDeb(&cicle,0,0);
   }
   //read next G-Code Line from File if exist
   if(GState == GCodeRun && motors_in_move == 0){
     if(moveHome == false){
-      timeDeb_start(&cicle1);
+      //timeDeb_start(&cicle1);
       executeNextGCodeLine(SDreadLine(GFile));
-      timeDeb_stop(&cicle1);
-      timeDeb(&cicle1,0,1);
+      //timeDeb_stop(&cicle1);
+      //timeDeb(&cicle1,0,1);
     }else{
       executeNextGCodeLine(SDreadLine(HomeFile));
     }
   }else{
-    timeDeb(&cicle1,1,0);
+    //timeDeb(&cicle1,1,0);
   }
 }
 
@@ -356,7 +360,6 @@ void timeDeb(timeing *c,bool ini,bool show){
   }
   c->Start = micros();
 }
-
 void timeDeb_start(timeing *c){
   c->Start = micros();
 }
@@ -384,8 +387,8 @@ bool is_time_over(unsigned long value){
     return 0;
   }
 }
-//check if one endswitch had changed
 float checkEndswitches(){
+  //check if one endswitch had changed
   float newXSwitchID = checkEndswitch(Xachse);
   float newYSwitchID = checkEndswitch(Yachse);
   float newZSwitchID = checkEndswitch(Zachse);
@@ -452,8 +455,8 @@ void TempControle(){
     }
   }    
 }
-//strops the movement (set soll pos equal act pos)
 void act_equal_soll(){
+  //strops the movement (set soll pos equal act pos)
   Xachse.soll_step = Xachse.act_step;
   Yachse.soll_step = Yachse.act_step;
   Zachse.soll_step = Zachse.act_step;
@@ -487,8 +490,8 @@ void setPose(){
   Zachse.soll_step = Zachse.act_step;
   Eachse.soll_step = Eachse.act_step;
 }
-//berechnet die  parameter für eine bewegung für eine achse
 void getMoveParams(){
+  //berechnet die  parameter für eine bewegung für eine achse
   if(Vmax<Vsoll){Vsoll = Vmax;}
   SeGes = sqrt(pow(Xachse.soll_posi-Xachse.act_posi,2)+pow(Yachse.soll_posi-Yachse.act_posi,2)+pow(Zachse.soll_posi-Zachse.act_posi,2)); //gesamtdistans
   ges_time = (SeGes/Vsoll)*1000000.0;
@@ -542,8 +545,8 @@ unsigned long timeToStep(struct StepMotorBig &StepM){
   }
   return t_p_step;
 }
-///////////////////////////////////führt einen schrit aus und gibt den aktuellen an////////////////////////////7
 int treiberBig(struct StepMotorBig &StepM){
+  //führt einen schrit aus und gibt den aktuellen an
   if(is_time_over(StepM.time_next_step)){
     if(StepM.soll_step>StepM.act_step){
       //one stapp forward
@@ -566,10 +569,10 @@ int treiberBig(struct StepMotorBig &StepM){
       digitalWrite(StepM.pinENA,HIGH);
     }
   }
-  if(StepM.soll_step!=StepM.act_step){
-    return 1;
-  }else{
+  if(StepM.soll_step==StepM.act_step&&is_time_over(StepM.time_next_step)){
     return 0;
+  }else{
+    return 1;
   }
 }
 //SD Card Functions
@@ -599,7 +602,7 @@ int create_file(File &myFile,char fileName[]){
   myFile = SD.open(fileName, FILE_WRITE);
   GState = GCodeCreate;
   if(myFile){
-    Serial.println("create_file: nextLine");
+    Serial.println("create_file: GC_NL");
   }else{
     Serial.println("create_file: errorFileOpen");
   }
@@ -622,7 +625,7 @@ void writeToSD(File &myFile,char* command_line){
   }
   //Serial.println("writeToSD: befor write");
   myFile.print(command_line);
-  //Serial.println("writeToSD: nextLine");
+  Serial.println("GC_NL");
 }
 int close_file(File &myFile){
   myFile.close();
@@ -847,12 +850,14 @@ void executeNextGCodeLine(char* GLine){
       send_once = false;
       break;
     case M104://M104 set hotend temperatur
+    case M109:
       Serial.println("executeNextGCodeLine: M104 found");
       LineParser(GLine,&x,&y,&z,&e,&soll_T,&f);
       Serial.print("M104 S");
       Serial.println(soll_T);
       break;
     case M140://M140 set hotend temperatur
+    case M190:
       //Serial.println("executeNextGCodeLine: M140 found");
       LineParser(GLine,&x,&y,&z,&e,&soll_T_Bed,&f);
       Serial.print("M140 S");
@@ -934,11 +939,11 @@ void executeNextGCodeLine(char* GLine){
       Serial.println("executeNextGCodeLine: no command found");  
       //addToSend("executeNextGCodeLine: no command found"); 
   }
-  
+  /*
   if(soll_speed!=-999){
     Vsoll=soll_speed;
     Serial.print("G1 F");
     Serial.println(Vsoll);
-  }
+  }*/
   
 }
