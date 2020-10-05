@@ -61,6 +61,8 @@ double tb;
 double te;
 double tv;
 
+bool waitForHeat = false;
+
 unsigned long time_now = micros();
 unsigned long cycle_time1 = micros();
 
@@ -311,7 +313,11 @@ void loop(){
     //timeDeb(&cicle,0,0);
   }
   //read next G-Code Line from File if exist
-  if(GState == GCodeRun && motors_in_move == 0){
+  //if(waitForHeat == true){
+  //  Serial.println("wait for heat");
+  //}
+  
+  if(GState == GCodeRun && motors_in_move == 0 && waitForHeat == false){
     if(moveHome == false){
       //timeDeb_start(&cicle1);
       executeNextGCodeLine(SDreadLine(GFile));
@@ -321,6 +327,12 @@ void loop(){
       executeNextGCodeLine(SDreadLine(HomeFile));
     }
   }else{
+    if(abs(soll_T-T)<5 && waitForHeat){
+      waitForHeat = false;
+      Serial.print("Reach heat ");
+      Serial.println(soll_T);
+    }
+    
     //timeDeb(&cicle1,1,0);
   }
 }
@@ -849,9 +861,14 @@ void executeNextGCodeLine(char* GLine){
       setPose();
       send_once = false;
       break;
-    case M104://M104 set hotend temperatur
-    case M109:
-      Serial.println("executeNextGCodeLine: M104 found");
+    case M109://M109 wait for hotend reach temperatur
+      waitForHeat = true;
+      LineParser(GLine,&x,&y,&z,&e,&soll_T,&f);
+      Serial.print("M109 S");
+      Serial.println(soll_T);
+      break;
+    case M104://M109 wait for hotend reach temperatur
+      //Serial.println("executeNextGCodeLine: M104 found");
       LineParser(GLine,&x,&y,&z,&e,&soll_T,&f);
       Serial.print("M104 S");
       Serial.println(soll_T);
@@ -864,7 +881,7 @@ void executeNextGCodeLine(char* GLine){
       Serial.println(soll_T_Bed);
       break;  
     case Q10://Q10 set move params
-      Serial.println("executeNextGCodeLine: Q10 found");
+      //Serial.println("executeNextGCodeLine: Q10 found");
       LineParser(GLine,&BmGes,&Vmin,&Vmax,&e,&fila,&f);
       if(fila!=-999){Eachse.steps_pmm = fila;}
       else{fila = Eachse.steps_pmm;}
@@ -916,6 +933,8 @@ void executeNextGCodeLine(char* GLine){
       Serial.println("executeNextGCodeLine: Q105 found");
       GState = GCodeStop;
       close_file(GFile);
+      act_equal_soll();
+      send_once = false;
       break;
     case Q107://Delete File
       Serial.println("executeNextGCodeLine: Q107 found");
@@ -936,14 +955,13 @@ void executeNextGCodeLine(char* GLine){
       Serial.println("executeNextGCodeLine: no command found FAIL");
       break;
     default:
-      Serial.println("executeNextGCodeLine: no command found");  
-      //addToSend("executeNextGCodeLine: no command found"); 
+      Serial.println("executeNextGCodeLine: no command found");   
   }
-  /*
-  if(soll_speed!=-999){
-    Vsoll=soll_speed;
-    Serial.print("G1 F");
-    Serial.println(Vsoll);
-  }*/
-  
+  if(soll_speed != -999){
+    Vsoll = soll_speed;
+    if(GState != GCodeRun){
+      Serial.print("G1 F");
+      Serial.println(Vsoll);
+    }
+  }
 }
