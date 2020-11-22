@@ -511,7 +511,7 @@ void getMoveParams(){
     SeGes = abs(Eachse.soll_posi-Eachse.act_posi);
     ges_time = (SeGes/Vsoll)*10000000.0;
   }  
-  if(BmGes!=0){
+  if(BmGes!=0&&Vsoll>Vmin){
     tb = (Vsoll-Vmin)/BmGes;
     te = SeGes/Vsoll+tb;
     tv = te - tb;
