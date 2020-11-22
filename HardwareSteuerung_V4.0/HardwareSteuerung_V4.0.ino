@@ -3,7 +3,7 @@
 #include <string.h>
 #include <PID_v1.h>
 
-char myStr[128];
+
 struct StepMotorBig {
   //Settings
   int pinENA;
@@ -44,7 +44,23 @@ struct timeing{
   unsigned long CntOvrDoubleAve;
 };
 
+struct values{
+  double X=0;
+  bool useX = false;
+  double Y=0;
+  bool useY = false;
+  double Z=0;
+  bool useZ = false;
+  double E=0;
+  bool useE = false;
+  double F=0;
+  bool useF = false;
+  double S=0; 
+  bool useS = false; 
+};
+
 timeing cicle,cicle1;
+values newValue;
 
 struct StepMotorBig Xachse;
 struct StepMotorBig Yachse;
@@ -159,6 +175,7 @@ sComand lComandList[21] = {
   {XXX,"XXX"}
 };
 char reciveBuf[128];
+char *myStr;
 unsigned int reciveWindex = 0; 
 
 const unsigned long threshold = 4294967295/2;
@@ -167,7 +184,11 @@ File GFile;
 File HomeFile;
 File OldFile;
 bool moveHome = false;
-char * GcodeLine;
+//char * GcodeLine;
+
+bool doneStep = false;
+int prepSteps = 0;
+eComandName newComand;
 
 bool send_once = true;
 int motors_in_move = 0;
@@ -305,26 +326,58 @@ void loop(){
         Serial.print(" Z");
         Serial.print(Zachse.act_posi);
         Serial.print(" E");
-        Serial.println(Eachse.act_posi);
+        Serial.print(Eachse.act_posi);
+        Serial.print(" F");
+        Serial.println(Vsoll);
       }
     }
     //timeDeb(&cicle,1,0);
   }else{
     //timeDeb(&cicle,0,0);
   }
-  //read next G-Code Line from File if exist
-  //if(waitForHeat == true){
-  //  Serial.println("wait for heat");
-  //}
   
-  if(GState == GCodeRun && motors_in_move == 0 && waitForHeat == false){
+  //read next G-Code Line from File if exist  
+  if(GState == GCodeRun && waitForHeat == false){
     if(moveHome == false){
       //timeDeb_start(&cicle1);
-      executeNextGCodeLine(SDreadLine(GFile));
+      //prepSteps = 0;
+      //doneStep = false;
+      if(doneStep || motors_in_move == 0)
+      {
+        switch(prepSteps)
+        {
+          case 0:
+            myStr = SDreadLine(GFile);
+            if(myStr[0]=='@'){
+              Serial.println("SDreadLine: GCode Finish");
+              GState = GCodeStop;
+              close_file(GFile);
+            }
+            doneStep = false;
+            prepSteps = 1;
+            break;
+          case 1:
+            newComand = ComandParser(myStr);
+            doneStep = false;
+            prepSteps = 2;
+            break;
+         case 2:
+            LineParser(myStr,&newValue);
+            doneStep = false;
+            prepSteps = 3;
+            break;
+        }
+        if(prepSteps == 3 && motors_in_move == 0)
+        {
+          executeNextGCodeLine(myStr,&newValue,newComand);
+          doneStep = false;
+          prepSteps = 0;
+        }
+      }    
       //timeDeb_stop(&cicle1);
       //timeDeb(&cicle1,0,1);
     }else{
-      executeNextGCodeLine(SDreadLine(HomeFile));
+      //executeNextGCodeLine(SDreadLine(HomeFile));
     }
   }else{
     if(abs(soll_T-T)<5 && waitForHeat){
@@ -384,7 +437,6 @@ void timeDeb_stop(timeing *c){
   if(dif > c->Average/c->Count){c->CntOvrAve++;}
   if(dif > (c->Average*2)/c->Count){c->CntOvrDoubleAve++;}
 }
-
 bool is_time_over(unsigned long value){
   if(value < threshold && time_now > threshold)
   {
@@ -568,6 +620,7 @@ int treiberBig(struct StepMotorBig &StepM){
       digitalWrite(StepM.pinPUL,HIGH);
       StepM.act_step++;
       StepM.time_next_step += timeToStep(StepM);
+      doneStep = true;
     }else if(StepM.soll_step<StepM.act_step){
       //one stepp back
       digitalWrite(StepM.pinPUL,LOW);
@@ -576,6 +629,7 @@ int treiberBig(struct StepMotorBig &StepM){
       digitalWrite(StepM.pinPUL,HIGH);
       StepM.act_step--;
       StepM.time_next_step += timeToStep(StepM);
+      doneStep = true;
     }else if(is_time_over(StepM.time_next_step+500000)){
       //turn motor off
       digitalWrite(StepM.pinENA,HIGH);
@@ -591,6 +645,12 @@ int treiberBig(struct StepMotorBig &StepM){
 void start_gcode(File &myFile,char fileName[]){
   if(open_file(myFile,fileName)==0){
     GState = GCodeRun;
+    myStr = SDreadLine(GFile);
+    eComandName newComand = ComandParser(myStr);
+    LineParser(myStr,&newValue);
+    executeNextGCodeLine(myStr,&newValue,newComand);
+    prepSteps = 0;
+    doneStep = false;
   }else{
     Serial.println("start_gcode: File not exist");
   }
@@ -680,7 +740,7 @@ void printDirectory(File &myFile,File dir, int numTabs) {
 }
 char* SDreadLine(File &myFile){
   static char newLine[128];
-  newLine[0] = '\0';
+  newLine[0] = '@';
   if(myFile.available())
   {
     int write_idx = 0;
@@ -707,22 +767,6 @@ char* SDreadLine(File &myFile){
       }
     }
   }
-  else
-  {
-    if(&myFile != &GFile){
-      Serial.println("SDreadLine: home move finish");
-      close_file(myFile);
-      moveHome = false;
-      return newLine;
-    }
-    else
-    {
-      Serial.println("SDreadLine: GCode Finish");
-      GState = GCodeStop;
-      close_file(myFile);
-      return newLine;
-    }
-  }
   return newLine;
 }
 //Lineparsing Functions
@@ -732,21 +776,23 @@ void checkCommandFromSerial(){
   if(Serial.available())
   {
     Serial.readBytes(caLine,1);
-    //Serial.print(caLine);
     reciveBuf[reciveWindex] = caLine[0];
     reciveWindex++;
     if(caLine[0] == '\n')
     {
       caLine[0] = ' ';
       reciveWindex = 0;
-      //Serial.print("checkCommandFromSerial ");
-      //Serial.print(reciveBuf);
-      //Serial.println(strlen(reciveBuf));
-      if(GState == GCodeCreate)
+      if(GState == GCodeCreate){
         writeToSD(GFile,reciveBuf);
-      else
-        executeNextGCodeLine(reciveBuf);
-        
+      }else{
+        //Serial.println(reciveBuf);
+        eComandName newComand = ComandParser(reciveBuf);
+        //Serial.println(reciveBuf);
+        LineParser(reciveBuf,&newValue);
+        //Serial.println(reciveBuf);
+        executeNextGCodeLine(reciveBuf,&newValue,newComand);
+        //Serial.println(reciveBuf);
+      }
       memset(&reciveBuf[0], 0, sizeof(reciveBuf));
     }
   }
@@ -774,38 +820,52 @@ eComandName ComandParser(char* command_line){
   //Serial.println("ComandParser: find no comand");
   return FAIL;
 }
-void LineParser(char* command_line,double* X,double* Y,double* Z,double* E,double* S,double* F){
+void LineParser(char* command_line,values *newValue){
   //cheack for values in the G-Code Line
   char trennzeichen[] = " ";
   char *wort;
-  //Serial.print("LineParser ");
-  //Serial.println(command_line);
-  wort = strtok(command_line, trennzeichen);  
+  char worker[128];
+
+  strcpy(worker,command_line);
+  newValue->useX = false; 
+  newValue->useY = false; 
+  newValue->useZ = false; 
+  newValue->useE = false; 
+  newValue->useF = false; 
+  newValue->useS = false; 
+
+  wort = strtok(worker, trennzeichen);  
   while(wort != NULL){
     switch(wort[0]){
       case 'X':    
         wort++;
-        *X = atof(wort);
+        newValue->X = atof(wort);
+        newValue->useX = true;
         break;
       case 'Y':
         wort++;
-        *Y = atof(wort);
+        newValue->Y = atof(wort);
+        newValue->useY = true;
         break;
       case 'Z':
         wort++;
-        *Z = atof(wort);
+        newValue->Z = atof(wort);
+        newValue->useZ = true;
         break;
       case 'E':
         wort++;
-        *E = atof(wort);
+        newValue->E = atof(wort);
+        newValue->useE = true;
         break;
       case 'S':
         wort++;
-        *S = atof(wort);
+        newValue->S = atof(wort);
+        newValue->useS = true;
         break;
       case 'F':
         wort++;
-        *F = atof(wort)/60;
+        newValue->F = atof(wort)/60;
+        newValue->useF = true;
         break;
     }
     wort = strtok(NULL, trennzeichen);
@@ -825,22 +885,35 @@ char* getName(char* command_line){
   }
   return NULL;
 }
-void executeNextGCodeLine(char* GLine){
+void applayValues(values *newValue,double *X,double *Y,double *Z,double *E,double *S,double *F){
+  if(newValue->useX)
+    *X = newValue->X;
+  if(newValue->useY)
+    *Y = newValue->Y;
+  if(newValue->useZ)
+    *Z = newValue->Z;
+  if(newValue->useE)
+    *E = newValue->E;
+  if(newValue->useF)
+    *F = newValue->F;
+  if(newValue->useS)
+    *S = newValue->S;
+}
+int executeNextGCodeLine(char* GLine,values *newValue,eComandName newComand){
   double x = 0,y = 0,z = 0,e = 0,s = 0,f = 0;
-  char * GLineCopy;
   double fila=-999;
-  double soll_speed=-999;
   //Serial.print("executeNextGCodeLine ");
   //Serial.println(GLine);
-  switch(ComandParser(GLine))
+  switch(newComand)
   {
     case XXX:
       Serial.println("test");
+      return -1;
       break;
     case G1://G1 move
       //Serial.println("executeNextGCodeLine: G1 found");
-      LineParser(GLine,&Xachse.soll_posi,&Yachse.soll_posi,
-        &Zachse.soll_posi,&Eachse.soll_posi,&s,&soll_speed);
+      applayValues(newValue,&Xachse.soll_posi,&Yachse.soll_posi,
+        &Zachse.soll_posi,&Eachse.soll_posi,&s,&Vsoll);
       getMoveParams();
       send_once = false;
       break;
@@ -856,33 +929,33 @@ void executeNextGCodeLine(char* GLine){
       break;
     case G92://G92 set positioning
       //Serial.println("executeNextGCodeLine: G92 found");
-      LineParser(GLine,&Xachse.act_posi,&Yachse.act_posi,
+      applayValues(newValue,&Xachse.act_posi,&Yachse.act_posi,
         &Zachse.act_posi,&Eachse.act_posi,&s,&f);
       setPose();
       send_once = false;
       break;
     case M109://M109 wait for hotend reach temperatur
       waitForHeat = true;
-      LineParser(GLine,&x,&y,&z,&e,&soll_T,&f);
+      applayValues(newValue,&x,&y,&z,&e,&soll_T,&f);
       Serial.print("M109 S");
       Serial.println(soll_T);
       break;
     case M104://M109 wait for hotend reach temperatur
       //Serial.println("executeNextGCodeLine: M104 found");
-      LineParser(GLine,&x,&y,&z,&e,&soll_T,&f);
+      applayValues(newValue,&x,&y,&z,&e,&soll_T,&f);
       Serial.print("M104 S");
       Serial.println(soll_T);
       break;
     case M140://M140 set hotend temperatur
     case M190:
       //Serial.println("executeNextGCodeLine: M140 found");
-      LineParser(GLine,&x,&y,&z,&e,&soll_T_Bed,&f);
+      applayValues(newValue,&x,&y,&z,&e,&soll_T_Bed,&f);
       Serial.print("M140 S");
       Serial.println(soll_T_Bed);
       break;  
     case Q10://Q10 set move params
       //Serial.println("executeNextGCodeLine: Q10 found");
-      LineParser(GLine,&BmGes,&Vmin,&Vmax,&e,&fila,&f);
+      applayValues(newValue,&BmGes,&Vmin,&Vmax,&e,&fila,&f);
       if(fila!=-999){Eachse.steps_pmm = fila;}
       else{fila = Eachse.steps_pmm;}
       Serial.print("Q10 X");
@@ -896,17 +969,17 @@ void executeNextGCodeLine(char* GLine){
       break;
     case Q20://Q20 set NTC values
       Serial.println("executeNextGCodeLine: Q20 found");
-      LineParser(GLine,&bitwertNTC,&widerstandNTC,&widerstand1,&e,&s,&f);
+      applayValues(newValue,&bitwertNTC,&widerstandNTC,&widerstand1,&e,&s,&f);
       break;
     case Q21://Q21 set PID values
       Serial.println("executeNextGCodeLine: Q21 found");
-      LineParser(GLine,&KP,&KI,&KD,&e,&s,&f);
+      applayValues(newValue,&KP,&KI,&KD,&e,&s,&f);
       if(e<0.5){myPID.SetTunings(KP, KI, KD, P_ON_E);}
       else{myPID.SetTunings(KP, KI, KD, P_ON_M);}
       break;
     case Q30://Q30 set NTC values for bed
       Serial.println("executeNextGCodeLine: Q30 found");
-      LineParser(GLine,&bitwertNTC_Bed,&widerstandNTC_Bed,&widerstand1_Bed,&e,&s,&f);
+      applayValues(newValue,&bitwertNTC_Bed,&widerstandNTC_Bed,&widerstand1_Bed,&e,&s,&f);
       break;
     case Q100://Execute G-Code if File exist
       Serial.println("executeNextGCodeLine: Q100 found");
@@ -950,18 +1023,13 @@ void executeNextGCodeLine(char* GLine){
       Serial.println("executeNextGCodeLine: Q107 found");
       remove_file(GFile,getName(GLine));
       break;
-
     case FAIL:
       Serial.println("executeNextGCodeLine: no command found FAIL");
+      return -1;
       break;
     default:
-      Serial.println("executeNextGCodeLine: no command found");   
+      Serial.println("executeNextGCodeLine: no command found");
+      return -1;
   }
-  if(soll_speed != -999){
-    Vsoll = soll_speed;
-    if(GState != GCodeRun){
-      Serial.print("G1 F");
-      Serial.println(Vsoll);
-    }
-  }
+  return 0;
 }
