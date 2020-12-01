@@ -2,6 +2,7 @@
 #include <SD.h>
 #include <string.h>
 #include <PID_v1.h>
+#include <math.h>
 
 
 struct StepMotorBig {
@@ -68,7 +69,10 @@ struct StepMotorBig Zachse;
 struct StepMotorBig Eachse;
 
 double SeGes;
-double BmGes = 0;
+double threshAngle = 45;
+double BmMax = 0;//maximale beschleinigung
+double BmNext = 0;//beschleinigung zwischenspeicher für die nächste bewegung
+double BmGes = 0;//verwendete beschleuningung für nächsten move
 double Vmin = 5;
 double Vsoll = 20;
 double Vmax = 30;
@@ -182,7 +186,7 @@ const unsigned long threshold = 4294967295/2;
 
 File GFile;
 File HomeFile;
-File OldFile;
+
 bool moveHome = false;
 //char * GcodeLine;
 
@@ -299,7 +303,7 @@ void setup() {
   }
   Serial.println("RESTART Arduino compleated");
 }
-void loop(){
+void loop(){  
   // put your main code here, to run repeatedly:
   time_now = micros();
   //read Line From Serial 
@@ -338,7 +342,7 @@ void loop(){
   
   //read next G-Code Line from File if exist  
   if(GState == GCodeRun && waitForHeat == false){
-    if(moveHome == false){
+    
       //timeDeb_start(&cicle1);
       //prepSteps = 0;
       //doneStep = false;
@@ -347,11 +351,21 @@ void loop(){
         switch(prepSteps)
         {
           case 0:
-            myStr = SDreadLine(GFile);
-            if(myStr[0]=='@'){
-              Serial.println("SDreadLine: GCode Finish");
-              GState = GCodeStop;
-              close_file(GFile);
+            if(moveHome == false){
+              myStr = SDreadLine(GFile);
+              if(myStr[0]=='@'){
+                Serial.println("SDreadLine: GCode Finish");
+                GState = GCodeStop;
+                close_file(GFile);
+              } 
+            }
+            else{
+              myStr = SDreadLine(HomeFile);
+              if(myStr[0]=='@'){
+                Serial.println("SDreadLine: HomeFile Finish");
+                moveHome = false;
+                close_file(HomeFile);
+              } 
             }
             doneStep = false;
             prepSteps = 1;
@@ -366,9 +380,15 @@ void loop(){
             doneStep = false;
             prepSteps = 3;
             break;
+         case 3:
+            BmNext = calcAcc(&newValue,newComand);
+            doneStep = false;
+            prepSteps = 4;
+            break;
         }
-        if(prepSteps == 3 && motors_in_move == 0)
+        if(prepSteps == 4 && motors_in_move == 0)
         {
+          BmGes = BmNext;
           executeNextGCodeLine(myStr,&newValue,newComand);
           doneStep = false;
           prepSteps = 0;
@@ -376,9 +396,6 @@ void loop(){
       }    
       //timeDeb_stop(&cicle1);
       //timeDeb(&cicle1,0,1);
-    }else{
-      //executeNextGCodeLine(SDreadLine(HomeFile));
-    }
   }else{
     if(abs(soll_T-T)<5 && waitForHeat){
       waitForHeat = false;
@@ -554,6 +571,31 @@ void setPose(){
   Zachse.soll_step = Zachse.act_step;
   Eachse.soll_step = Eachse.act_step;
 }
+double calcAcc(values *newValue,eComandName comand){
+  if(newValue->Z != Zachse.soll_posi || newValue->Z != Zachse.act_posi)
+  {
+    //Serial.println("change in Z");
+    return BmMax;
+  }
+  if(comand == G1){
+    float x1 = newValue->X - Xachse.soll_posi;
+    float x2 = Xachse.soll_posi - Xachse.act_posi;
+    float y1 = newValue->Y - Yachse.soll_posi;
+    float y2 = Yachse.soll_posi - Yachse.act_posi;
+    float angle = abs((atan2(y2, x2) - atan2(y1, x1))*(180.0 / M_PI));
+    if(angle > threshAngle && angle < (360-threshAngle)){
+      //Serial.println("agle to smale or to big ");
+    }else{
+      //Serial.println("use 0 acc");
+      return 0;
+    }
+  }else{
+    //Serial.println("command not G1");
+    return BmMax;
+  }
+  //Serial.println("come to end");
+  return BmMax;
+}
 void getMoveParams(){
   //berechnet die  parameter für eine bewegung für eine achse
   if(Vmax<Vsoll){Vsoll = Vmax;}
@@ -674,7 +716,7 @@ int create_file(File &myFile,char fileName[]){
   myFile = SD.open(fileName, FILE_WRITE);
   GState = GCodeCreate;
   if(myFile){
-    Serial.println("create_file: GC_NL");
+    Serial.println("GC_NL");
   }else{
     Serial.println("create_file: errorFileOpen");
   }
@@ -955,15 +997,17 @@ int executeNextGCodeLine(char* GLine,values *newValue,eComandName newComand){
       break;  
     case Q10://Q10 set move params
       //Serial.println("executeNextGCodeLine: Q10 found");
-      applayValues(newValue,&BmGes,&Vmin,&Vmax,&e,&fila,&f);
+      applayValues(newValue,&BmMax,&Vmin,&Vmax,&threshAngle,&fila,&f);
       if(fila!=-999){Eachse.steps_pmm = fila;}
       else{fila = Eachse.steps_pmm;}
       Serial.print("Q10 X");
-      Serial.print(BmGes);
+      Serial.print(BmMax);
       Serial.print(" Y");
       Serial.print(Vmin);
       Serial.print(" Z");
       Serial.print(Vmax);
+      Serial.print(" E");
+      Serial.print(threshAngle);
       Serial.print(" S");
       Serial.println(fila);
       break;
