@@ -84,6 +84,7 @@ double tv;
 bool waitForHeat = false;
 
 unsigned long time_now = micros();
+unsigned long time_old = micros();
 unsigned long cycle_time1 = micros();
 
 int sensorPin = A1;
@@ -122,10 +123,10 @@ double soll_T_Bed = 0;
 int temprelai_Bed = 3;
 
 enum eGCodeState{
-  GCodeRun,
-  GCodePause,
-  GCodeStop, 
-  GCodeCreate 
+  GCodeRun = 0,
+  GCodePause = 1,
+  GCodeStop =  2, 
+  GCodeCreate = 3 
 };
 enum eComandName{
   FAIL,
@@ -306,6 +307,11 @@ void setup() {
 void loop(){  
   // put your main code here, to run repeatedly:
   time_now = micros();
+  if(time_now < time_old)
+  {
+    Serial.println("micros OVERFLOW");
+  }
+  time_old = time_now;
   //read Line From Serial 
   checkCommandFromSerial();   
   checkEndswitches();
@@ -402,7 +408,6 @@ void loop(){
       Serial.print("Reach heat ");
       Serial.println(soll_T);
     }
-    
     //timeDeb(&cicle1,1,0);
   }
 }
@@ -470,19 +475,22 @@ bool is_time_over(unsigned long value){
 }
 float checkEndswitches(){
   //check if one endswitch had changed
-  float newXSwitchID = checkEndswitch(Xachse);
-  float newYSwitchID = checkEndswitch(Yachse);
-  float newZSwitchID = checkEndswitch(Zachse);
-  if(Xachse.SwitchID != newXSwitchID || Yachse.SwitchID != newYSwitchID || Zachse.SwitchID != newZSwitchID){
-    Xachse.SwitchID = newXSwitchID;
-    Yachse.SwitchID = newYSwitchID;
-    Zachse.SwitchID = newZSwitchID;
-    Serial.print("ES X");
-    Serial.print(Xachse.SwitchID);
-    Serial.print(" Y");
-    Serial.print(Yachse.SwitchID);
-    Serial.print(" Z");
-    Serial.println(Zachse.SwitchID);
+  if(GState == GCodeStop || moveHome == true)
+  {
+    float newXSwitchID = checkEndswitch(Xachse);
+    float newYSwitchID = checkEndswitch(Yachse);
+    float newZSwitchID = checkEndswitch(Zachse);
+    if(Xachse.SwitchID != newXSwitchID || Yachse.SwitchID != newYSwitchID || Zachse.SwitchID != newZSwitchID){
+      Xachse.SwitchID = newXSwitchID;
+      Yachse.SwitchID = newYSwitchID;
+      Zachse.SwitchID = newZSwitchID;
+      Serial.print("ES X");
+      Serial.print(Xachse.SwitchID);
+      Serial.print(" Y");
+      Serial.print(Yachse.SwitchID);
+      Serial.print(" Z");
+      Serial.println(Zachse.SwitchID);
+    }
   }
 }
 float checkEndswitch(struct StepMotorBig &StepM){
@@ -949,7 +957,18 @@ int executeNextGCodeLine(char* GLine,values *newValue,eComandName newComand){
   switch(newComand)
   {
     case XXX:
-      Serial.println("test");
+      Serial.print("XXX Xa");
+      Serial.print(treiberBig(Xachse));
+      Serial.print(" Ya");
+      Serial.print(treiberBig(Yachse));
+      Serial.print(" Za");
+      Serial.print(treiberBig(Zachse));
+      Serial.print(" Ea");
+      Serial.print(treiberBig(Eachse));
+      Serial.print(" Move");
+      Serial.print(motors_in_move);
+      
+      Serial.println(" test");
       return -1;
       break;
     case G1://G1 move
