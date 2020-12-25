@@ -479,13 +479,13 @@ void timeDeb_stop(timeing *c) {
 }
 bool is_time_over(unsigned long value) {
   // have to be testet
-  if ((time_now - value) > threshold) {
-    if (time_now + threshold > value + threshold)
+  if (abs(value - time_now) > threshold) {
+    if (time_now-threshold >= value-threshold)
       return 1;
     else
       return 0;
   } else {
-    if (time_now > value)
+    if (time_now >= value)
       return 1;
     else
       return 0;
@@ -594,22 +594,27 @@ void act_steps_to_act_posi() {
   Zachse.act_posi = double(Zachse.act_step) / double(Zachse.steps_pmm);
   Eachse.act_posi = double(Eachse.act_step) / double(Eachse.steps_pmm);
 }
-void act_posi_to_act_steps() {
-  Xachse.act_step = Xachse.act_posi * Xachse.steps_pmm;
-  Yachse.act_step = Yachse.act_posi * Yachse.steps_pmm;
-  Zachse.act_step = Zachse.act_posi * Zachse.steps_pmm;
-  Eachse.act_step = Eachse.act_posi * Eachse.steps_pmm;
-}
-void setPose() {
-  Xachse.soll_posi = Xachse.act_posi;
-  Yachse.soll_posi = Yachse.act_posi;
-  Zachse.soll_posi = Zachse.act_posi;
-  Eachse.soll_posi = Eachse.act_posi;
-  act_posi_to_act_steps();
-  Xachse.soll_step = Xachse.act_step;
-  Yachse.soll_step = Yachse.act_step;
-  Zachse.soll_step = Zachse.act_step;
-  Eachse.soll_step = Eachse.act_step;
+void setPose(values *newValue) {
+  if (newValue->useX){
+    Xachse.soll_posi = Xachse.act_posi;
+    Xachse.act_step = Xachse.act_posi * Xachse.steps_pmm;
+    Xachse.soll_step = Xachse.act_step;
+  }
+  if (newValue->useY){
+    Yachse.soll_posi = Yachse.act_posi;
+    Yachse.act_step = Yachse.act_posi * Yachse.steps_pmm;
+    Yachse.soll_step = Yachse.act_step;
+  }
+  if (newValue->useZ){
+    Zachse.soll_posi = Zachse.act_posi;
+    Zachse.act_step = Zachse.act_posi * Zachse.steps_pmm;
+    Zachse.soll_step = Zachse.act_step;
+  }
+  if (newValue->useE){
+    Eachse.soll_posi = Eachse.act_posi;
+    Eachse.act_step = Eachse.act_posi * Eachse.steps_pmm;
+    Eachse.soll_step = Eachse.act_step;
+  }
 }
 double calcAcc(values *newValue, eComandName comand) {
   if (newValue->Z != Zachse.soll_posi || newValue->Z != Zachse.act_posi)
@@ -956,8 +961,6 @@ void LineParser(char* command_line, values *newValue) {
         wort++;
         newValue->F = atof(wort) / 60;
         newValue->useF = true;
-        Serial.print("F ");
-        Serial.println(newValue->F);
         break;
     }
     wort = strtok(NULL, trennzeichen);
@@ -1033,7 +1036,7 @@ int executeNextGCodeLine(char* GLine, values *newValue, eComandName newComand) {
       //Serial.println("executeNextGCodeLine: G92 found");
       applayValues(newValue, &Xachse.act_posi, &Yachse.act_posi,
                    &Zachse.act_posi, &Eachse.act_posi, &s, &f);
-      setPose();
+      setPose(newValue);
       send_once = false;
       break;
     case M109://M109 wait for hotend reach temperatur
