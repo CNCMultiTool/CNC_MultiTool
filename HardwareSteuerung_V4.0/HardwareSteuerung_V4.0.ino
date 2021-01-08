@@ -23,7 +23,8 @@ struct StepMotorBig {
   double act_posi;//actuelle position in mm
   double soll_posi;//soll position in mm
   unsigned long time_pstep;
-  unsigned long time_next_step;
+  //unsigned long time_next_step;
+  unsigned long time_last_step;
   unsigned long step_div;
   //acc variablen
   double Se;
@@ -206,12 +207,12 @@ void setup() {
   Xachse.act_posi = 0;
   Xachse.soll_step = 0;
   Xachse.act_step = 0;
-  Xachse.time_next_step = 0;
+  Xachse.time_last_step = 0;
   Xachse.time_pstep = 0;
   Xachse.steps_pmm = 50;
-  Xachse.pinENA = 37;
-  Xachse.pinDIR = 39;
-  Xachse.pinPUL = 41;
+  Xachse.pinENA = 37;//PC0
+  Xachse.pinDIR = 39;//PG2
+  Xachse.pinPUL = 41;//PG0
   Xachse.pinPositiv = 44;
   Xachse.pinNull = 46;
   Xachse.SwitchID = 0;
@@ -220,7 +221,7 @@ void setup() {
   Yachse.act_posi = 0;
   Yachse.soll_step = 0;
   Yachse.act_step = 0;
-  Yachse.time_next_step = 0;
+  Yachse.time_last_step = 0;
   Yachse.time_pstep = 0;
   Yachse.steps_pmm = 50;
   Yachse.pinENA = 43;
@@ -234,7 +235,7 @@ void setup() {
   Zachse.act_posi = 0;
   Zachse.soll_step = 0;
   Zachse.act_step = 0;
-  Zachse.time_next_step = 0;
+  Zachse.time_last_step = 0;
   Zachse.time_pstep = 0;
   Zachse.steps_pmm = 50;
   Zachse.pinENA = 25;
@@ -248,7 +249,7 @@ void setup() {
   Eachse.act_posi = 0;
   Eachse.soll_step = 0;
   Eachse.act_step = 0;
-  Eachse.time_next_step = 0;
+  Eachse.time_last_step = 0;
   Eachse.time_pstep = 0;
   Eachse.steps_pmm = 35;
   Eachse.pinENA = 31;
@@ -662,16 +663,19 @@ void getMoveParams() {
   BigM_move_params(Yachse);
   BigM_move_params(Zachse);
   BigM_move_params(Eachse);
-  Xachse.time_next_step = micros();
-  Yachse.time_next_step = micros();
-  Zachse.time_next_step = micros();
-  Eachse.time_next_step = micros();
 }
 void BigM_move_params(struct StepMotorBig &StepM) {
   StepM.soll_step = StepM.soll_posi * float(StepM.steps_pmm);
   StepM.step_div = abs(StepM.soll_step - StepM.act_step);
   StepM.time_pstep = ges_time / StepM.step_div;
-  StepM.time_next_step = micros();
+  StepM.time_last_step = 0;
+  digitalWrite(StepM.pinENA, LOW);
+  if (StepM.soll_step > StepM.act_step)
+    digitalWrite(StepM.pinDIR, HIGH);
+  else
+    digitalWrite(StepM.pinDIR, LOW);
+    
+  StepM.time_last_step = micros();
   if (BmGes != 0) {
     StepM.Se = float(StepM.step_div) / float(StepM.steps_pmm);
     StepM.f = StepM.Se / SeGes;
@@ -705,37 +709,31 @@ unsigned long timeToStep(struct StepMotorBig &StepM) {
 }
 int treiberBig(struct StepMotorBig &StepM) {
   //führt einen schrit aus und gibt den aktuellen an
-  if (is_time_over(StepM.time_next_step)) {
+  if (time_now - StepM.time_last_step > StepM.time_pstep) {
     if (StepM.soll_step > StepM.act_step) {
       //one stapp forward
       digitalWrite(StepM.pinPUL, LOW);
-      digitalWrite(StepM.pinENA, LOW);
-      digitalWrite(StepM.pinDIR, HIGH);
-      digitalWrite(StepM.pinPUL, HIGH);
       StepM.act_step++;
-      StepM.time_next_step += timeToStep(StepM);
+      StepM.time_pstep = timeToStep(StepM);
+      StepM.time_last_step = time_now;
       doneStep = true;
+      digitalWrite(StepM.pinPUL, HIGH);
     } else if (StepM.soll_step < StepM.act_step) {
       //one stepp back
       digitalWrite(StepM.pinPUL, LOW);
-      digitalWrite(StepM.pinENA, LOW);
-      digitalWrite(StepM.pinDIR, LOW);
-      digitalWrite(StepM.pinPUL, HIGH);
       StepM.act_step--;
-      StepM.time_next_step += timeToStep(StepM);
+      StepM.time_pstep = timeToStep(StepM);
+      StepM.time_last_step = time_now;
       doneStep = true;
-    } else if (is_time_over(StepM.time_next_step + 5000000)) {
+      digitalWrite(StepM.pinPUL, HIGH);
+    } else if (time_now - StepM.time_last_step > 5000000) {
       //turn motor off
       digitalWrite(StepM.pinENA, HIGH);
     }
   }
-  if (StepM.soll_step == StepM.act_step && is_time_over(StepM.time_next_step)) {
+  if (StepM.soll_step == StepM.act_step && (time_now - StepM.time_last_step > StepM.time_pstep)) {
     return 0;
   } else {
-    //     if(threshold<(StepM.time_next_step-time_now)){
-    //      StepM.time_next_step = time_now;
-    //      return 0;
-    //    }
     return 1;
   }
 }
