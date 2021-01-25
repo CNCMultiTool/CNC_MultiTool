@@ -296,24 +296,17 @@ void setup() {
     ; // wait for serial port to connect. Needed for native USB port only
   }
 
-  if (!SD.begin(53)) {
-    while (true) {
+  while(!SD.begin(53)) {
       Serial.println("SD initialization failed!");
-    }
+      delay(1000);
   }
-  else {
-    Serial.println("SD initializ");
-  }
+  Serial.println("SD initializ");
+
   Serial.println("RESTART Arduino compleated");
 }
 void loop() {
   // put your main code here, to run repeatedly:
   time_now = micros();
-  if (time_now < time_old)
-  {
-    Serial.println("micros OVERFLOW");
-  }
-  time_old = time_now;
   //read Line From Serial
   checkCommandFromSerial();
   checkEndswitches();
@@ -343,17 +336,11 @@ void loop() {
         Serial.println(Vsoll);
       }
     }
-    //timeDeb(&cicle,1,0);
-  } else {
-    //timeDeb(&cicle,0,0);
   }
 
   //read next G-Code Line from File if exist
-  if (GState == GCodeRun && waitForHeat == false) {
-
-    //timeDeb_start(&cicle1);
-    //prepSteps = 0;
-    //doneStep = false;
+  if (GState == GCodeRun && waitForHeat == false) 
+  {
     if (doneStep || motors_in_move == 0)
     {
       switch (prepSteps)
@@ -376,22 +363,18 @@ void loop() {
               useEndSwitch = false;
             }
           }
-          doneStep = false;
           prepSteps = 1;
           break;
         case 1:
           newComand = ComandParser(myStr);
-          doneStep = false;
           prepSteps = 2;
           break;
         case 2:
           LineParser(myStr, &newValue);
-          doneStep = false;
           prepSteps = 3;
           break;
         case 3:
           BmNext = calcAcc(&newValue, newComand);
-          doneStep = false;
           prepSteps = 4;
           break;
       }
@@ -399,111 +382,18 @@ void loop() {
       {
         BmGes = BmNext;
         executeNextGCodeLine(myStr, &newValue, newComand);
-        doneStep = false;
         prepSteps = 0;
       }
     }
-    //timeDeb_stop(&cicle1);
-    //timeDeb(&cicle1,0,1);
   } else {
     if (abs(soll_T - T) < 5 && waitForHeat) {
       waitForHeat = false;
       Serial.print("Reach heat ");
       Serial.println(soll_T);
     }
-    //timeDeb(&cicle1,1,0);
   }
 }
 
-void timeDeb(timeing *c, bool ini, bool show) {
-  if (ini) {
-    c->Start = time_now;
-    c->Min = 4294967295;
-    c->Max = 0;
-    c->Average = 0;
-    c->Count = 0;
-    c->CntOvrAve = 0;
-    c->CntOvrDoubleAve = 0;
-    return;
-  }
-  if (!show) {
-    unsigned long dif = micros() - c->Start;
-    if (dif < c->Min) {
-      c->Min = dif;
-    }
-    if (dif > c->Max) {
-      c->Max = dif;
-    }
-    c->Count++;
-    c->Average = c->Average + dif;
-    if (dif > c->Average / c->Count) {
-      c->CntOvrAve++;
-    }
-    if (dif > (c->Average * 2) / c->Count) {
-      c->CntOvrDoubleAve++;
-    }
-  } else {
-    Serial.print(" Min ");
-    Serial.print(c->Min);
-    Serial.print(" Max ");
-    Serial.print(c->Max);
-    Serial.print(" Average ");
-    Serial.print(c->Average / c->Count);
-    Serial.print(" CntOvrAve ");
-    Serial.print(c->CntOvrAve);
-    Serial.print(" CntOvrDoubleAve ");
-    Serial.print(c->CntOvrDoubleAve);
-    Serial.print(" Count ");
-    Serial.println(c->Count);
-  }
-  c->Start = micros();
-}
-void timeDeb_start(timeing *c) {
-  c->Start = micros();
-}
-void timeDeb_stop(timeing *c) {
-  unsigned long dif = micros() - c->Start;
-  if (dif < c->Min) {
-    c->Min = dif;
-  }
-  if (dif > c->Max) {
-    c->Max = dif;
-  }
-  c->Count++;
-  c->Average = c->Average + dif;
-  if (dif > c->Average / c->Count) {
-    c->CntOvrAve++;
-  }
-  if (dif > (c->Average * 2) / c->Count) {
-    c->CntOvrDoubleAve++;
-  }
-}
-bool is_time_over(unsigned long value) {
-  // have to be testet
-  if (abs(value - time_now) > threshold) {
-    if (time_now-threshold >= value-threshold)
-      return 1;
-    else
-      return 0;
-  } else {
-    if (time_now >= value)
-      return 1;
-    else
-      return 0;
-  }
-  //  if(value < threshold && time_now > threshold)
-  //  {
-  //    return 0;
-  //  }
-  //  if(time_now >= value)
-  //  {
-  //    return 1;
-  //  }
-  //  else
-  //  {
-  //    return 0;
-  //  }
-}
 float checkEndswitches() {
   //check if one endswitch had changed
   if (useEndSwitch == true)
@@ -547,7 +437,7 @@ void TempControle() {
     TKelvin = 1 / ((1 / Tn) + ((double)1 / bWert) * log((double)widerstandNTC / Rn));
     T = TKelvin - kelvintemp;
     analogWrite(temprelai, Output);
-    if (is_time_over(cycle_time1))
+    if(time_now - cycle_time1 > 5000000)
     {
       if (soll_T != 1) {
         Serial.print("Temp THsoll");
@@ -559,8 +449,7 @@ void TempControle() {
         Serial.print(" TBist");
         Serial.println(T_Bed);
       }
-
-      cycle_time1 = time_now + 5000000;
+      cycle_time1 = time_now;
 
       bitwertNTC_Bed = analogRead(sensorPin_Bed);      // lese Analogwert an A0 aus
       widerstandNTC_Bed = widerstand1_Bed * (((double)bitwertNTC_Bed / 1024) / (1 - ((double)bitwertNTC_Bed / 1024)));
