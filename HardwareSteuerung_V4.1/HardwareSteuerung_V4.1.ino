@@ -41,7 +41,7 @@ typedef struct StepMotorBig {
   int pinPUL;
   //processing
   int steps_pmm;//steps pro mm (constant für x y z)
-  long act_step;//actueller position der achse in step
+  long act_step = 0;//actueller position der achse in step
 } StepMotorBig;
 struct sComand {
   eComandName eIndent;
@@ -76,6 +76,17 @@ typedef struct circular_buffer {
   void *head;       // pointer to head
   void *tail;       // pointer to tail
 } circular_buffer;
+typedef struct MovePos {
+  float Xp = 0;
+  long Xs = 0;
+  float Yp = 0;
+  long Ys = 0;
+  float Zp = 0;
+  long Zs = 0;
+  float Ep = 0;
+  long Es = 0;
+  float Speed = 0;//mm/s
+} MovePos;
 
 StepMotorBig Xachse;
 StepMotorBig Yachse;
@@ -84,7 +95,6 @@ StepMotorBig Eachse;
 
 sComand lComandList[8] = {
   {G1, "G1"},
-  {G9, "G9"},
   {G28, "G28"},
   {G92, "G92"},
   {M104, "M104"},
@@ -101,6 +111,8 @@ eGCodeState_t state;
 File GFile;
 File HomeFile;
 comParam nextMove;
+MovePos prePos;
+MovePos nextPrePos;
 
 void setup() {
   // put your setup code here, to run once:
@@ -181,11 +193,11 @@ void loop() {
 
     switch (state) {
       case GCodeStart:
-        if (SD_OpenFile(&GFile , "CIRCLE.TXT") == 0)
+        if (SD_OpenFile(&GFile , "CIRCLE2.TXT") == 0)
           setState(GCodeRun);
         break;
       case GCodeRun:
-        if (readFromSD(&GFile) == -1)
+        if (preRunPointer(&GFile) == -1 && cbSteps.count == 0)
           setState(GCodeStop);
         //calculate steps until finisched last point
         break;
@@ -197,41 +209,139 @@ void loop() {
       case GCodeCreate:
         break;
       case GCodeStartHome:
-        if (SD_OpenFile(&HomeFile , "home.txt") == 0)
+        if (SD_OpenFile(&HomeFile , "home.txt") == 0){
           setState(GCodeRunHome);
+          //enabel endswitches
+        }
         break;
       case GCodeRunHome:
-        if (readFromSD(&HomeFile) == -1)
+        if (preRunPointer(&HomeFile) == -1)
           setState(GCodeStopHome);
-        else
           //calculate steps until finisched last point
           break;
         break;
       case GCodeStopHome:
         SD_CloseFile(&HomeFile);
         setState(GCodeRun);
+        //disabel endswitches
         break;
       default:
         Serial.println("unknown State");
     }
+    calculateSteps();
   }
 }
 
-int readFromSD(File* gFile) {
+//prePos;
+//nextPrePos;
+void calculateSteps(){
+  fillSimpeSteps(&nextPrePos.Xs,&prePos.Xs,X);
+  fillSimpeSteps(&nextPrePos.Ys,&prePos.Ys,Y);
+  fillSimpeSteps(&nextPrePos.Zs,&prePos.Zs,Z);
+}
+void fillSimpeSteps(long *sollStep,long *istStep,eAchse achse){
+  stepParam newStep;
+  newStep.achse = achse;
+  newStep.ticks = T_MAX;
+  if(*sollStep > *istStep){
+    newStep.dir = 1;
+    while(*sollStep > *istStep){
+      while (cb_push_back(&cbSteps, &newStep) == -1) {
+        digitalWrite(24, HIGH);
+        delay(1);
+        digitalWrite(24, LOW);
+      }
+      *istStep += 1;
+    }
+  }else if(*sollStep < *istStep){
+    newStep.dir = 0;
+    while(*sollStep < *istStep){
+      while (cb_push_back(&cbSteps, &newStep) == -1) {
+        digitalWrite(24, HIGH);
+        delay(1);
+        digitalWrite(24, LOW);
+      }
+      *istStep -= 1;
+    }
+  }
+}
+
+int preRunPointer(File* gFile) {
   comParam newCommand;
   char *newLine;
   newLine = SD_ReadLine(gFile);
   if (newLine[0] == '@')
     return -1;
+  //Serial.println(newLine);
   LineParser(newLine, &newCommand);
-  if (newCommand.com == FAIL) {
-    readFromSD(gFile);
-  } else if (newCommand.com != G1) {
-    addCommand(&newCommand);
-    readFromSD(gFile);
-  } else {
-    nextMove = newCommand;// nur die in use sollten übertragen werden
+  switch(newCommand.com){
+    case G1:
+      setNextPrePos(&newCommand);
+      break;
+    case G28:
+      setState(GCodeStartHome);
+      break;
+    case G92:
+      setPrePos(&newCommand);
+    case M104:
+    case M140:
+    case M109:
+    case M190:
+      addCommand(&newCommand);
+      preRunPointer(gFile);
+      break;
+    case FAIL:
+    default:
+      preRunPointer(gFile);
   }
+}
+void setNextPrePos(comParam* newPos){
+  if (newPos->useX){
+    nextPrePos.Xp = newPos->X;
+    nextPrePos.Xs = newPos->X * Xachse.steps_pmm;
+  }
+  if (newPos->useY){
+    nextPrePos.Yp = newPos->Y;
+    nextPrePos.Ys = newPos->Y * Yachse.steps_pmm;
+  }
+  if (newPos->useZ){
+    nextPrePos.Zp = newPos->Z;
+    nextPrePos.Zs = newPos->Z * Zachse.steps_pmm;
+  }
+  if (newPos->useE){
+    nextPrePos.Ep = newPos->E;
+    nextPrePos.Es = newPos->E * Eachse.steps_pmm;
+  }
+  if (newPos->useF)
+    nextPrePos.Speed = newPos->F;
+}
+void setPrePos(comParam* newPos){
+  if (newPos->useX){
+    prePos.Xp = newPos->X;
+    prePos.Xs = newPos->X * Xachse.steps_pmm;
+  }
+  if (newPos->useY){
+    prePos.Yp = newPos->Y;
+    prePos.Ys = newPos->Y * Yachse.steps_pmm;
+  }
+  if (newPos->useZ){
+    prePos.Zp = newPos->Z;
+    prePos.Zs = newPos->Z * Zachse.steps_pmm;
+  }
+  if (newPos->useE){
+    prePos.Ep = newPos->E;
+    prePos.Es = newPos->E * Eachse.steps_pmm;
+  }
+}
+void setRealPose(comParam* newPos) {
+  if (newPos->useX)
+    Xachse.act_step = newPos->X * Xachse.steps_pmm;
+  if (newPos->useY)
+    Yachse.act_step = newPos->Y * Yachse.steps_pmm;
+  if (newPos->useZ)
+    Zachse.act_step = newPos->Z * Zachse.steps_pmm;
+  if (newPos->useE)
+    Eachse.act_step = newPos->E * Eachse.steps_pmm;
 }
 void setState(eGCodeState_t newState) {
   state = newState;
@@ -240,18 +350,64 @@ void setState(eGCodeState_t newState) {
 }
 void checkSerial() {
   char caLine[2];
-  stepParam newStep;
   comParam newCommand;
   if (Serial.available()) {
-    Serial.println("get serial");
+    Serial.print("get serial ");
     Serial.readBytes(caLine, 2);
-
-    if (caLine[0] >= 'A' and caLine[0] <= 'Z')
+    Serial.println(caLine[0]);
+    switch (caLine[0]) {
+      case 'M':
+        digitalWrite(Xachse.pinENA, LOW);
+        digitalWrite(Yachse.pinENA, LOW);
+        digitalWrite(Zachse.pinENA, LOW);
+        digitalWrite(Eachse.pinENA, LOW);
+        Serial.println("get M");
+        break;
+      case 'm':
+        digitalWrite(Xachse.pinENA, HIGH);
+        digitalWrite(Yachse.pinENA, HIGH);
+        digitalWrite(Zachse.pinENA, HIGH);
+        digitalWrite(Eachse.pinENA, HIGH);
+        Serial.println("get m");
+        break;
+      case 'a':
+        Serial.println("get a");
+        newCommand.com = G92;
+        newCommand.X = 10;
+        addCommand(&newCommand);
+        break;
+      case 'A':
+        Serial.println("get A");
+        setState(GCodeStart);
+        break;
+      case 'S':
+        startTimer(PRESCALE);
+        Serial.println("get S");
+        break;
+      case 's':
+        startTimer(0);
+        Serial.println("get s");
+        break;
+//      case 'B':
+//        Serial.println("get B");
+//        File root = SD.open("/");
+//        SD_printDirectory(GFile, root, 0);
+//        break;
+//        
+      default:
+        checkSerialAddSteps(caLine[0]);
+        break;
+    }
+  }
+}
+void checkSerialAddSteps(char caLine){
+    stepParam newStep;
+    if (caLine >= 'A' and caLine <= 'Z')
       newStep.dir = 1;
     else
       newStep.dir = 0;
 
-    switch (caLine[0]) {
+    switch (caLine) {
       case 'x':
       case 'X':
         Serial.println("get x");
@@ -267,49 +423,18 @@ void checkSerial() {
         Serial.println("get z");
         newStep.achse = Z;
         break;
-      case 'a':
-        Serial.println("get a");
-        newCommand.com = G92;
-        newCommand.X = 10;
-        addCommand(&newCommand);
-        return;
-        break;
-      case 'A':
-        setState(GCodeStart);
-        return;
-        break;
-      case 'B':
-        File root = SD.open("/");
-        SD_printDirectory(GFile, root, 0);
-        return;
-        break;
-      case 'M':
-        digitalWrite(Xachse.pinENA, LOW);
-        digitalWrite(Yachse.pinENA, LOW);
-        digitalWrite(Zachse.pinENA, LOW);
-        digitalWrite(Eachse.pinENA, LOW);
-        return;
-        break;
-      case 'm':
-        digitalWrite(Xachse.pinENA, HIGH);
-        digitalWrite(Yachse.pinENA, HIGH);
-        digitalWrite(Zachse.pinENA, HIGH);
-        digitalWrite(Eachse.pinENA, HIGH);
-        return;
-        break;
-
       default:
         Serial.print("unknown kommand ");
-        Serial.println(caLine[0]);
+        Serial.println(caLine);
         return;
     }
+    Serial.println("fill buffer");
     newStep.ticks = T_MAX;
     for (int i = 0; i < 500; i++) {
       while (cb_push_back(&cbSteps, &newStep) == -1) {
         delay(1);
       }
     }
-  }
 }
 ISR (TIMER1_OVF_vect) { // Timer1 ISR
   digitalWrite(22, HIGH);
@@ -363,11 +488,33 @@ void performStep(StepMotorBig *mot, bool dir) {
   digitalWrite(mot->pinPUL, HIGH);
 }
 void performCommand(comParam* newCommand) {
-  Serial.print("performCommand com ");
-  Serial.println(newCommand->com);
+  switch(newCommand->com){
+    case G92:
+      Serial.println("do G92");
+      break;
+    case M104:
+      Serial.println("do M104");
+      break;
+    case M140:
+      Serial.println("do M140");
+      break;
+    case M109:
+      Serial.println("do M109");
+      break;
+    case M190:
+      Serial.println("do M190");
+      break;
+    default:
+      Serial.println("unknown Command");
+  }
 }
 void startTimer(int prescale = 1) {
   switch (prescale) {
+    case 0:
+      resetBit(&TCCR1B, (1 << CS10));
+      resetBit(&TCCR1B, (1 << CS11));
+      resetBit(&TCCR1B, (1 << CS12));
+      break;
     case 1:
       setBit(&TCCR1B, (1 << CS10));
       resetBit(&TCCR1B, (1 << CS11));
