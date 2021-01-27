@@ -8,6 +8,7 @@
 #define CPU 16000000.00
 #define T_MAX 65535.00
 #define PRESCALE 64
+
 //i dont know why to init this funktion here
 void startTimer(int precscalar);
 
@@ -39,6 +40,8 @@ typedef struct StepMotorBig {
   int pinENA;
   int pinDIR;
   int pinPUL;
+  int pinNull;
+  int pinPlus;
   //processing
   int steps_pmm;//steps pro mm (constant für x y z)
   long act_step = 0;//actueller position der achse in step
@@ -78,13 +81,9 @@ typedef struct circular_buffer {
 } circular_buffer;
 typedef struct MovePos {
   float Xp = 0;
-  long Xs = 0;
   float Yp = 0;
-  long Ys = 0;
   float Zp = 0;
-  long Zs = 0;
   float Ep = 0;
-  long Es = 0;
   float Speed = 0;//mm/s
 } MovePos;
 
@@ -92,7 +91,6 @@ StepMotorBig Xachse;
 StepMotorBig Yachse;
 StepMotorBig Zachse;
 StepMotorBig Eachse;
-
 sComand lComandList[8] = {
   {G1, "G1"},
   {G28, "G28"},
@@ -102,7 +100,6 @@ sComand lComandList[8] = {
   {M109, "M109"},
   {M190, "M190"}
 };
-
 circular_buffer cbSteps;
 circular_buffer cbCommand;
 
@@ -114,6 +111,9 @@ comParam nextMove;
 MovePos prePos;
 MovePos nextPrePos;
 
+//settings/Parameter
+bool useES = true;
+
 void setup() {
   // put your setup code here, to run once:
   Xachse.act_step = 0;
@@ -121,33 +121,47 @@ void setup() {
   Xachse.pinENA = 37;//PC0
   Xachse.pinDIR = 39;//PG2
   Xachse.pinPUL = 41;//PG0
+  Xachse.pinPlus = 44;
+  Xachse.pinNull = 46;
   pinMode(Xachse.pinENA, OUTPUT);
   pinMode(Xachse.pinDIR, OUTPUT);
   pinMode(Xachse.pinPUL, OUTPUT);
+  pinMode(Xachse.pinNull, INPUT_PULLUP);
+  pinMode(Xachse.pinPlus, INPUT_PULLUP);
 
   Yachse.act_step = 0;
   Yachse.steps_pmm = 50;
   Yachse.pinENA = 43;
   Yachse.pinDIR = 45;
   Yachse.pinPUL = 47;
+  Yachse.pinPlus = 40;
+  Yachse.pinNull = 42;
   pinMode(Yachse.pinENA, OUTPUT);
   pinMode(Yachse.pinDIR, OUTPUT);
   pinMode(Yachse.pinPUL, OUTPUT);
+  pinMode(Yachse.pinNull, INPUT_PULLUP);
+  pinMode(Yachse.pinPlus, INPUT_PULLUP);
 
   Zachse.act_step = 0;
   Zachse.steps_pmm = 50;
   Zachse.pinENA = 25;
   Zachse.pinDIR = 27;
   Zachse.pinPUL = 29;
+  Zachse.pinPlus = 36;
+  Zachse.pinNull = 38;
   pinMode(Zachse.pinENA, OUTPUT);
   pinMode(Zachse.pinDIR, OUTPUT);
   pinMode(Zachse.pinPUL, OUTPUT);
+  pinMode(Zachse.pinNull, INPUT_PULLUP);
+  pinMode(Zachse.pinPlus, INPUT_PULLUP);
 
   Eachse.act_step = 0;
   Eachse.steps_pmm = 35;
   Eachse.pinENA = 31;
   Eachse.pinDIR = 33;
   Eachse.pinPUL = 35;
+  Eachse.pinPlus = 0;
+  Eachse.pinNull = 0;
   pinMode(Eachse.pinENA, OUTPUT);
   pinMode(Eachse.pinDIR, OUTPUT);
   pinMode(Eachse.pinPUL, OUTPUT);
@@ -189,8 +203,7 @@ void loop() {
 
   Serial.println("wait for serial");
   while (true) {
-    checkSerial();
-
+    doStdTasks();
     switch (state) {
       case GCodeStart:
         if (SD_OpenFile(&GFile , "CIRCLE2.TXT") == 0)
@@ -199,7 +212,6 @@ void loop() {
       case GCodeRun:
         if (preRunPointer(&GFile) == -1 && cbSteps.count == 0)
           setState(GCodeStop);
-        //calculate steps until finisched last point
         break;
       case GCodePause:
         break;
@@ -211,60 +223,51 @@ void loop() {
       case GCodeStartHome:
         if (SD_OpenFile(&HomeFile , "home.txt") == 0){
           setState(GCodeRunHome);
-          //enabel endswitches
+          useES = true;
         }
         break;
       case GCodeRunHome:
         if (preRunPointer(&HomeFile) == -1)
           setState(GCodeStopHome);
-          //calculate steps until finisched last point
           break;
         break;
       case GCodeStopHome:
         SD_CloseFile(&HomeFile);
         setState(GCodeRun);
-        //disabel endswitches
+        useES = false;
         break;
       default:
         Serial.println("unknown State");
     }
     calculateSteps();
+    
   }
 }
 
-//prePos;
-//nextPrePos;
 void calculateSteps(){
-  fillSimpeSteps(&nextPrePos.Xs,&prePos.Xs,X);
-  fillSimpeSteps(&nextPrePos.Ys,&prePos.Ys,Y);
-  fillSimpeSteps(&nextPrePos.Zs,&prePos.Zs,Z);
+  fillSimpeSteps(&nextPrePos.Xp,&prePos.Xp,X);
+  fillSimpeSteps(&nextPrePos.Yp,&prePos.Yp,Y);
+  fillSimpeSteps(&nextPrePos.Zp,&prePos.Zp,Z);
 }
-void fillSimpeSteps(long *sollStep,long *istStep,eAchse achse){
+void fillSimpeSteps(float *sollStep,float *istStep,eAchse achse){
   stepParam newStep;
   newStep.achse = achse;
   newStep.ticks = T_MAX;
   if(*sollStep > *istStep){
     newStep.dir = 1;
     while(*sollStep > *istStep){
-      while (cb_push_back(&cbSteps, &newStep) == -1) {
-        digitalWrite(24, HIGH);
-        delay(1);
-        digitalWrite(24, LOW);
-      }
-      *istStep += 1;
+       cb_push_back(&cbSteps, &newStep);
+      *istStep += float(1/50);
     }
   }else if(*sollStep < *istStep){
     newStep.dir = 0;
     while(*sollStep < *istStep){
-      while (cb_push_back(&cbSteps, &newStep) == -1) {
-        digitalWrite(24, HIGH);
-        delay(1);
-        digitalWrite(24, LOW);
-      }
-      *istStep -= 1;
+      cb_push_back(&cbSteps, &newStep);
+      *istStep -= float(1/50);
     }
   }
 }
+
 
 int preRunPointer(File* gFile) {
   comParam newCommand;
@@ -296,42 +299,26 @@ int preRunPointer(File* gFile) {
   }
 }
 void setNextPrePos(comParam* newPos){
-  if (newPos->useX){
+  if (newPos->useX)
     nextPrePos.Xp = newPos->X;
-    nextPrePos.Xs = newPos->X * Xachse.steps_pmm;
-  }
-  if (newPos->useY){
+  if (newPos->useY)
     nextPrePos.Yp = newPos->Y;
-    nextPrePos.Ys = newPos->Y * Yachse.steps_pmm;
-  }
-  if (newPos->useZ){
+  if (newPos->useZ)
     nextPrePos.Zp = newPos->Z;
-    nextPrePos.Zs = newPos->Z * Zachse.steps_pmm;
-  }
-  if (newPos->useE){
+  if (newPos->useE)
     nextPrePos.Ep = newPos->E;
-    nextPrePos.Es = newPos->E * Eachse.steps_pmm;
-  }
   if (newPos->useF)
     nextPrePos.Speed = newPos->F;
 }
 void setPrePos(comParam* newPos){
-  if (newPos->useX){
+  if (newPos->useX)
     prePos.Xp = newPos->X;
-    prePos.Xs = newPos->X * Xachse.steps_pmm;
-  }
-  if (newPos->useY){
+  if (newPos->useY)
     prePos.Yp = newPos->Y;
-    prePos.Ys = newPos->Y * Yachse.steps_pmm;
-  }
-  if (newPos->useZ){
+  if (newPos->useZ)
     prePos.Zp = newPos->Z;
-    prePos.Zs = newPos->Z * Zachse.steps_pmm;
-  }
-  if (newPos->useE){
+  if (newPos->useE)
     prePos.Ep = newPos->E;
-    prePos.Es = newPos->E * Eachse.steps_pmm;
-  }
 }
 void setRealPose(comParam* newPos) {
   if (newPos->useX)
@@ -348,6 +335,44 @@ void setState(eGCodeState_t newState) {
   Serial.print("newState ");
   Serial.println(state);
 }
+eGCodeState_t getState() {
+  return state;
+}
+void checkEndswitches(){
+  //check if in home
+  if(digitalRead(Xachse.pinNull)==HIGH&&
+  digitalRead(Yachse.pinNull)==HIGH&&
+  digitalRead(Zachse.pinPlus)==HIGH){
+    if(getState() == GCodeRunHome)
+      Serial.println("is in Home");
+      setState(GCodeStopHome);
+  }
+  comParam newPos;
+  //prePos;
+  //nextPrePos;
+  handleES(&Xachse,&prePos.Xp,&nextPrePos.Xp);
+  handleES(&Yachse,&prePos.Yp,&nextPrePos.Yp);
+  handleES(&Zachse,&prePos.Zp,&nextPrePos.Zp);
+}
+void handleES(StepMotorBig *mot,float *preP,float *nextPreP){
+  if(digitalRead(mot->pinNull)==HIGH){
+    float pos = float(mot->act_step) / float(mot->steps_pmm);
+    if(*preP<pos){
+      *preP=pos;
+      }
+    if(*nextPreP<pos){
+      *nextPreP=pos;
+      }
+    
+  }
+  if(digitalRead(mot->pinPlus)==HIGH){
+    float pos = float(mot->act_step) / float(mot->steps_pmm);
+    if(*preP>pos){*preP=pos;}
+    if(*nextPreP>pos){*nextPreP=pos;}
+  }
+}
+
+
 void checkSerial() {
   char caLine[2];
   comParam newCommand;
@@ -355,85 +380,69 @@ void checkSerial() {
     Serial.print("get serial ");
     Serial.readBytes(caLine, 2);
     Serial.println(caLine[0]);
-    switch (caLine[0]) {
-      case 'M':
+    if(caLine[0]=='M'){
         digitalWrite(Xachse.pinENA, LOW);
         digitalWrite(Yachse.pinENA, LOW);
         digitalWrite(Zachse.pinENA, LOW);
         digitalWrite(Eachse.pinENA, LOW);
         Serial.println("get M");
-        break;
-      case 'm':
+    }else if(caLine[0]=='m'){
         digitalWrite(Xachse.pinENA, HIGH);
         digitalWrite(Yachse.pinENA, HIGH);
         digitalWrite(Zachse.pinENA, HIGH);
         digitalWrite(Eachse.pinENA, HIGH);
         Serial.println("get m");
-        break;
-      case 'a':
+    }else if(caLine[0]=='a'){
         Serial.println("get a");
-        newCommand.com = G92;
-        newCommand.X = 10;
-        addCommand(&newCommand);
-        break;
-      case 'A':
+        setState(GCodeStartHome);
+    }else if(caLine[0]=='A'){
         Serial.println("get A");
         setState(GCodeStart);
-        break;
-      case 'S':
+    }else if(caLine[0]=='S'){
         startTimer(PRESCALE);
         Serial.println("get S");
-        break;
-      case 's':
+    }else if(caLine[0]=='s'){
         startTimer(0);
         Serial.println("get s");
-        break;
-//      case 'B':
-//        Serial.println("get B");
-//        File root = SD.open("/");
-//        SD_printDirectory(GFile, root, 0);
-//        break;
-//        
-      default:
+    }else if(caLine[0]=='B'){
+        Serial.println("get B");
+        File root = SD.open("/");
+        SD_printDirectory(GFile, root, 0);
+    }else if(caLine[0]=='b'){
+        Serial.println("get b");
+        Serial.print("npP_x:");
+        Serial.print(nextPrePos.Xp);
+        Serial.print(" pP_x:");
+        Serial.println(prePos.Xp);
+        Serial.print("npP_y:");
+        Serial.print(nextPrePos.Yp);
+        Serial.print(" pP_y:");
+        Serial.println(prePos.Yp);
+        Serial.print("npP_z:");
+        Serial.print(nextPrePos.Zp);
+        Serial.print(" pP_z:");
+        Serial.println(prePos.Zp);
+    }else{
         checkSerialAddSteps(caLine[0]);
-        break;
     }
   }
 }
 void checkSerialAddSteps(char caLine){
-    stepParam newStep;
-    if (caLine >= 'A' and caLine <= 'Z')
-      newStep.dir = 1;
-    else
-      newStep.dir = 0;
-
-    switch (caLine) {
-      case 'x':
-      case 'X':
-        Serial.println("get x");
-        newStep.achse = X;
-        break;
-      case 'y':
-      case 'Y':
-        Serial.println("get y");
-        newStep.achse = Y;
-        break;
-      case 'z':
-      case 'Z':
-        Serial.println("get z");
-        newStep.achse = Z;
-        break;
-      default:
+    if(caLine == 'x'){
+      nextPrePos.Xp -= 10;
+    }else if(caLine == 'X'){
+      nextPrePos.Xp += 10;
+    }else if(caLine == 'y'){
+      nextPrePos.Yp -= 10;
+    }else if(caLine == 'Y'){
+      nextPrePos.Yp += 10;
+    }else if(caLine == 'z'){
+      nextPrePos.Zp -= 10;
+    }else if(caLine == 'Z'){
+      nextPrePos.Zp += 10;
+    }else{
         Serial.print("unknown kommand ");
         Serial.println(caLine);
-        return;
-    }
-    Serial.println("fill buffer");
-    newStep.ticks = T_MAX;
-    for (int i = 0; i < 500; i++) {
-      while (cb_push_back(&cbSteps, &newStep) == -1) {
-        delay(1);
-      }
     }
 }
 ISR (TIMER1_OVF_vect) { // Timer1 ISR
@@ -469,16 +478,23 @@ ISR (TIMER1_OVF_vect) { // Timer1 ISR
 }
 void addCommand(comParam* newCommand) {
   stepParam newStep;
-  while (cb_push_back(&cbCommand, newCommand) == -1) {
-    delay(1);
-  }
+  cb_push_back(&cbCommand, newCommand);
   newStep.achse = C;
   newStep.ticks = 0;
-  while (cb_push_back(&cbSteps, &newStep) == -1) {
-    delay(1);
-  }
+  cb_push_back(&cbSteps, &newStep);
 }
 void performStep(StepMotorBig *mot, bool dir) {
+  if (dir && useES && mot->pinPlus != 0){
+    if(digitalRead(mot->pinPlus)==HIGH){
+      return;
+    }
+  }else if (!dir && useES && mot->pinNull != 0){
+    if(digitalRead(mot->pinNull)==HIGH){
+      return;
+    }
+  }
+  //Zachse.pinPlus = 36;
+  //Zachse.pinNull = 38;
   digitalWrite(mot->pinPUL, LOW);
   digitalWrite(mot->pinDIR, dir);
   if (dir)
@@ -714,8 +730,8 @@ void cb_free(circular_buffer *cb) {
   // clear out other fields too, just to be safe
 }
 int cb_push_back(circular_buffer *cb, const void *item) {
-  if (cb->count == cb->capacity) {
-    return -1;
+  while(cb->count == cb->capacity) {
+    doStdTasks();
   }
   memcpy(cb->head, item, cb->sz);
   cb->head = (char*)cb->head + cb->sz;
@@ -734,6 +750,13 @@ int cb_pop_front(circular_buffer *cb, void *item) {
     cb->tail = cb->buffer;
   cb->count--;
   return cb->count;
+}
+void doStdTasks(){
+  //task that have to be performed also while waiting to add a point
+  checkSerial();
+  checkEndswitches();
+  //regulate temperature
+  //status aupdates
 }
 void setBit(volatile uint8_t* B, unsigned char b) {
   //set a bit in a Byte
