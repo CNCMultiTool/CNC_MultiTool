@@ -385,9 +385,11 @@ void processComandLine(char* newLine) {
     Serial.println("Q30");
   } else if (newCommand.com == Q100) { //Execute G-Code if File exist
     Serial.println("Q100");
-    *GCodeFileName = fileName;
+    Serial.println(fileName);
+    //*GCodeFileName = fileName;
+    strcpy(GCodeFileName,fileName);
     if (getState() == GCodeStop)
-      setState(GCodeRun);
+      setState(GCodeStart);
   } else if (newCommand.com == Q101) { //open file to write G-Code in it
     Serial.println("Q101");
   } else if (newCommand.com == Q102) { //close file after write G-Code
@@ -708,6 +710,8 @@ void startTimer(int prescale = 1) {
   setBit(&TIMSK1, (1 << TOIE1));
 }
 int SD_OpenFile(File *file , const char* fileName) {
+  Serial.print("open file ");
+  Serial.println(fileName);
   if (file)
     file->close();
   if (!SD.exists(fileName)) {
