@@ -48,9 +48,6 @@ void Serial::serial_close()
     m_database->m_SerialIsOpen = false;
 }
 
-
-
-
 /**
  * liest daten vom serielen port
  * chekct ob ein telegramm empfangen
