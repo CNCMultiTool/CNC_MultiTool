@@ -261,6 +261,11 @@ void loop() {
         SD_CloseFile(&GFile);
         break;
       case GCodeCreate:
+        while(getState()==GCodeCreate){
+          if(SR_CheckForLine() == 1){
+            SD_writeToSD(&GFile, reciveBuf);
+          }
+        }
         break;
       case GCodeStartHome:
         if (SD_OpenFile(&HomeFile , "home.txt") == 0) {
@@ -281,7 +286,6 @@ void loop() {
         Serial.println("unknown State");
     }
     calculateSteps();
-
   }
 }
 
@@ -385,13 +389,16 @@ void processComandLine(char* newLine) {
     Serial.println("Q30");
   } else if (newCommand.com == Q100) { //Execute G-Code if File exist
     Serial.println("Q100");
-    Serial.println(fileName);
-    //*GCodeFileName = fileName;
     strcpy(GCodeFileName,fileName);
     if (getState() == GCodeStop)
       setState(GCodeStart);
   } else if (newCommand.com == Q101) { //open file to write G-Code in it
     Serial.println("Q101");
+    if(getState() == GCodeStop){
+      setState(GCodeCreate);
+      SD_createFile(&GFile, fileName);
+    }else
+      Serial.println("write can only start when stoped");
   } else if (newCommand.com == Q102) { //close file after write G-Code
     Serial.println("Q102");
   } else if (newCommand.com == Q103) { //Pause G-Code
@@ -411,7 +418,7 @@ void processComandLine(char* newLine) {
     SD_printDirectory(GFile, root, 0);
   } else if (newCommand.com == Q107) { //Delete File
     Serial.println("Q107");
-    SD_removeFile(GFile, fileName);
+    SD_removeFile(fileName);
   } else {
     Serial.println("unknown GCode");
   }
@@ -710,8 +717,6 @@ void startTimer(int prescale = 1) {
   setBit(&TIMSK1, (1 << TOIE1));
 }
 int SD_OpenFile(File *file , const char* fileName) {
-  Serial.print("open file ");
-  Serial.println(fileName);
   if (file)
     file->close();
   if (!SD.exists(fileName)) {
@@ -786,9 +791,7 @@ void SD_printDirectory(File &myFile, File dir, int numTabs) {
     entry.close();
   }
 }
-int SD_removeFile(File &myFile, const char* fileName) {
-  if (!myFile)
-    myFile.close();
+int SD_removeFile(const char* fileName) {
   if (SD.exists(fileName)) {
     SD.remove(fileName);
     Serial.print("remove_file: delete ");
@@ -797,6 +800,33 @@ int SD_removeFile(File &myFile, const char* fileName) {
   }
   Serial.println("remove_file: file not exist");
   return -1;
+}
+void SD_createFile(File *myFile,const char* fileName){
+  if (SD.exists(fileName)){
+    SD.remove(fileName);
+    Serial.println("remove file");
+  }
+  *myFile = SD.open(fileName,FILE_WRITE);
+  Serial.print("create file to write ");
+  Serial.println(fileName);
+  if (!*myFile) {
+    Serial.println("create_file: errorFileOpen");
+    setState(GCodeStop);
+  }else{
+    Serial.println("GC_NL");
+  }
+}
+void SD_writeToSD(File *myFile,char* newLine) {
+  if (ComandParser(newLine) == Q102)
+  {
+    Serial.println("Finish Create File");
+    myFile->close();
+    setState(GCodeStop);
+    return;
+  }
+  //Serial.println("writeToSD: befor write");
+  myFile->write(newLine);
+  Serial.println("GC_NL");
 }
 eComandName ComandParser(char* command_line) {
   //look for a G-Code Comand in Line
