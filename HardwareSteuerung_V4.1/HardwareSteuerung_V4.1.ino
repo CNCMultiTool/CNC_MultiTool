@@ -82,7 +82,7 @@ typedef struct comParam {//decoded comand line
 typedef struct  stepParam {
   eAchse achse;
   bool dir;
-  int ticks;
+  unsigned int ticks;
   int preScale;
 } stepParam;
 typedef struct circular_buffer {
@@ -231,6 +231,13 @@ void setup() {
   }
   Serial.println("SD initializ");
 
+//init the timer5
+  TCNT5 = 0;
+  TCCR5A = 0x00;
+  TCCR5B = 0x00;
+  TCCR5C = 0x00;
+  setBit(&TIMSK5, (1 << TOIE5));//enable timer overflow
+
   cb_init(&cbSteps, 100, sizeof(stepParam));
   cb_init(&cbCommand, 10, sizeof(comParam));
   setState(GCodeStop);
@@ -238,7 +245,7 @@ void setup() {
 }
 
 void loop() {
-  startTimer(PRESCALE);
+  startTimer(1);//start intterrupt timer
 
   Serial.println("wait for serial");
   while (true) {
@@ -294,37 +301,83 @@ void calculateSteps() {
   prePos.Ys = float(prePos.Yp) * float(Yachse.steps_pmm);
   prePos.Zs = float(prePos.Zp) * float(Zachse.steps_pmm);
   prePos.Es = float(prePos.Ep) * float(Eachse.steps_pmm);
+  
+  fillSimpeSteps(&nextPrePos.Xs, &prePos.Xs, Xachse,nextPrePos.Speed);
+  fillSimpeSteps(&nextPrePos.Ys, &prePos.Ys, Yachse,nextPrePos.Speed);
+  fillSimpeSteps(&nextPrePos.Zs, &prePos.Zs, Zachse,nextPrePos.Speed);
+  fillSimpeSteps(&nextPrePos.Es, &prePos.Es, Eachse,nextPrePos.Speed);
 
-  fillSimpeSteps(&nextPrePos.Xs, &prePos.Xs, X);
   prePos.Xp = float(prePos.Xs) / float(Xachse.steps_pmm);
-  fillSimpeSteps(&nextPrePos.Ys, &prePos.Ys, Y);
   prePos.Yp = float(prePos.Ys) / float(Yachse.steps_pmm);
-  fillSimpeSteps(&nextPrePos.Zs, &prePos.Zs, Z);
   prePos.Zp = float(prePos.Zs) / float(Zachse.steps_pmm);
-  fillSimpeSteps(&nextPrePos.Es, &prePos.Es, E);
   prePos.Ep = float(prePos.Es) / float(Eachse.steps_pmm);
 }
-void fillSimpeSteps(long *sollStep, long *istStep, eAchse achse) {
+void fillSimpeSteps(long *sollStep, long *istStep, StepMotorBig Achse,double mySpeed) {
   stepParam newStep;
+  double StepPerSekond = (mySpeed*double(Achse.steps_pmm));
   if (*sollStep == *istStep) {
     return;
   } else if (*sollStep > *istStep) {
-    newStep.achse = achse;
-    newStep.ticks = T_MAX;
+    Serial.print("fillSimpeSteps sPs ");
+    Serial.print(StepPerSekond);
+    Serial.print(" speed ");
+    Serial.println(mySpeed);
+    newStep.achse = Achse.achse;
+    usToTimer(&newStep,StepPerSekond);
     newStep.dir = 1;
     while (*sollStep > *istStep) {
       cb_push_back(&cbSteps, &newStep);
       *istStep += 1;
+      checkSerial();
     }
   } else if (*sollStep < *istStep) {
+    Serial.print("fillSimpeSteps sPs ");
+    Serial.print(StepPerSekond);
+    Serial.print(" speed ");
+    Serial.println(mySpeed);
     newStep.dir = 0;
-    newStep.achse = achse;
-    newStep.ticks = T_MAX;
+    newStep.achse = Achse.achse;
+    usToTimer(&newStep,StepPerSekond);
     while (*sollStep < *istStep) {
       cb_push_back(&cbSteps, &newStep);
       *istStep -= 1;
+      checkSerial();
     }
   }
+}
+void usToTimer(stepParam* myStep,double StepPerSekond){
+  //tick = 1/16.000.000 = 62.5ns
+  // max_ticks = 65535
+  Serial.print("usToTime sps ");
+  Serial.print(StepPerSekond);
+  Serial.print(" ");
+  double us = 1.0/StepPerSekond;
+  double usF = CPU;
+  if(us<0){
+    myStep->ticks = 0;
+    myStep->preScale = 1;//4096us
+  }else if(us<4095){
+    myStep->ticks =  T_MAX - (usF/1.0)*us-1;
+    myStep->preScale = 1;//4096us
+  }else if(us<32767){
+    myStep->ticks = T_MAX - (usF/8.0)*us-1;
+    myStep->preScale = 8;//32767us
+  }else if(us<262139){
+    myStep->ticks = T_MAX - (usF/64.0)*us-1;
+    myStep->preScale = 64;//262139us
+  }else if(us<1048559){
+    myStep->ticks = T_MAX - (usF/256.0)*us-1;
+    myStep->preScale = 256;//1048559us
+  }else{// if(us<4194239){
+    myStep->ticks = T_MAX - (usF/1024.0)*us-1;
+    myStep->preScale = 1024;//4194239us
+  }  
+  if(myStep->ticks > T_MAX) myStep->ticks = T_MAX;
+  
+//  Serial.print(" pre:");
+//  Serial.print(myStep->preScale);
+//  Serial.print(" ticks:");
+//  Serial.println(myStep->ticks);
 }
 int calcPreRunPointer(File* gFile) {
 
@@ -596,12 +649,13 @@ int SR_CheckForLine() {
   }
   return 0;
 }
-ISR (TIMER1_OVF_vect) { // Timer1 ISR
+ISR (TIMER5_OVF_vect) { // Timer1 ISR
   digitalWrite(22, HIGH);
   stepParam nextStep;
   comParam nextCommand;
   if (cb_pop_front(&cbSteps, &nextStep) == -1) {
-    TCNT1 = T_MAX;
+    TCNT5 = 0;//T_MAX;
+    startTimer(1);
   } else {
     switch (nextStep.achse) {
       case X:
@@ -623,10 +677,11 @@ ISR (TIMER1_OVF_vect) { // Timer1 ISR
           performCommand(&nextCommand);
         break;
     }
-    TCNT1 = nextStep.ticks;
-    //TODO add set prescalar heare
+    startTimer(nextStep.preScale);
+    TCNT5 = nextStep.ticks;
   }
   digitalWrite(22, LOW);
+  
 }
 void addCommand(comParam* newCommand) {
   stepParam newStep;
@@ -681,40 +736,40 @@ void performCommand(comParam* newCommand) {
 void startTimer(int prescale = 1) {
   switch (prescale) {
     case 0:
-      resetBit(&TCCR1B, (1 << CS10));
-      resetBit(&TCCR1B, (1 << CS11));
-      resetBit(&TCCR1B, (1 << CS12));
+      resetBit(&TCCR5B, (1 << CS10));
+      resetBit(&TCCR5B, (1 << CS11));
+      resetBit(&TCCR5B, (1 << CS12));
       break;
     case 1:
-      setBit(&TCCR1B, (1 << CS10));
-      resetBit(&TCCR1B, (1 << CS11));
-      resetBit(&TCCR1B, (1 << CS12));
+      setBit(&TCCR5B, (1 << CS10));
+      resetBit(&TCCR5B, (1 << CS11));
+      resetBit(&TCCR5B, (1 << CS12));
       break;
     case 8:
-      resetBit(&TCCR1B, (1 << CS10));
-      setBit(&TCCR1B, (1 << CS11));
-      resetBit(&TCCR1B, (1 << CS12));
+      resetBit(&TCCR5B, (1 << CS10));
+      setBit(&TCCR5B, (1 << CS11));
+      resetBit(&TCCR5B, (1 << CS12));
       break;
     case 64:
-      setBit(&TCCR1B, (1 << CS10));
-      setBit(&TCCR1B, (1 << CS11));
-      resetBit(&TCCR1B, (1 << CS12));
+      setBit(&TCCR5B, (1 << CS10));
+      setBit(&TCCR5B, (1 << CS11));
+      resetBit(&TCCR5B, (1 << CS12));
       break;
     case 256:
-      resetBit(&TCCR1B, (1 << CS10));
-      resetBit(&TCCR1B, (1 << CS11));
-      setBit(&TCCR1B, (1 << CS12));
+      resetBit(&TCCR5B, (1 << CS10));
+      resetBit(&TCCR5B, (1 << CS11));
+      setBit(&TCCR5B, (1 << CS12));
       break;
     case 1024:
-      setBit(&TCCR1B, (1 << CS10));
-      resetBit(&TCCR1B, (1 << CS11));
-      setBit(&TCCR1B, (1 << CS12));
+      setBit(&TCCR5B, (1 << CS10));
+      resetBit(&TCCR5B, (1 << CS11));
+      setBit(&TCCR5B, (1 << CS12));
       break;
     default:
       Serial.println("unknown prescalar");
       break;
   }
-  setBit(&TIMSK1, (1 << TOIE1));
+  setBit(&TIMSK5, (1 << TOIE5));
 }
 int SD_OpenFile(File *file , const char* fileName) {
   if (file)
