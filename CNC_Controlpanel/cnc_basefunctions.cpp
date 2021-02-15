@@ -270,9 +270,9 @@ void  cnc_basefunctions::processLine(const QString &s)
         m_ComandLines.clear();
         emit Log("create file failed");
     }
-    if(s.indexOf("posX")!=-1)
+    if(s.indexOf("M114 X")!=-1)
     {
-        int start = s.indexOf("posX")+4;
+        int start = s.indexOf("M114 X")+6;
         int end = s.indexOf(" Y",start);
         m_database->m_act_X = s.mid(start,end-start).toFloat();
         start = s.indexOf(" Y",end)+2;
@@ -282,13 +282,9 @@ void  cnc_basefunctions::processLine(const QString &s)
         end = s.indexOf(" E",start);
         m_database->m_act_Z = s.mid(start,end-start).toFloat();
         start = s.indexOf(" E",end)+2;
-        end = s.indexOf(" F",start);
-        m_database->m_act_E = s.mid(start,end-start).toFloat();
-        start = s.indexOf(" F",end)+2;
         end = s.length();
-        m_database->m_act_speed = s.mid(start,end-start).toFloat();
+        m_database->m_act_E = s.mid(start,end-start).toFloat();
         emit show_position();
-        emit show_speed();
     }
     if(s.indexOf("Temp THsoll")!=-1)
     {

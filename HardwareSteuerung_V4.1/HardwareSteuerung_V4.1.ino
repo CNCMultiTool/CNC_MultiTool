@@ -97,13 +97,17 @@ typedef struct circular_buffer {
 typedef struct MovePos {
   float Xp = 0;
   long Xs = 0;
+  float Xv = 0;
   float Yp = 0;
   long Ys = 0;
+  float Yv = 0;
   float Zp = 0;
   long Zs = 0;
+  float Zv = 0;
   float Ep = 0;
   long Es = 0;
-  float Speed = 0;//mm/s
+  float Ev = 0;
+  float Speed = 20;//mm/s
 } MovePos;
 
 StepMotorBig Xachse;
@@ -246,14 +250,15 @@ void setup() {
 
 void loop() {
   startTimer(1);//start intterrupt timer
-
-  Serial.println("wait for serial");
   while (true) {
     doStdTasks();
     switch (state) {
       case GCodeStart:
-        if (SD_OpenFile(&GFile , GCodeFileName) == 0)
+        if (SD_OpenFile(&GFile , GCodeFileName) == 0){
           setState(GCodeRun);
+        }else{
+          setState(GCodeStop);
+        }
         break;
       case GCodeRun:
         //useES = false;//disable endswitches to move undisturbed in GCode
@@ -295,35 +300,108 @@ void loop() {
     calculateSteps();
   }
 }
-
 void calculateSteps() {
   prePos.Xs = float(prePos.Xp) * float(Xachse.steps_pmm);
   prePos.Ys = float(prePos.Yp) * float(Yachse.steps_pmm);
   prePos.Zs = float(prePos.Zp) * float(Zachse.steps_pmm);
   prePos.Es = float(prePos.Ep) * float(Eachse.steps_pmm);
+  //get travel dist
+  float gesDif = getTravelDist(&prePos,&nextPrePos);
+  //get travel achseSpeed  Xv/Xdif = Speed/GesDif
+  nextPrePos.Xv = abs(prePos.Xp - nextPrePos.Xp)/gesDif * nextPrePos.Speed;
+  nextPrePos.Yv = abs(prePos.Yp - nextPrePos.Yp)/gesDif * nextPrePos.Speed;
+  nextPrePos.Zv = abs(prePos.Zp - nextPrePos.Zp)/gesDif * nextPrePos.Speed;
+  nextPrePos.Ev = abs(prePos.Ep - nextPrePos.Ep)/gesDif * nextPrePos.Speed;
+  //calculate step time x y z e sort in buffer
+
+  unsigned long lastMoveTime = 0;
+  unsigned long nextX = 1000000/(nextPrePos.Xv * Xachse.steps_pmm);
+  if(nextPrePos.Xs==prePos.Xs)nextX = -1; 
+  unsigned long nextY = 1000000/(nextPrePos.Yv * Yachse.steps_pmm);
+  if(nextPrePos.Ys==prePos.Ys)nextY = -1; 
+  unsigned long nextZ = 1000000/(nextPrePos.Zv * Zachse.steps_pmm);
+  if(nextPrePos.Zs==prePos.Zs)nextZ = -1; 
+  unsigned long nextE = 1000000/(nextPrePos.Ev * Eachse.steps_pmm);
+  if(nextPrePos.Es==prePos.Es)nextE = -1; 
+
+while(!prePointerOnPos()){
+  doStdTasks();
+  if(nextX<=nextY&&nextX<=nextZ&&nextX<=nextE){
+    //X
+    createStep(X,&nextPrePos.Xs, &prePos.Xs,nextX-lastMoveTime);
+    lastMoveTime = nextX;
+    nextX = lastMoveTime + 1000000/(nextPrePos.Xv * Xachse.steps_pmm);
+  }
+  else if(nextY<=nextZ&&nextY<=nextE){
+    //Y
+    createStep(Y,&nextPrePos.Ys, &prePos.Ys,nextY-lastMoveTime);
+    lastMoveTime = nextY;
+    nextY = lastMoveTime + 1000000/(nextPrePos.Yv * Yachse.steps_pmm);
+  }
+  else if(nextZ<=nextE){
+    //Z
+    createStep(Z,&nextPrePos.Zs, &prePos.Zs,nextZ-lastMoveTime);
+    lastMoveTime = nextZ;
+    nextZ = lastMoveTime + 1000000/(nextPrePos.Zv * Zachse.steps_pmm);
+  }else{
+    //E
+    createStep(E,&nextPrePos.Es, &prePos.Es,nextE-lastMoveTime);
+    lastMoveTime = nextE;
+    nextE = lastMoveTime + 1000000/(nextPrePos.Ev * Eachse.steps_pmm);
+  }
+}
   
-  fillSimpeSteps(&nextPrePos.Xs, &prePos.Xs, Xachse,nextPrePos.Speed);
-  fillSimpeSteps(&nextPrePos.Ys, &prePos.Ys, Yachse,nextPrePos.Speed);
-  fillSimpeSteps(&nextPrePos.Zs, &prePos.Zs, Zachse,nextPrePos.Speed);
-  fillSimpeSteps(&nextPrePos.Es, &prePos.Es, Eachse,nextPrePos.Speed);
+//  fillSimpeSteps(&nextPrePos.Xs, &prePos.Xs, Xachse,nextPrePos.Xv);
+//  fillSimpeSteps(&nextPrePos.Ys, &prePos.Ys, Yachse,nextPrePos.Yv);
+//  fillSimpeSteps(&nextPrePos.Zs, &prePos.Zs, Zachse,nextPrePos.Zv);
+//  fillSimpeSteps(&nextPrePos.Es, &prePos.Es, Eachse,nextPrePos.Ev);
 
   prePos.Xp = float(prePos.Xs) / float(Xachse.steps_pmm);
   prePos.Yp = float(prePos.Ys) / float(Yachse.steps_pmm);
   prePos.Zp = float(prePos.Zs) / float(Zachse.steps_pmm);
   prePos.Ep = float(prePos.Es) / float(Eachse.steps_pmm);
 }
+bool prePointerOnPos(){
+  if(nextPrePos.Xs==prePos.Xs){
+    if(nextPrePos.Ys==prePos.Ys){
+      if(nextPrePos.Zs==prePos.Zs){
+        if(nextPrePos.Es==prePos.Es){
+          return 1;
+        }
+      }
+    }
+  }
+  return 0;
+}
+void createStep(eAchse achse,long *sollStep, long *istStep,double us){
+  //Serial.print("createStep ");
+  //Serial.println(achse); 
+  //Serial.println(us); 
+  stepParam newStep;
+  newStep.achse = achse;
+  usToTimer(&newStep,us);
+  if (*sollStep > *istStep) {
+    newStep.dir = 1;
+    cb_push_back(&cbSteps, &newStep);
+    *istStep += 1;
+  } else if (*sollStep < *istStep) {
+    newStep.dir = 0;
+    cb_push_back(&cbSteps, &newStep);
+    *istStep -= 1;
+  }
+}
 void fillSimpeSteps(long *sollStep, long *istStep, StepMotorBig Achse,double mySpeed) {
   stepParam newStep;
-  double StepPerSekond = (mySpeed*double(Achse.steps_pmm));
+  double usPerStep = 1000000.0/(mySpeed*double(Achse.steps_pmm));
   if (*sollStep == *istStep) {
     return;
   } else if (*sollStep > *istStep) {
-    Serial.print("fillSimpeSteps sPs ");
-    Serial.print(StepPerSekond);
+    Serial.print("fillSimpeSteps usPerStep ");
+    Serial.print(usPerStep);
     Serial.print(" speed ");
     Serial.println(mySpeed);
     newStep.achse = Achse.achse;
-    usToTimer(&newStep,StepPerSekond);
+    usToTimer(&newStep,usPerStep);
     newStep.dir = 1;
     while (*sollStep > *istStep) {
       cb_push_back(&cbSteps, &newStep);
@@ -331,13 +409,13 @@ void fillSimpeSteps(long *sollStep, long *istStep, StepMotorBig Achse,double myS
       checkSerial();
     }
   } else if (*sollStep < *istStep) {
-    Serial.print("fillSimpeSteps sPs ");
-    Serial.print(StepPerSekond);
+    Serial.print("fillSimpeSteps usPerStep ");
+    Serial.print(usPerStep);
     Serial.print(" speed ");
     Serial.println(mySpeed);
     newStep.dir = 0;
     newStep.achse = Achse.achse;
-    usToTimer(&newStep,StepPerSekond);
+    usToTimer(&newStep,usPerStep);
     while (*sollStep < *istStep) {
       cb_push_back(&cbSteps, &newStep);
       *istStep -= 1;
@@ -345,14 +423,24 @@ void fillSimpeSteps(long *sollStep, long *istStep, StepMotorBig Achse,double myS
     }
   }
 }
-void usToTimer(stepParam* myStep,double StepPerSekond){
+float getTravelDist(MovePos* pPos,MovePos* nPrePos){
+  float Xdif = pPos->Xp - nPrePos->Xp;
+  float Ydif = pPos->Yp - nPrePos->Yp;
+  float Zdif = pPos->Zp - nPrePos->Zp;
+  float gesDif = sqrt(pow(Xdif,2)+pow(Ydif,2)+pow(Zdif,2));
+  if(gesDif == 0)
+    return abs(pPos->Ep - nPrePos->Ep);
+  return gesDif;
+}
+void usToTimer(stepParam* myStep,double us){
   //tick = 1/16.000.000 = 62.5ns
   // max_ticks = 65535
-  Serial.print("usToTime sps ");
-  Serial.print(StepPerSekond);
-  Serial.print(" ");
-  double us = 1.0/StepPerSekond;
-  double usF = CPU;
+  //Serial.print("usToTime sps ");
+  //Serial.print(us);
+  //Serial.print(" ");
+  //double us = 1.0/StepPerSekond;
+  //double usF = CPU;
+  double usF = 16;
   if(us<0){
     myStep->ticks = 0;
     myStep->preScale = 1;//4096us
@@ -374,13 +462,12 @@ void usToTimer(stepParam* myStep,double StepPerSekond){
   }  
   if(myStep->ticks > T_MAX) myStep->ticks = T_MAX;
   
-//  Serial.print(" pre:");
-//  Serial.print(myStep->preScale);
-//  Serial.print(" ticks:");
-//  Serial.println(myStep->ticks);
+  //Serial.print(" pre:");
+  //Serial.print(myStep->preScale);
+  //Serial.print(" ticks:");
+  //Serial.println(myStep->ticks);
 }
 int calcPreRunPointer(File* gFile) {
-
   char *newLine;
   newLine = SD_ReadLine(gFile);
   if (newLine[0] == '@'){
@@ -477,36 +564,18 @@ void processComandLine(char* newLine) {
   }
 }
 void sendDeviceStatus() {
-  Serial.print("npP_x:");
-  Serial.print(nextPrePos.Xp);
-  Serial.print(" pP_x:");
-  Serial.print(prePos.Xp);
-  Serial.print(" rP_x:");
-  Serial.println(float(Xachse.act_step) / float(Xachse.steps_pmm));
-  Serial.print("npP_y:");
-  Serial.print(nextPrePos.Yp);
-  Serial.print(" pP_y:");
-  Serial.print(prePos.Yp);
-  Serial.print(" rP_y:");
-  Serial.println(float(Yachse.act_step) / float(Yachse.steps_pmm));
-  Serial.print("npP_z:");
-  Serial.print(nextPrePos.Zp);
-  Serial.print(" pP_z:");
-  Serial.print(prePos.Zp);
-  Serial.print(" rP_z:");
-  Serial.println(float(Zachse.act_step) / float(Zachse.steps_pmm));
-  Serial.print("npS_z:");
-  Serial.print(float(nextPrePos.Zs));
-  Serial.print(" pS_z:");
-  Serial.print(float(prePos.Zs));
-  Serial.print(" rS_z:");
-  Serial.println(float(Zachse.act_step));
-  Serial.print("count ");
-  Serial.println(cbSteps.count);
-  Serial.print("State ");
-  Serial.println(state);
+  Serial.print("M114 X");
+  Serial.print(Xachse.act_step/double(Xachse.steps_pmm));
+  Serial.print(" Y");
+  Serial.print(Yachse.act_step/double(Yachse.steps_pmm));
+  Serial.print(" Z");
+  Serial.print(Zachse.act_step/double(Zachse.steps_pmm));
+  Serial.print(" E");
+  Serial.println(Eachse.act_step/double(Eachse.steps_pmm));
 }
 void StopMove() {
+  cb_clear(&cbSteps);
+  cb_clear(&cbCommand);
   StopAchse(X);
   StopAchse(Y);
   StopAchse(Z);
@@ -714,8 +783,15 @@ void performStep(StepMotorBig *mot, bool dir) {
 void performCommand(comParam* newCommand) {
   switch (newCommand->com) {
     case G92:
-      Serial.println("do G92");
       setRealPose(newCommand);
+      Serial.print("M114 X");
+      Serial.print(newCommand->X);
+      Serial.print(" Y");
+      Serial.print(newCommand->Y);
+      Serial.print(" Z");
+      Serial.print(newCommand->Z);
+      Serial.print(" E");
+      Serial.println(newCommand->E);
       break;
     case M104:
       Serial.println("do M104");
@@ -771,14 +847,13 @@ void startTimer(int prescale = 1) {
   }
   setBit(&TIMSK5, (1 << TOIE5));
 }
-int SD_OpenFile(File *file , const char* fileName) {
-  if (file)
-    file->close();
+int SD_OpenFile(File *file , char *fileName) {
+  file->close();
   if (!SD.exists(fileName)) {
     Serial.println("ERROR file dose not exist");
     return -1;
   }
-  *file = SD.open(fileName);
+  *file = SD.open(fileName, FILE_READ);
   if (!file) {
     Serial.println("ERROR file cant be open");
     return -1;
@@ -880,7 +955,7 @@ void SD_writeToSD(File *myFile,char* newLine) {
     return;
   }
   //Serial.println("writeToSD: befor write");
-  myFile->write(newLine);
+  myFile->println(newLine);
   Serial.println("GC_NL");
 }
 eComandName ComandParser(char* command_line) {
@@ -987,6 +1062,11 @@ void cb_init(circular_buffer *cb, size_t capacity, size_t sz) {
 void cb_free(circular_buffer *cb) {
   free(cb->buffer);
   // clear out other fields too, just to be safe
+}
+void cb_clear(circular_buffer *cb){
+  cb->count = 0;
+  cb->head = cb->buffer;
+  cb->tail = cb->buffer;
 }
 int cb_push_back(circular_buffer *cb, const void *item) {
   while (cb->count == cb->capacity) {
