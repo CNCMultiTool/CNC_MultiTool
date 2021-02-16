@@ -43,6 +43,7 @@ public:
 
 
     void send_moveHome();
+    void send_getPosition();
 private:
     QString m_fileName;
     QFile m_inputFile;

@@ -80,6 +80,8 @@ private slots:
 
     void on_pushButtonThreshAngle_clicked();
 
+    void on_pushButtonGetPosition_clicked();
+
 private:
     Ui::MainWindow *ui;
 

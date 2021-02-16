@@ -180,13 +180,13 @@ void MainWindow::on_pushButtonSerialConnect_clicked()
         m_serial->serial_open();
         m_basefunctions->send_stop();
 
-//        m_basefunctions->send_NTC_values_bed(&m_database->m_bValue_Bed,&m_database->m_R_nen_Bed,&m_database->m_R_vor_Bed);
-//        m_basefunctions->send_NTC_values(&m_database->m_bValue,&m_database->m_R_nen,&m_database->m_R_vor);
-//        m_basefunctions->send_PID_values(&m_database->m_KP,&m_database->m_KI,&m_database->m_KD,&m_database->m_POn);
-//        m_basefunctions->send_moveparam(&m_database->m_max_acc,&m_database->m_min_speed,&m_database->m_max_speed,&m_database->m_threshAngle,&m_database->m_soll_filament);
+        m_basefunctions->send_NTC_values_bed(&m_database->m_bValue_Bed,&m_database->m_R_nen_Bed,&m_database->m_R_vor_Bed);
+        m_basefunctions->send_NTC_values(&m_database->m_bValue,&m_database->m_R_nen,&m_database->m_R_vor);
+        m_basefunctions->send_PID_values(&m_database->m_KP,&m_database->m_KI,&m_database->m_KD,&m_database->m_POn);
+        m_basefunctions->send_moveparam(&m_database->m_max_acc,&m_database->m_min_speed,&m_database->m_max_speed,&m_database->m_threshAngle,&m_database->m_soll_filament);
         m_basefunctions->send_Speed(m_database->m_soll_speed);
-//        m_basefunctions->send_BedTemp(0);
-//        m_basefunctions->send_HotendTemp(0);
+        m_basefunctions->send_BedTemp(0);
+        m_basefunctions->send_HotendTemp(0);
     }
 }
 
@@ -236,6 +236,11 @@ void MainWindow::on_pushButtonMoveENeg_pressed()
 {
     float inv = -9999;
     m_basefunctions->send_move(nullptr,nullptr,nullptr,&inv,nullptr);
+}
+
+void MainWindow::on_pushButtonGetPosition_clicked()
+{
+    m_basefunctions->send_getPosition();
 }
 
 void MainWindow::on_pushButtonMoveTo_pressed()
@@ -617,5 +622,3 @@ void MainWindow::on_pushButton_MoveHome_clicked()
 {
     m_basefunctions->send_moveHome();
 }
-
-

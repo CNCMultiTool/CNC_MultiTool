@@ -4,6 +4,7 @@
 #include <math.h>
 #include<avr/io.h>
 #include<avr/interrupt.h>
+#include <PID_v1.h>
 
 #define CPU 16000000.00
 #define T_MAX 65535.00
@@ -30,6 +31,7 @@ enum eComandName {
   G28,//move home
   G92,//set position to
   M104,//set hotend temperature
+  M114,//get position
   M140,//set bed temperatur
   M109,//set hotend temperature
   M190,//set bed temperatur
@@ -114,12 +116,13 @@ StepMotorBig Xachse;
 StepMotorBig Yachse;
 StepMotorBig Zachse;
 StepMotorBig Eachse;
-sComand lComandList[20] = {
+sComand lComandList[21] = {
   {G1, "G1"},
   {G9, "G9"},
   {G28, "G28"},
   {G92, "G92"},
   {M104, "M104"},
+  {M114, "M114"},
   {M140, "M140"},
   {M109, "M109"},
   {M190, "M190"},
@@ -150,8 +153,52 @@ char reciveBuf[128];
 unsigned int reciveWindex = 0;
 char GCodeFileName[32];
 
+//temp controle
+unsigned long time_now = micros();
+unsigned long cycle_time1 = micros();
+
+int sensorPin = A1;
+double bitwertNTC = 0;
+double widerstand1 = 690;                 //Ohm
+double bWert = 3950;                          // B- Wert vom NTC
+double widerstandNTC = 0;
+double kelvintemp = 273.15;                // 0°Celsius in Kelvin
+double Tn = kelvintemp + 25;               //Nenntemperatur in Kelvin
+double Rn = 100000;
+double TKelvin = 0;                        //Die errechnete Isttemperatur
+double T = 0;
+//PID
+double Output;
+double KP = 35;
+double KI = 0.2;
+double KD = 750;
+double soll_T = 0;
+int temprelai = 2;
+
+//PID myPID(&soll_T, &Output, &T, KP, KI, KD,P_ON_M, REVERSE);
+PID myPID(&soll_T, &Output, &T, KP, KI, KD, P_ON_E, REVERSE);
+unsigned long WindowSize = 100;
+
+int sensorPin_Bed = A0;
+double bitwertNTC_Bed = 0;
+double widerstand1_Bed = 690;                 //Ohm
+double bWert_Bed = 3950;                          // B- Wert vom NTC
+double widerstandNTC_Bed = 0;
+double kelvintemp_Bed = 273.15;                // 0°Celsius in Kelvin
+double Tn_Bed = kelvintemp_Bed + 25;               //Nenntemperatur in Kelvin
+double Rn_Bed = 100000;
+double TKelvin_Bed = 0;                        //Die errechnete Isttemperatur
+double T_Bed = 0;
+double soll_T_Bed = 0;
+int temprelai_Bed = 3;
+
 //settings/Parameter
 bool useES = true;
+
+double BmMax =150;
+double Vmin = 10;
+double Vmax = 20;
+bool waitForHeat = false;
 
 void setup() {
   // put your setup code here, to run once:
@@ -214,10 +261,13 @@ void setup() {
   pinMode(26, OUTPUT);
   pinMode(28, OUTPUT);
 
-  pinMode(2, OUTPUT);
-  pinMode(3, OUTPUT);
-  digitalWrite(2, LOW);
-  digitalWrite(3, HIGH);//turn off heating
+  pinMode(temprelai, OUTPUT);
+  pinMode(temprelai_Bed, OUTPUT);
+  digitalWrite(temprelai, LOW);
+  digitalWrite(temprelai_Bed, HIGH);//turn off heating
+  myPID.SetOutputLimits(0, 255);
+  myPID.SetSampleTime(WindowSize);
+  myPID.SetMode(AUTOMATIC);
 
   digitalWrite(22, LOW);
   digitalWrite(24, LOW);
@@ -251,6 +301,7 @@ void setup() {
 void loop() {
   startTimer(1);//start intterrupt timer
   while (true) {
+    time_now = micros();
     doStdTasks();
     switch (state) {
       case GCodeStart:
@@ -305,8 +356,12 @@ void calculateSteps() {
   prePos.Ys = float(prePos.Yp) * float(Yachse.steps_pmm);
   prePos.Zs = float(prePos.Zp) * float(Zachse.steps_pmm);
   prePos.Es = float(prePos.Ep) * float(Eachse.steps_pmm);
+  //check for Vmax Vmin 
+  if(Vmax<nextPrePos.Speed)nextPrePos.Speed = Vmax;
+  if(Vmin>nextPrePos.Speed)nextPrePos.Speed = Vmin;
   //get travel dist
   float gesDif = getTravelDist(&prePos,&nextPrePos);
+  
   //get travel achseSpeed  Xv/Xdif = Speed/GesDif
   nextPrePos.Xv = abs(prePos.Xp - nextPrePos.Xp)/gesDif * nextPrePos.Speed;
   nextPrePos.Yv = abs(prePos.Yp - nextPrePos.Yp)/gesDif * nextPrePos.Speed;
@@ -350,11 +405,6 @@ while(!prePointerOnPos()){
     nextE = lastMoveTime + 1000000/(nextPrePos.Ev * Eachse.steps_pmm);
   }
 }
-  
-//  fillSimpeSteps(&nextPrePos.Xs, &prePos.Xs, Xachse,nextPrePos.Xv);
-//  fillSimpeSteps(&nextPrePos.Ys, &prePos.Ys, Yachse,nextPrePos.Yv);
-//  fillSimpeSteps(&nextPrePos.Zs, &prePos.Zs, Zachse,nextPrePos.Zv);
-//  fillSimpeSteps(&nextPrePos.Es, &prePos.Es, Eachse,nextPrePos.Ev);
 
   prePos.Xp = float(prePos.Xs) / float(Xachse.steps_pmm);
   prePos.Yp = float(prePos.Ys) / float(Yachse.steps_pmm);
@@ -388,39 +438,6 @@ void createStep(eAchse achse,long *sollStep, long *istStep,double us){
     newStep.dir = 0;
     cb_push_back(&cbSteps, &newStep);
     *istStep -= 1;
-  }
-}
-void fillSimpeSteps(long *sollStep, long *istStep, StepMotorBig Achse,double mySpeed) {
-  stepParam newStep;
-  double usPerStep = 1000000.0/(mySpeed*double(Achse.steps_pmm));
-  if (*sollStep == *istStep) {
-    return;
-  } else if (*sollStep > *istStep) {
-    Serial.print("fillSimpeSteps usPerStep ");
-    Serial.print(usPerStep);
-    Serial.print(" speed ");
-    Serial.println(mySpeed);
-    newStep.achse = Achse.achse;
-    usToTimer(&newStep,usPerStep);
-    newStep.dir = 1;
-    while (*sollStep > *istStep) {
-      cb_push_back(&cbSteps, &newStep);
-      *istStep += 1;
-      checkSerial();
-    }
-  } else if (*sollStep < *istStep) {
-    Serial.print("fillSimpeSteps usPerStep ");
-    Serial.print(usPerStep);
-    Serial.print(" speed ");
-    Serial.println(mySpeed);
-    newStep.dir = 0;
-    newStep.achse = Achse.achse;
-    usToTimer(&newStep,usPerStep);
-    while (*sollStep < *istStep) {
-      cb_push_back(&cbSteps, &newStep);
-      *istStep -= 1;
-      checkSerial();
-    }
   }
 }
 float getTravelDist(MovePos* pPos,MovePos* nPrePos){
@@ -491,13 +508,16 @@ void processComandLine(char* newLine) {
     Serial.println("find G9 ");
   } else {
     LineParser(newLine, &newCommand);
-    Serial.print("values: ");
-    Serial.println(newLine);
+    //Serial.print("values: ");
+    //Serial.println(newLine);
   }
 
-  Serial.print("paresed ");
+  //Serial.print("paresed ");
   if (newCommand.com == G1) {
-    Serial.println("G1");
+    if(getState() == GCodeStop && newCommand.useF){
+      Serial.print("G1 F");
+      Serial.println(newCommand.F);
+    }
     setNextPrePos(&newCommand);
   } else if (newCommand.com == G9) { //stop movement
     Serial.println("G9");
@@ -507,26 +527,57 @@ void processComandLine(char* newLine) {
     Serial.println("G28");
     setState(GCodeStartHome);
   } else if (newCommand.com == G92) { //set pos
-    Serial.println("G92");
+    //Serial.println("G92");
     setPrePos(&newCommand);
     setNextPrePos(&newCommand);
     addCommand(&newCommand);
   } else if (newCommand.com == M104 || //set temperature
              newCommand.com == M140) {
-    Serial.println("Q144");
+    Serial.println("M144");
     addCommand(&newCommand);
+  } else if (newCommand.com == M114) {
+    Serial.println("M114");
+    sendDeviceStatus();
   } else if (newCommand.com == M109 || //set temperature
              newCommand.com == M190) {
-    Serial.println("Q199");
+    Serial.println("M199");
     addCommand(&newCommand);
   } else if (newCommand.com == Q10) { //max Accelaration//acc- max- min- speed
     Serial.println("Q10");
+    double help;
+    double fila = -1;
+    applayValues(&newCommand, &BmMax, &Vmin, &Vmax, &help, &fila, &help);
+    if(fila != -1)Eachse.steps_pmm = fila;
+    Serial.print("Q10 X");
+    Serial.print(BmMax);
+    Serial.print(" Y");
+    Serial.print(Vmin);
+    Serial.print(" Z");
+    Serial.print(Vmax);
+    Serial.print(" E");
+    Serial.print(-1);
+    Serial.print(" S");
+    Serial.println(Eachse.steps_pmm);
   } else if (newCommand.com == Q20) { //max speed//bitwertNTC widerstandNTC widerstand1   for hotend
     Serial.println("Q20");
+    bitwertNTC = newCommand.X;
+    widerstandNTC = newCommand.Y;
+    widerstand1 = newCommand.Z;
   } else if (newCommand.com == Q21) { //min speed//P I D ON for hotend
     Serial.println("Q21");
+    KP = newCommand.X;
+    KI = newCommand.Y;
+    KD = newCommand.Z;
+    if (newCommand.E < 0.5) {
+      myPID.SetTunings(KP, KI, KD, P_ON_E);
+    }else {
+      myPID.SetTunings(KP, KI, KD, P_ON_M);
+    }
   } else if (newCommand.com == Q30) { //min speed//bitwertNTC widerstandNTC widerstand1   for bed
     Serial.println("Q30");
+    bitwertNTC_Bed = newCommand.X;
+    widerstandNTC_Bed = newCommand.Y;
+    widerstand1_Bed = newCommand.Z;
   } else if (newCommand.com == Q100) { //Execute G-Code if File exist
     Serial.println("Q100");
     strcpy(GCodeFileName,fileName);
@@ -719,7 +770,7 @@ int SR_CheckForLine() {
   return 0;
 }
 ISR (TIMER5_OVF_vect) { // Timer1 ISR
-  digitalWrite(22, HIGH);
+  //digitalWrite(22, HIGH);
   stepParam nextStep;
   comParam nextCommand;
   if (cb_pop_front(&cbSteps, &nextStep) == -1) {
@@ -749,8 +800,7 @@ ISR (TIMER5_OVF_vect) { // Timer1 ISR
     startTimer(nextStep.preScale);
     TCNT5 = nextStep.ticks;
   }
-  digitalWrite(22, LOW);
-  
+  //digitalWrite(22, LOW);
 }
 void addCommand(comParam* newCommand) {
   stepParam newStep;
@@ -773,7 +823,9 @@ void performStep(StepMotorBig *mot, bool dir) {
   //Zachse.pinPlus = 36;
   //Zachse.pinNull = 38;
   digitalWrite(mot->pinPUL, LOW);
-  digitalWrite(mot->pinDIR, dir);
+  if(digitalRead(mot->pinDIR)!=dir)
+    digitalWrite(mot->pinDIR, dir);
+    
   if (dir)
     mot->act_step++;
   else
@@ -784,26 +836,29 @@ void performCommand(comParam* newCommand) {
   switch (newCommand->com) {
     case G92:
       setRealPose(newCommand);
-      Serial.print("M114 X");
-      Serial.print(newCommand->X);
-      Serial.print(" Y");
-      Serial.print(newCommand->Y);
-      Serial.print(" Z");
-      Serial.print(newCommand->Z);
-      Serial.print(" E");
-      Serial.println(newCommand->E);
+      //sendDeviceStatus();
       break;
     case M104:
-      Serial.println("do M104");
+      soll_T = newCommand->S;
+      Serial.print("M104 S");
+      Serial.println(soll_T);
       break;
     case M140:
-      Serial.println("do M140");
+      soll_T_Bed = newCommand->S;
+      Serial.print("M140 S");
+      Serial.println(soll_T_Bed);
       break;
     case M109:
-      Serial.println("do M109");
+      soll_T = newCommand->S;
+      Serial.print("M109 S");
+      Serial.println(soll_T);
+      waitForHeat = true;
+      startTimer(0);//stop timer to wait for heat
       break;
     case M190:
-      Serial.println("do M190");
+      soll_T_Bed = newCommand->S;
+      Serial.print("M190 S");
+      Serial.println(soll_T_Bed);
       break;
     default:
       Serial.println("unknown Command");
@@ -1070,8 +1125,10 @@ void cb_clear(circular_buffer *cb){
 }
 int cb_push_back(circular_buffer *cb, const void *item) {
   while (cb->count == cb->capacity) {
+    digitalWrite(24,HIGH);
     doStdTasks();
   }
+  digitalWrite(24,LOW);
   memcpy(cb->head, item, cb->sz);
   cb->head = (char*)cb->head + cb->sz;
   if (cb->head == cb->buffer_end)
@@ -1094,8 +1151,54 @@ void doStdTasks() {
   //task that have to be performed also while waiting to add a point
   checkSerial();
   checkEndswitches();
+  TempControle();
   //regulate temperature
   //status aupdates
+}
+void TempControle() {
+  if (myPID.Compute())
+  {
+    bitwertNTC = analogRead(sensorPin);      // lese Analogwert an A0 aus
+    widerstandNTC = widerstand1 * (((double)bitwertNTC / 1024) / (1 - ((double)bitwertNTC / 1024)));
+    TKelvin = 1 / ((1 / Tn) + ((double)1 / bWert) * log((double)widerstandNTC / Rn));
+    T = TKelvin - kelvintemp;
+    analogWrite(temprelai, Output);
+
+    if(waitForHeat == true){
+      if(abs(T - soll_T)<5){
+        waitForHeat = false;
+        startTimer(1);
+      }
+    }
+    
+    if(time_now - cycle_time1 > 5000000)
+    {
+      if (soll_T != 1) {
+        Serial.print("Temp THsoll");
+        Serial.print(soll_T);
+        Serial.print(" THist");
+        Serial.print(T);
+        Serial.print(" TBsoll");
+        Serial.print(soll_T_Bed);
+        Serial.print(" TBist");
+        Serial.println(T_Bed);
+      }
+      cycle_time1 = time_now;
+
+      bitwertNTC_Bed = analogRead(sensorPin_Bed);      // lese Analogwert an A0 aus
+      widerstandNTC_Bed = widerstand1_Bed * (((double)bitwertNTC_Bed / 1024) / (1 - ((double)bitwertNTC_Bed / 1024)));
+      TKelvin_Bed = 1 / ((1 / Tn_Bed) + ((double)1 / bWert_Bed) * log((double)widerstandNTC_Bed / Rn_Bed));
+      T_Bed = TKelvin_Bed - kelvintemp_Bed;
+      if (soll_T_Bed + 5 < T_Bed)
+      {
+        digitalWrite(temprelai_Bed, HIGH);
+      }
+      else if (soll_T_Bed - 5 > T_Bed)
+      {
+        digitalWrite(temprelai_Bed, LOW);
+      }
+    }
+  }
 }
 void setBit(volatile uint8_t* B, unsigned char b) {
   //set a bit in a Byte
@@ -1104,4 +1207,18 @@ void setBit(volatile uint8_t* B, unsigned char b) {
 void resetBit(volatile uint8_t* B, unsigned char b) {
   //reset a bit in a Byte
   *B &= ~b;
+}
+void applayValues(comParam* newValue, double *X, double *Y, double *Z, double *E, double *S, double *F) {
+  if (newValue->useX)
+    *X = newValue->X;
+  if (newValue->useY)
+    *Y = newValue->Y;
+  if (newValue->useZ)
+    *Z = newValue->Z;
+  if (newValue->useE)
+    *E = newValue->E;
+  if (newValue->useF)
+    *F = newValue->F;
+  if (newValue->useS)
+    *S = newValue->S;
 }

@@ -135,39 +135,7 @@ void cnc_basefunctions::send_CreateFile(QString fileSorce,QString fileDest)
     m_inputFile.close();
     m_ComandLines.push_back("Q102 ");
     emit Log("send_CreateFile: finish reading gCode LineTotal "+QString::number(m_read_counter));
-
-
-//    if(!isRunning())
-//    {
-//        this->start();
-//        this->setPriority(Priority::LowestPriority);
-//    }else{
-//        quit();
-//    }
 }
-//void cnc_basefunctions::run()
-//{
-//    emit Log("send_CreateFile: reading sending gCode");
-//    QString newLine;
-//    int count = 0;
-//    do{
-//        newLine = m_in.readLine();
-//        if(newLine[0]!=';'){
-//            m_ComandLines.push_back(newLine);
-//            count++;
-//        }
-//        if(count == 50){
-//            m_mySerial->serial_send("Q101 "+m_fileName);
-//            emit Log("start sending G-code");
-//        }
-//        if(count%100 == 0){
-//            emit Log("read "+QString::number(count)+"Lines from G-code");
-//        }
-//    }while(!newLine.isNull());
-//    m_inputFile.close();
-//    m_ComandLines.push_back("Q102 ");
-//    emit Log("send_CreateFile: finish reading gCode LineTotal "+QString::number(count));
-//}
 
 void cnc_basefunctions::send_CloseFile()
 {
@@ -197,6 +165,11 @@ void cnc_basefunctions::send_DeleteFile(QString file)
 void cnc_basefunctions::send_XXX()
 {
     emit serial_send("XXX ");
+}
+
+void cnc_basefunctions::send_getPosition()
+{
+    emit serial_send("M114 ");
 }
 
 void cnc_basefunctions::send_move(float *X,float *Y,float *Z,float *E,float *F)
