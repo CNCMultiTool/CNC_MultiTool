@@ -309,7 +309,7 @@ void loop() {
       useES = false;//disable endswitches to move undisturbed in GCode
       if (calcPreRunPointer(&GFile) == -1 && cbSteps.count == 0)
         setState(GCodeStop);
-    } else if (state == GCodeStop) {
+    } else if (state == GCodePause) {
       useES = true;//enable endswitches for manuel movements
     } else if (state == GCodeStop) {
       useES = true;//enable endswitches for manuel movements
@@ -334,6 +334,7 @@ void loop() {
       }
     } else if (state == GCodeStopHome) {
       SD_CloseFile(&HomeFile);
+      sendDeviceStatus();
       setState(GCodeRun);
     } else {
       Serial.println("unknown State");
@@ -539,10 +540,10 @@ int calcPreRunPointer(File* gFile) {
   if (newLine[0] == '@') {
     return -1;
   }
-  processComandLine(newLine);
+  processComandLine(newLine,false);
   return 0;
 }
-void processComandLine(char* newLine) {
+void processComandLine(char* newLine,bool doNow) {
   comParam newCommand;
   char* fileName;
   newCommand.com = ComandParser(newLine);
@@ -583,18 +584,18 @@ void processComandLine(char* newLine) {
     //Serial.println("G92");
     setPrePos(&newCommand);
     setNextPrePos(&newCommand);
-    addCommand(&newCommand);
+    addCommand(&newCommand,doNow);
   } else if (newCommand.com == M104 || //set temperature
              newCommand.com == M140) {
     Serial.println("M144");
-    addCommand(&newCommand);
+    addCommand(&newCommand,doNow);
   } else if (newCommand.com == M114) {
     Serial.println("M114");
     sendDeviceStatus();
   } else if (newCommand.com == M109 || //set temperature
              newCommand.com == M190) {
     Serial.println("M199");
-    addCommand(&newCommand);
+    addCommand(&newCommand,doNow);
   } else if (newCommand.com == Q10) { //max Accelaration//acc- max- min- speed
     Serial.println("Q10");
     double help;
@@ -656,6 +657,7 @@ void processComandLine(char* newLine) {
     } else if (getState() == GCodeRunHome) {
       setState(GCodeStopHome);
     }
+    StopMove();
   } else if (newCommand.com == Q106) { //get list of File on SD Card
     Serial.println("Q106");
     File root = SD.open("/");
@@ -815,7 +817,7 @@ void handleES(StepMotorBig* mot, int ES) {
 int checkSerial() {
   if (SR_CheckForLine() == 1) {
     setMotorsENA(false);
-    processComandLine(reciveBuf);
+    processComandLine(reciveBuf,true);
     memset(&reciveBuf[0], 0, sizeof(reciveBuf));
   }
 }
@@ -877,13 +879,17 @@ ISR (TIMER5_OVF_vect) { // Timer1 ISR
   sei();
   digitalWrite(22, LOW);
 }
-void addCommand(comParam* newCommand) {
-  stepParam newStep;
-  cb_push_back(&cbCommand, newCommand);
-  newStep.achse = C;
-  newStep.ticks = T_MAX;
-  newStep.preScale = 1;
-  cb_push_back(&cbSteps, &newStep);
+void addCommand(comParam* newCommand,bool doNow) {
+  if(doNow){
+    performCommand(newCommand);
+  }else{
+    stepParam newStep;
+    cb_push_back(&cbCommand, newCommand);
+    newStep.achse = C;
+    newStep.ticks = T_MAX;
+    newStep.preScale = 1;
+    cb_push_back(&cbSteps, &newStep);
+  }
 }
 void performStep(StepMotorBig *mot, bool dir) {
   if (dir && useES && mot->pinPlus != 0) {
@@ -911,30 +917,33 @@ void performCommand(comParam* newCommand) {
   switch (newCommand->com) {
     case G92:
       setRealPose(newCommand);
-      setPrePos(newCommand);
-      sendDeviceStatus();
+      //sendDeviceStatus();
       break;
     case M104:
       soll_T = newCommand->S;
       Serial.print("M104 S");
       Serial.println(soll_T);
       setWaitForHeat(false);
+      sendTemperature();
       break;
     case M140:
       soll_T_Bed = newCommand->S;
       Serial.print("M140 S");
       Serial.println(soll_T_Bed);
+      sendTemperature();
       break;
     case M109:
       soll_T = newCommand->S;
       Serial.print("M109 S");
       Serial.println(soll_T);
       setWaitForHeat(true);
+      sendTemperature();
       break;
     case M190:
       soll_T_Bed = newCommand->S;
       Serial.print("M190 S");
       Serial.println(soll_T_Bed);
+      sendTemperature();
       break;
     default:
       Serial.print("unknown Command ");
@@ -1099,12 +1108,15 @@ void SD_writeToSD(File *myFile, char* newLine) {
 eComandName ComandParser(char* command_line) {
   //look for a G-Code Comand in Line
   char wort[10];
+  int command_length;
   char* command_end = strchr(command_line, ' ');
-  if (command_end == 0)
-    return FAIL;
-  int command_length = command_end - command_line;
+  if (command_end == 0 && sizeof(command_line) != 0)
+    command_length = sizeof(command_line)+1;
+  else
+    command_length = command_end - command_line;
   strncpy(wort, command_line, command_length);
   wort[command_length] = '\0';
+  //Serial.println(wort);
   for (int i = 0; i < sizeof(lComandList) / sizeof(lComandList[0]); i++)
   {
     if (strcmp(lComandList[i].cName, wort) == 0)
@@ -1261,14 +1273,7 @@ void TempControle() {
     if (time_now - cycle_time1 > 5000000)
     {
       if (soll_T != 1) {
-        Serial.print("Temp THsoll");
-        Serial.print(soll_T);
-        Serial.print(" THist");
-        Serial.print(T);
-        Serial.print(" TBsoll");
-        Serial.print(soll_T_Bed);
-        Serial.print(" TBist");
-        Serial.println(T_Bed);
+        sendTemperature();
       }
       cycle_time1 = time_now;
 
@@ -1286,6 +1291,16 @@ void TempControle() {
       }
     }
   }
+}
+void sendTemperature(){
+  Serial.print("Temp THsoll");
+  Serial.print(soll_T);
+  Serial.print(" THist");
+  Serial.print(T);
+  Serial.print(" TBsoll");
+  Serial.print(soll_T_Bed);
+  Serial.print(" TBist");
+  Serial.println(T_Bed);
 }
 void setBit(volatile uint8_t* B, unsigned char b) {
   //set a bit in a Byte

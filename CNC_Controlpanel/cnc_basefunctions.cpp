@@ -212,6 +212,7 @@ void cnc_basefunctions::send_newHome(float X,float Y,float Z)
                             " Y"+QString::number(Y)+
                             " Z"+QString::number(Z)+
                             " E0");
+    //m_ComandLines.push_back("G9 ");
     m_ComandLines.push_back("Q102 ");
    // start sending
    m_send_buffer_counter = 0;

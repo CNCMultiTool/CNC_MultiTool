@@ -187,6 +187,7 @@ void MainWindow::on_pushButtonSerialConnect_clicked()
         m_basefunctions->send_Speed(m_database->m_soll_speed);
         m_basefunctions->send_BedTemp(0);
         m_basefunctions->send_HotendTemp(0);
+        m_basefunctions->send_stop();
     }
 }
 
