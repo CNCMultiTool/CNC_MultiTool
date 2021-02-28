@@ -25,6 +25,7 @@ enum eGCodeState {
 enum eAchse {X, Y, Z, E, C}; //alles achsen und C für spezial comand
 enum eComandName {
   FAIL,
+  XXX,
   G1,//move
   G9,//stop
   G28,//move home
@@ -113,7 +114,8 @@ StepMotorBig Xachse;
 StepMotorBig Yachse;
 StepMotorBig Zachse;
 StepMotorBig Eachse;
-sComand lComandList[21] = {
+sComand lComandList[22] = {
+  {XXX, "XXX"},
   {G1, "G1"},
   {G9, "G9"},
   {G28, "G28"},
@@ -349,10 +351,10 @@ void setMotorsENA(bool b) {
   digitalWrite(Eachse.pinENA, b);
 }
 void calculateSteps() {
-  prePos.Xs = float(prePos.Xp) * float(Xachse.steps_pmm);
-  prePos.Ys = float(prePos.Yp) * float(Yachse.steps_pmm);
-  prePos.Zs = float(prePos.Zp) * float(Zachse.steps_pmm);
-  prePos.Es = float(prePos.Ep) * float(Eachse.steps_pmm);
+//  prePos.Xs = float(prePos.Xp) * float(Xachse.steps_pmm);
+//  prePos.Ys = float(prePos.Yp) * float(Yachse.steps_pmm);
+//  prePos.Zs = float(prePos.Zp) * float(Zachse.steps_pmm);
+//  prePos.Es = float(prePos.Ep) * float(Eachse.steps_pmm);
   //check for Vmax Vmin
   if (Vmax < nextPrePos.Speed)nextPrePos.Speed = Vmax;
   if (Vmin > nextPrePos.Speed)nextPrePos.Speed = Vmin;
@@ -556,10 +558,11 @@ void processComandLine(char* newLine,bool doNow) {
     Serial.println(fileName);
   } else if (newCommand.com == G9) {
     Serial.println("find G9 ");
+    startTimer(1);
   } else {
     LineParser(newLine, &newCommand);
     //Serial.print("values: ");
-    //Serial.println(newLine);
+    Serial.println(newLine);
   }
 
   //Serial.print("paresed ");
@@ -669,6 +672,7 @@ void processComandLine(char* newLine,bool doNow) {
     Serial.print("unknown GCode: ");
     Serial.println(newLine);
   }
+  sendDeviceStatus();
 }
 void sendDeviceStatus() {
   Serial.print("M114 X");
@@ -679,34 +683,71 @@ void sendDeviceStatus() {
   Serial.print(Zachse.act_step / double(Zachse.steps_pmm));
   Serial.print(" E");
   Serial.println(Eachse.act_step / double(Eachse.steps_pmm));
+
+  Serial.print("prePos X");
+  Serial.print(prePos.Xp);
+  Serial.print(" , ");
+  Serial.print(prePos.Xs / double(Xachse.steps_pmm));
+  Serial.print(" Y");
+  Serial.print(prePos.Yp);
+  Serial.print(" , ");
+  Serial.print(prePos.Ys / double(Yachse.steps_pmm));
+  Serial.print(" Z");
+  Serial.print(prePos.Zp);
+  Serial.print(" , ");
+  Serial.print(prePos.Zs / double(Zachse.steps_pmm));
+  Serial.print(" E");
+  Serial.print(prePos.Ep);
+  Serial.print(" , ");
+  Serial.println(prePos.Es / double(Eachse.steps_pmm));
+
+  Serial.print("nextPrePos X");
+  Serial.print(nextPrePos.Xp);
+  Serial.print(" , ");
+  Serial.print(nextPrePos.Xs / double(Xachse.steps_pmm));
+  Serial.print(" Y");
+  Serial.print(nextPrePos.Yp);
+  Serial.print(" , ");
+  Serial.print(nextPrePos.Ys / double(Yachse.steps_pmm));
+  Serial.print(" Z");
+  Serial.print(nextPrePos.Zp);
+  Serial.print(" , ");
+  Serial.print(nextPrePos.Zs / double(Zachse.steps_pmm));
+  Serial.print(" E");
+  Serial.print(nextPrePos.Ep);
+  Serial.print(" , ");
+  Serial.println(nextPrePos.Es / double(Eachse.steps_pmm));
 }
 void StopMove() {
-  cb_clear(&cbSteps);
-  cb_clear(&cbCommand);
   StopAchse(X);
   StopAchse(Y);
   StopAchse(Z);
   StopAchse(E);
+  cb_clear(&cbSteps);
+  cb_clear(&cbCommand);
 }
 void StopAchse(eAchse achse) {
   comParam newPos;
-  float pos;
   switch (achse) {
     case X:
       newPos.useX = true;
-      newPos.X = float(Xachse.act_step) / float(Xachse.steps_pmm);
+      newPos.X = prePos.Xp;
+      //newPos.X = float(Xachse.act_step) / float(Xachse.steps_pmm);
       break;
     case Y:
       newPos.useY = true;
-      newPos.Y = float(Yachse.act_step) / float(Yachse.steps_pmm);
+      newPos.Y = prePos.Yp;
+      //newPos.Y = float(Yachse.act_step) / float(Yachse.steps_pmm);
       break;
     case Z:
       newPos.useZ = true;
-      newPos.Z = float(Zachse.act_step) / float(Zachse.steps_pmm);
+      newPos.Z = prePos.Zp;
+      //newPos.Z = float(Zachse.act_step) / float(Zachse.steps_pmm);
       break;
     case E:
       newPos.useE = true;
-      newPos.E = float(Eachse.act_step) / float(Eachse.steps_pmm);
+      newPos.E = prePos.Ep;
+      //newPos.E = float(Eachse.act_step) / float(Eachse.steps_pmm);
       break;
   }
   setNextPrePos(&newPos);
@@ -714,24 +755,25 @@ void StopAchse(eAchse achse) {
 }
 void setNextPrePos(comParam* newPos) {
   if (newPos->useX) {
-    //Serial.print("set npp x ");
+    Serial.println("set npp x ");
     //Serial.print(newPos->X);
     nextPrePos.Xp = newPos->X;
     nextPrePos.Xs = nextPrePos.Xp * float(Xachse.steps_pmm);
   }
   if (newPos->useY) {
-    //Serial.print("set npp y ");
+    Serial.println("set npp y ");
     //Serial.print(newPos->Y);
     nextPrePos.Yp = newPos->Y;
     nextPrePos.Ys = nextPrePos.Yp * float(Yachse.steps_pmm);
   }
   if (newPos->useZ) {
-    //Serial.print("set npp z ");
+    Serial.println("set npp z ");
     //Serial.print(newPos->Z);
     nextPrePos.Zp = newPos->Z;
     nextPrePos.Zs = nextPrePos.Zp * float(Zachse.steps_pmm);
   }
   if (newPos->useE) {
+    Serial.println("set npp e ");
     nextPrePos.Ep = newPos->E;
     nextPrePos.Es = nextPrePos.Ep * float(Eachse.steps_pmm);
   }
@@ -740,25 +782,26 @@ void setNextPrePos(comParam* newPos) {
   //Serial.println();
 }
 void setPrePos(comParam* newPos) {
-  if (newPos->useX) {
-    //Serial.print("set pp x ");
+  if (newPos->useX){
+    Serial.println("set pp x ");
     //Serial.print(newPos->X);
     prePos.Xp = newPos->X;
     prePos.Xs = prePos.Xp * float(Xachse.steps_pmm);
   }
   if (newPos->useY) {
-    //Serial.print("set pp y ");
+    Serial.println("set pp y ");
     //Serial.print(newPos->Y);
     prePos.Yp = newPos->Y;
     prePos.Ys = prePos.Yp * float(Yachse.steps_pmm);
   }
   if (newPos->useZ) {
-    //Serial.print("set pp z ");
+    Serial.println("set pp z ");
     //Serial.print(newPos->Z);
     prePos.Zp = newPos->Z;
     prePos.Zs = prePos.Zp * float(Zachse.steps_pmm);
   }
   if (newPos->useE) {
+    Serial.println("set pp e ");
     prePos.Ep = newPos->E;
     prePos.Es = prePos.Ep * float(Eachse.steps_pmm);
   }
@@ -806,10 +849,11 @@ void checkEndswitches() {
 }
 void handleES(StepMotorBig* mot, int ES) {
   if (digitalRead(ES) == HIGH && mot->ESstate == false) {
-    StopAchse(mot->achse);
     mot->ESstate = true;
+    StopAchse(mot->achse);
     Serial.print("touch es ");
     Serial.println(mot->achse);
+    
   }
   if (digitalRead(ES) == LOW)
     mot->ESstate = false;
