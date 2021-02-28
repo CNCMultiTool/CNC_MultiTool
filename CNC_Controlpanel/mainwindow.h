@@ -69,6 +69,8 @@ private slots:
     void show_acc_speed_fila();
     void show_speed();
     void show_act_temp();
+    void show_useES(float ES);
+    void show_state(float state);
 
 
     void on_pushButton_StartCreation_clicked();
@@ -82,6 +84,9 @@ private slots:
 
     void on_pushButtonGetPosition_clicked();
 
+    void on_pushButtonUseES_clicked();
+
+    void show_waitForHeat(float isWaiting);
 private:
     Ui::MainWindow *ui;
 

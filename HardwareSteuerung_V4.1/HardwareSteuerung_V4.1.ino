@@ -36,6 +36,7 @@ enum eComandName {
   M109,//set hotend temperature
   M190,//set bed temperatur
   Q10,//max Accelaration//acc- max- min- speed
+  Q11,//toggle endswitch use
   Q20,//max speed//bitwertNTC widerstandNTC widerstand1   for hotend
   Q21,//min speed//P I D ON for hotend
   Q30,//min speed//bitwertNTC widerstandNTC widerstand1   for bed
@@ -57,7 +58,7 @@ typedef struct StepMotorBig {
   int pinNull;
   int pinPlus;
   //processing
-  bool ESstate = false;
+  int ESstate = 0;
   int steps_pmm;//steps pro mm (constant für x y z)
   long act_step = 0;//actueller position der achse in step
 } StepMotorBig;
@@ -114,7 +115,7 @@ StepMotorBig Xachse;
 StepMotorBig Yachse;
 StepMotorBig Zachse;
 StepMotorBig Eachse;
-sComand lComandList[22] = {
+sComand lComandList[24] = {
   {XXX, "XXX"},
   {G1, "G1"},
   {G9, "G9"},
@@ -126,6 +127,7 @@ sComand lComandList[22] = {
   {M109, "M109"},
   {M190, "M190"},
   {Q10, "Q10"},
+  {Q11, "Q11"},
   {Q20, "Q20"},
   {Q21, "Q21"},
   {Q30, "Q30"},
@@ -308,13 +310,13 @@ void loop() {
         setWaitForHeat(false);
       }
     } else if (state == GCodeRun) {
-      useES = false;//disable endswitches to move undisturbed in GCode
+      setUseES(false);//disable endswitches to move undisturbed in GCode
       if (calcPreRunPointer(&GFile) == -1 && cbSteps.count == 0)
         setState(GCodeStop);
     } else if (state == GCodePause) {
-      useES = true;//enable endswitches for manuel movements
+      setUseES(true);//enable endswitches for manuel movements
     } else if (state == GCodeStop) {
-      useES = true;//enable endswitches for manuel movements
+      setUseES(true);//enable endswitches for manuel movements
       SD_CloseFile(&GFile);
       if (getTravelDist(&prePos, &nextPrePos) == 0) {
         setMotorsENA(true);
@@ -328,7 +330,10 @@ void loop() {
     } else if (state == GCodeStartHome) {
       if (SD_OpenFile(&HomeFile , "home.txt") == 0) {
         setState(GCodeRunHome);
-        useES = true;
+        setUseES(true);
+        Xachse.ESstate = 0;
+        Yachse.ESstate = 0;
+        Zachse.ESstate = 0;
       }
     } else if (state == GCodeRunHome) {
       if (calcPreRunPointer(&HomeFile) == -1 && cbSteps.count == 0) {
@@ -536,6 +541,8 @@ void usToTimer(stepParam* myStep, double us) {
 }
 int calcPreRunPointer(File* gFile) {
   char *newLine;
+  if(waitForHeat == true)
+    return 0; 
   do {
     newLine = SD_ReadLine(gFile);
   } while (newLine[0] == '\0');
@@ -562,7 +569,7 @@ void processComandLine(char* newLine,bool doNow) {
   } else {
     LineParser(newLine, &newCommand);
     //Serial.print("values: ");
-    Serial.println(newLine);
+    //Serial.println(newLine);
   }
 
   //Serial.print("paresed ");
@@ -582,12 +589,13 @@ void processComandLine(char* newLine,bool doNow) {
     sendDeviceStatus();
   } else if (newCommand.com == G28) { //start move home
     Serial.println("G28");
-    setState(GCodeStartHome);
+    addCommand(&newCommand,doNow);
   } else if (newCommand.com == G92) { //set pos
     //Serial.println("G92");
     setPrePos(&newCommand);
     setNextPrePos(&newCommand);
     addCommand(&newCommand,doNow);
+    sendDeviceStatus();
   } else if (newCommand.com == M104 || //set temperature
              newCommand.com == M140) {
     Serial.println("M144");
@@ -615,6 +623,8 @@ void processComandLine(char* newLine,bool doNow) {
     Serial.print(-1);
     Serial.print(" S");
     Serial.println(Eachse.steps_pmm);
+  } else if (newCommand.com == Q11) {
+    setUseES(!useES);
   } else if (newCommand.com == Q20) { //max speed//bitwertNTC widerstandNTC widerstand1   for hotend
     Serial.println("Q20");
     bitwertNTC = newCommand.X;
@@ -672,7 +682,14 @@ void processComandLine(char* newLine,bool doNow) {
     Serial.print("unknown GCode: ");
     Serial.println(newLine);
   }
-  sendDeviceStatus();
+  //sendDeviceStatus();
+}
+void setUseES(bool newES){
+  if(newES != useES){
+    useES = newES;
+    Serial.print("useES ");
+    Serial.println(useES);
+  }
 }
 void sendDeviceStatus() {
   Serial.print("M114 X");
@@ -684,39 +701,39 @@ void sendDeviceStatus() {
   Serial.print(" E");
   Serial.println(Eachse.act_step / double(Eachse.steps_pmm));
 
-  Serial.print("prePos X");
-  Serial.print(prePos.Xp);
-  Serial.print(" , ");
-  Serial.print(prePos.Xs / double(Xachse.steps_pmm));
-  Serial.print(" Y");
-  Serial.print(prePos.Yp);
-  Serial.print(" , ");
-  Serial.print(prePos.Ys / double(Yachse.steps_pmm));
-  Serial.print(" Z");
-  Serial.print(prePos.Zp);
-  Serial.print(" , ");
-  Serial.print(prePos.Zs / double(Zachse.steps_pmm));
-  Serial.print(" E");
-  Serial.print(prePos.Ep);
-  Serial.print(" , ");
-  Serial.println(prePos.Es / double(Eachse.steps_pmm));
-
-  Serial.print("nextPrePos X");
-  Serial.print(nextPrePos.Xp);
-  Serial.print(" , ");
-  Serial.print(nextPrePos.Xs / double(Xachse.steps_pmm));
-  Serial.print(" Y");
-  Serial.print(nextPrePos.Yp);
-  Serial.print(" , ");
-  Serial.print(nextPrePos.Ys / double(Yachse.steps_pmm));
-  Serial.print(" Z");
-  Serial.print(nextPrePos.Zp);
-  Serial.print(" , ");
-  Serial.print(nextPrePos.Zs / double(Zachse.steps_pmm));
-  Serial.print(" E");
-  Serial.print(nextPrePos.Ep);
-  Serial.print(" , ");
-  Serial.println(nextPrePos.Es / double(Eachse.steps_pmm));
+//  Serial.print("prePos X");
+//  Serial.print(prePos.Xp);
+//  Serial.print(" , ");
+//  Serial.print(prePos.Xs / double(Xachse.steps_pmm));
+//  Serial.print(" Y");
+//  Serial.print(prePos.Yp);
+//  Serial.print(" , ");
+//  Serial.print(prePos.Ys / double(Yachse.steps_pmm));
+//  Serial.print(" Z");
+//  Serial.print(prePos.Zp);
+//  Serial.print(" , ");
+//  Serial.print(prePos.Zs / double(Zachse.steps_pmm));
+//  Serial.print(" E");
+//  Serial.print(prePos.Ep);
+//  Serial.print(" , ");
+//  Serial.println(prePos.Es / double(Eachse.steps_pmm));
+//
+//  Serial.print("nextPrePos X");
+//  Serial.print(nextPrePos.Xp);
+//  Serial.print(" , ");
+//  Serial.print(nextPrePos.Xs / double(Xachse.steps_pmm));
+//  Serial.print(" Y");
+//  Serial.print(nextPrePos.Yp);
+//  Serial.print(" , ");
+//  Serial.print(nextPrePos.Ys / double(Yachse.steps_pmm));
+//  Serial.print(" Z");
+//  Serial.print(nextPrePos.Zp);
+//  Serial.print(" , ");
+//  Serial.print(nextPrePos.Zs / double(Zachse.steps_pmm));
+//  Serial.print(" E");
+//  Serial.print(nextPrePos.Ep);
+//  Serial.print(" , ");
+//  Serial.println(nextPrePos.Es / double(Eachse.steps_pmm));
 }
 void StopMove() {
   StopAchse(X);
@@ -755,25 +772,25 @@ void StopAchse(eAchse achse) {
 }
 void setNextPrePos(comParam* newPos) {
   if (newPos->useX) {
-    Serial.println("set npp x ");
+    //Serial.println("set npp x ");
     //Serial.print(newPos->X);
     nextPrePos.Xp = newPos->X;
     nextPrePos.Xs = nextPrePos.Xp * float(Xachse.steps_pmm);
   }
   if (newPos->useY) {
-    Serial.println("set npp y ");
+    //Serial.println("set npp y ");
     //Serial.print(newPos->Y);
     nextPrePos.Yp = newPos->Y;
     nextPrePos.Ys = nextPrePos.Yp * float(Yachse.steps_pmm);
   }
   if (newPos->useZ) {
-    Serial.println("set npp z ");
+    //Serial.println("set npp z ");
     //Serial.print(newPos->Z);
     nextPrePos.Zp = newPos->Z;
     nextPrePos.Zs = nextPrePos.Zp * float(Zachse.steps_pmm);
   }
   if (newPos->useE) {
-    Serial.println("set npp e ");
+    //Serial.println("set npp e ");
     nextPrePos.Ep = newPos->E;
     nextPrePos.Es = nextPrePos.Ep * float(Eachse.steps_pmm);
   }
@@ -783,25 +800,25 @@ void setNextPrePos(comParam* newPos) {
 }
 void setPrePos(comParam* newPos) {
   if (newPos->useX){
-    Serial.println("set pp x ");
+    //Serial.println("set pp x ");
     //Serial.print(newPos->X);
     prePos.Xp = newPos->X;
     prePos.Xs = prePos.Xp * float(Xachse.steps_pmm);
   }
   if (newPos->useY) {
-    Serial.println("set pp y ");
+    //Serial.println("set pp y ");
     //Serial.print(newPos->Y);
     prePos.Yp = newPos->Y;
     prePos.Ys = prePos.Yp * float(Yachse.steps_pmm);
   }
   if (newPos->useZ) {
-    Serial.println("set pp z ");
+    //Serial.println("set pp z ");
     //Serial.print(newPos->Z);
     prePos.Zp = newPos->Z;
     prePos.Zs = prePos.Zp * float(Zachse.steps_pmm);
   }
   if (newPos->useE) {
-    Serial.println("set pp e ");
+    //Serial.println("set pp e ");
     prePos.Ep = newPos->E;
     prePos.Es = prePos.Ep * float(Eachse.steps_pmm);
   }
@@ -840,23 +857,33 @@ eGCodeState getState() {
   return state;
 }
 void checkEndswitches() {
-  if (getState() == GCodeRunHome) {
+  if (getState() == GCodeRunHome || useES) {
     //Serial.println("check es");
-    handleES(&Xachse, Xachse.pinNull);
-    handleES(&Yachse, Yachse.pinNull);
-    handleES(&Zachse, Zachse.pinPlus);
+    handleES(&Xachse, "X");
+    handleES(&Yachse, "Y");
+    handleES(&Zachse, "Z");
   }
 }
-void handleES(StepMotorBig* mot, int ES) {
-  if (digitalRead(ES) == HIGH && mot->ESstate == false) {
-    mot->ESstate = true;
+void handleES(StepMotorBig* mot, char* msg) {
+  if (digitalRead(mot->pinNull) == HIGH && mot->ESstate == 0){
+    mot->ESstate = -1;
     StopAchse(mot->achse);
-    Serial.print("touch es ");
-    Serial.println(mot->achse);
-    
+    Serial.print("ES ");
+    Serial.print(msg);
+    Serial.println(mot->ESstate);
+  }else if(digitalRead(mot->pinPlus) == HIGH && mot->ESstate == 0){
+    mot->ESstate = 1;
+    StopAchse(mot->achse);
+    Serial.print("ES ");
+    Serial.print(msg);
+    Serial.println(mot->ESstate);
   }
-  if (digitalRead(ES) == LOW)
-    mot->ESstate = false;
+  if (digitalRead(mot->pinNull) == LOW && digitalRead(mot->pinPlus) == LOW && mot->ESstate != 0){
+    mot->ESstate = 0;
+    Serial.print("ES ");
+    Serial.print(msg);
+    Serial.println(mot->ESstate);
+  }
 }
 int checkSerial() {
   if (SR_CheckForLine() == 1) {
@@ -887,7 +914,7 @@ ISR (TIMER5_OVF_vect) { // Timer1 ISR
   cli();
   stepParam nextStep;
   comParam nextCommand;
-  if (cb_pop_front(&cbSteps, &nextStep) == -1 || waitForHeat == true) {
+  if (cb_pop_front(&cbSteps, &nextStep) == -1) {
     TCNT5 = 0;//T_MAX;
     startTimer(1);
   } else {
@@ -963,11 +990,13 @@ void performCommand(comParam* newCommand) {
       setRealPose(newCommand);
       //sendDeviceStatus();
       break;
+    case G28:
+      setState(GCodeStartHome);
+      break;
     case M104:
       soll_T = newCommand->S;
       Serial.print("M104 S");
       Serial.println(soll_T);
-      setWaitForHeat(false);
       sendTemperature();
       break;
     case M140:
@@ -994,13 +1023,13 @@ void performCommand(comParam* newCommand) {
       Serial.println(newCommand->com);
   }
 }
-void startTimer(int prescale = 1) {
+void startTimer(int prescale) {
   switch (prescale) {
-    case 0:
-      resetBit(&TCCR5B, (1 << CS10));
-      resetBit(&TCCR5B, (1 << CS11));
-      resetBit(&TCCR5B, (1 << CS12));
-      break;
+//    case 0:
+//      resetBit(&TCCR5B, (1 << CS10));
+//      resetBit(&TCCR5B, (1 << CS11));
+//      resetBit(&TCCR5B, (1 << CS12));
+//      break;
     case 1:
       setBit(&TCCR5B, (1 << CS10));
       resetBit(&TCCR5B, (1 << CS11));
@@ -1194,19 +1223,19 @@ int LineParser(char* command_line, comParam *newParam) {
         wort++;
         newParam->X = atof(wort);
         newParam->useX = true;
-        Xachse.ESstate = false;
+        //Xachse.ESstate = 0;
         break;
       case 'Y':
         wort++;
         newParam->Y = atof(wort);
         newParam->useY = true;
-        Yachse.ESstate = false;
+        //Yachse.ESstate = 0;
         break;
       case 'Z':
         wort++;
         newParam->Z = atof(wort);
         newParam->useZ = true;
-        Zachse.ESstate = false;
+        //Zachse.ESstate = 0;
         break;
       case 'E':
         wort++;
@@ -1296,7 +1325,7 @@ void doStdTasks() {
 }
 void setWaitForHeat(bool h) {
   waitForHeat = h;
-  Serial.print("wait for heat:");
+  Serial.print("waitForHeat ");
   Serial.println(waitForHeat);
 }
 void TempControle() {
@@ -1313,8 +1342,9 @@ void TempControle() {
         setWaitForHeat(false);
       }
     }
-
-    if (time_now - cycle_time1 > 5000000)
+  }
+  
+  if (time_now - cycle_time1 > 5000000)
     {
       if (soll_T != 1) {
         sendTemperature();
@@ -1334,7 +1364,6 @@ void TempControle() {
         digitalWrite(temprelai_Bed, LOW);
       }
     }
-  }
 }
 void sendTemperature(){
   Serial.print("Temp THsoll");

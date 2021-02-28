@@ -44,6 +44,7 @@ public:
 
     void send_moveHome();
     void send_getPosition();
+    void send_toggleES();
 private:
     QString m_fileName;
     QFile m_inputFile;
@@ -66,6 +67,10 @@ signals:
     void show_acc_speed_fila();
     void show_speed();
     void show_act_temp();
+    void show_useES(float);
+    void show_state(float);
+    void show_waitForHeat(float);
+
 
 private slots:
     void processLine(const QString &s);

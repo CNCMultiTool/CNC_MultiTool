@@ -880,7 +880,7 @@
      <rect>
       <x>10</x>
       <y>350</y>
-      <width>311</width>
+      <width>481</width>
       <height>251</height>
      </rect>
     </property>
@@ -892,34 +892,13 @@
        </property>
       </widget>
      </item>
-     <item row="7" column="2">
-      <widget class="QLabel" name="label_fila">
-       <property name="text">
-        <string>TextLabel</string>
-       </property>
-      </widget>
-     </item>
      <item row="0" column="1">
       <widget class="QDoubleSpinBox" name="doubleSpinBoxMinSpeed"/>
-     </item>
-     <item row="6" column="2">
-      <widget class="QLabel" name="label_temp">
-       <property name="text">
-        <string>TextLabel</string>
-       </property>
-      </widget>
      </item>
      <item row="2" column="2">
       <widget class="QLabel" name="label_speed">
        <property name="text">
         <string>TextLabel</string>
-       </property>
-      </widget>
-     </item>
-     <item row="6" column="0">
-      <widget class="QPushButton" name="pushButtoHotendTemp">
-       <property name="text">
-        <string>Hotend Temperatur</string>
        </property>
       </widget>
      </item>
@@ -937,46 +916,15 @@
        </property>
       </widget>
      </item>
-     <item row="0" column="2">
-      <widget class="QLabel" name="label_min_speed">
+     <item row="1" column="2">
+      <widget class="QLabel" name="label_max_speed">
        <property name="text">
         <string>TextLabel</string>
        </property>
       </widget>
      </item>
-     <item row="3" column="1">
-      <widget class="QDoubleSpinBox" name="doubleSpinBoxMaxAcc">
-       <property name="maximum">
-        <double>9999.989999999999782</double>
-       </property>
-      </widget>
-     </item>
-     <item row="6" column="1">
-      <widget class="QDoubleSpinBox" name="doubleSpinBoxHotendTemp">
-       <property name="maximum">
-        <double>9999.989999999999782</double>
-       </property>
-      </widget>
-     </item>
-     <item row="7" column="1">
-      <widget class="QDoubleSpinBox" name="doubleSpinBoxFilament">
-       <property name="minimum">
-        <double>-9999.000000000000000</double>
-       </property>
-       <property name="maximum">
-        <double>9999.989999999999782</double>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="0">
-      <widget class="QPushButton" name="pushButtonMaxSpeed">
-       <property name="text">
-        <string>max Speed</string>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="2">
-      <widget class="QLabel" name="label_max_acc">
+     <item row="7" column="2">
+      <widget class="QLabel" name="label_fila">
        <property name="text">
         <string>TextLabel</string>
        </property>
@@ -989,17 +937,17 @@
        </property>
       </widget>
      </item>
-     <item row="5" column="1">
-      <widget class="QDoubleSpinBox" name="doubleSpinBoxBedTemp">
-       <property name="maximum">
-        <double>999.990000000000009</double>
+     <item row="6" column="2">
+      <widget class="QLabel" name="label_temp">
+       <property name="text">
+        <string>TextLabel</string>
        </property>
       </widget>
      </item>
-     <item row="2" column="1">
-      <widget class="QDoubleSpinBox" name="doubleSpinBoxSpeed">
-       <property name="maximum">
-        <double>999.990000000000009</double>
+     <item row="1" column="0">
+      <widget class="QPushButton" name="pushButtonMaxSpeed">
+       <property name="text">
+        <string>max Speed</string>
        </property>
       </widget>
      </item>
@@ -1010,17 +958,10 @@
        </property>
       </widget>
      </item>
-     <item row="1" column="2">
-      <widget class="QLabel" name="label_max_speed">
-       <property name="text">
-        <string>TextLabel</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="0">
-      <widget class="QPushButton" name="pushButtonMinSpeed">
-       <property name="text">
-        <string>min Speed</string>
+     <item row="6" column="1">
+      <widget class="QDoubleSpinBox" name="doubleSpinBoxHotendTemp">
+       <property name="maximum">
+        <double>9999.989999999999782</double>
        </property>
       </widget>
      </item>
@@ -1038,6 +979,58 @@
        </property>
       </widget>
      </item>
+     <item row="5" column="1">
+      <widget class="QDoubleSpinBox" name="doubleSpinBoxBedTemp">
+       <property name="maximum">
+        <double>999.990000000000009</double>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="2">
+      <widget class="QLabel" name="label_max_acc">
+       <property name="text">
+        <string>TextLabel</string>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="0">
+      <widget class="QPushButton" name="pushButtoHotendTemp">
+       <property name="text">
+        <string>Hotend Temperatur</string>
+       </property>
+      </widget>
+     </item>
+     <item row="7" column="1">
+      <widget class="QDoubleSpinBox" name="doubleSpinBoxFilament">
+       <property name="minimum">
+        <double>-9999.000000000000000</double>
+       </property>
+       <property name="maximum">
+        <double>9999.989999999999782</double>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QDoubleSpinBox" name="doubleSpinBoxSpeed">
+       <property name="maximum">
+        <double>999.990000000000009</double>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="2">
+      <widget class="QLabel" name="label_min_speed">
+       <property name="text">
+        <string>TextLabel</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="QDoubleSpinBox" name="doubleSpinBoxMaxAcc">
+       <property name="maximum">
+        <double>9999.989999999999782</double>
+       </property>
+      </widget>
+     </item>
      <item row="4" column="1">
       <widget class="QDoubleSpinBox" name="doubleSpinBoxThreshAngle">
        <property name="maximum">
@@ -1049,6 +1042,34 @@
       <widget class="QLabel" name="label_ThreshAngle">
        <property name="text">
         <string>TextLabel</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="0">
+      <widget class="QPushButton" name="pushButtonMinSpeed">
+       <property name="text">
+        <string>min Speed</string>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="3">
+      <widget class="QLabel" name="label_waitForHeat">
+       <property name="text">
+        <string>Wait for heat</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="3">
+      <widget class="QLabel" name="label_state">
+       <property name="text">
+        <string>state undefine</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="3">
+      <widget class="QPushButton" name="pushButtonUseES">
+       <property name="text">
+        <string>use Endswitch</string>
        </property>
       </widget>
      </item>

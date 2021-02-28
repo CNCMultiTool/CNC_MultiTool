@@ -41,7 +41,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_basefunctions,SIGNAL(show_speed()),this,SLOT(show_speed()));
     connect(m_basefunctions,SIGNAL(show_acc_speed_fila()),this,SLOT(show_acc_speed_fila()));
     connect(m_basefunctions,SIGNAL(show_act_temp()),this,SLOT(show_act_temp()));
-
+    connect(m_basefunctions,SIGNAL(show_useES(float)),this,SLOT(show_useES(float)));
+    connect(m_basefunctions,SIGNAL(show_state(float)),this,SLOT(show_state(float)));
+    connect(m_basefunctions,SIGNAL(show_waitForHeat(float)),this,SLOT(show_waitForHeat(float)));
 
     connect(m_database,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_database,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
@@ -150,6 +152,54 @@ void MainWindow::show_endswitch()
     endswitchButtonColor(m_database->m_endswitch_Y,ui->pushButtonMoveYPos,ui->pushButtonMoveYNeg);
     endswitchButtonColor(m_database->m_endswitch_Z,ui->pushButtonMoveZPos,ui->pushButtonMoveZNeg);
 }
+
+void MainWindow::show_useES(float ES){
+    if(ES)
+        ui->pushButtonUseES->setStyleSheet("background-color: green");
+    else
+        ui->pushButtonUseES->setStyleSheet("background-color: red");
+}
+
+void MainWindow::show_state(float state){
+    switch(int(state)){
+    case 0:
+        ui->label_state->setText("GCodeStart");
+                break;
+    case 1:
+        ui->label_state->setText("GCodeRun");
+                break;
+    case 2:
+        ui->label_state->setText("GCodePause");
+                break;
+    case 3:
+        ui->label_state->setText("GCodeStop");
+                break;
+    case 4:
+        ui->label_state->setText("GCodeCreate");
+                break;
+    case 5:
+        ui->label_state->setText("GCodeStartHome");
+                break;
+    case 6:
+        ui->label_state->setText("GCodeRunHome");
+                break;
+    case 7:
+        ui->label_state->setText("GCodeStopHome");
+                break;
+    default:
+        ui->label_state->setText("unknown state");
+                break;
+    }
+
+}
+
+void MainWindow::show_waitForHeat(float isWaiting){
+    if(isWaiting)
+        ui->label_waitForHeat->setStyleSheet("background-color: yellow");
+    else
+        ui->label_waitForHeat->setStyleSheet("background-color: lightblue");
+}
+
 
 //paints the movebuttons red or green depending of the endswitches
 void MainWindow::endswitchButtonColor(float value,QPushButton *PosButton,QPushButton *NegButton)
@@ -622,4 +672,9 @@ void MainWindow::on_pushButton_NewHome_clicked()
 void MainWindow::on_pushButton_MoveHome_clicked()
 {
     m_basefunctions->send_moveHome();
+}
+
+void MainWindow::on_pushButtonUseES_clicked()
+{
+    m_basefunctions->send_toggleES();
 }

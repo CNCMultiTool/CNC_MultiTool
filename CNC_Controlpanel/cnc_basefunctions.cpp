@@ -225,6 +225,10 @@ void cnc_basefunctions::send_moveHome(){
 }
 
 
+void cnc_basefunctions::send_toggleES(){
+    emit serial_send("Q11 ");
+}
+
 void  cnc_basefunctions::processLine(const QString &s)
 {
     if(s.indexOf("GC_NL")!=-1)
@@ -276,17 +280,20 @@ void  cnc_basefunctions::processLine(const QString &s)
         m_database->m_act_bedTemp = s.mid(start,end-start).toFloat();
         emit show_temp();
     }
-    if(s.indexOf("ES X")!=-1)
+    if(s.indexOf("ES ")!=-1)
     {
-        int start = s.indexOf("ES X")+4;
-        int end = s.indexOf(" Y",start);
-        m_database->m_endswitch_X = s.mid(start,end-start).toFloat();
-        start = s.indexOf(" Y",end)+2;
-        end = s.indexOf(" Z",start);
-        m_database->m_endswitch_Y = s.mid(start,end-start).toFloat();
-        start = s.indexOf(" Z",end)+2;
-        end = s.length();
-        m_database->m_endswitch_Z = s.mid(start,end-start).toFloat();
+        int start;
+        int end = end = s.length();
+        if(s.contains("X")){
+            start = s.indexOf("X")+1;
+            m_database->m_endswitch_X = s.mid(start,end-start).toFloat();
+        }else if(s.contains("Y")){
+            start = s.indexOf("Y")+1;
+            m_database->m_endswitch_Y = s.mid(start,end-start).toFloat();
+        }else if(s.contains("Z")){
+            start = s.indexOf("Z")+1;
+            m_database->m_endswitch_Z = s.mid(start,end-start).toFloat();
+        }
         emit show_endswitch();
     }
     if(s.indexOf("G1 F")!=-1)
@@ -335,6 +342,24 @@ void  cnc_basefunctions::processLine(const QString &s)
         int end = s.length();
         m_database->m_soll_bedTemp = s.mid(start,end-start).toFloat();
         emit show_act_temp();
+    }
+    if(s.indexOf("useES ")!=-1)
+    {
+        int start = s.indexOf("useES ")+6;
+        int end = s.length();
+        emit show_useES(s.mid(start,end-start).toFloat());
+    }
+    if(s.indexOf("newState ")!=-1)
+    {
+        int start = s.indexOf("newState ")+9;
+        int end = s.length();
+        emit show_state(s.mid(start,end-start).toFloat());
+    }
+    if(s.indexOf("waitForHeat ")!=-1)
+    {
+        int start = s.indexOf("waitForHeat ")+12;
+        int end = s.length();
+        emit show_waitForHeat(s.mid(start,end-start).toFloat());
     }
 
 }
