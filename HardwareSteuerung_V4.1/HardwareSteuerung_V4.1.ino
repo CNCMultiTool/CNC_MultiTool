@@ -100,15 +100,23 @@ typedef struct MovePos {
   float Xp = 0;
   long Xs = 0;
   float Xv = 0;
+  float Xb = 0;
+  bool useX = false;
   float Yp = 0;
   long Ys = 0;
   float Yv = 0;
+  float Yb = 0;
+  bool useY = false;
   float Zp = 0;
   long Zs = 0;
   float Zv = 0;
+  float Zb = 0;
+  bool useZ = false;
   float Ep = 0;
   long Es = 0;
   float Ev = 0;
+  float Eb = 0;
+  bool useE = false;
   float Speed = 20;//mm/s
 } MovePos;
 StepMotorBig Xachse;
@@ -356,117 +364,172 @@ void setMotorsENA(bool b) {
   digitalWrite(Eachse.pinENA, b);
 }
 void calculateSteps() {
-//  prePos.Xs = float(prePos.Xp) * float(Xachse.steps_pmm);
-//  prePos.Ys = float(prePos.Yp) * float(Yachse.steps_pmm);
-//  prePos.Zs = float(prePos.Zp) * float(Zachse.steps_pmm);
-//  prePos.Es = float(prePos.Ep) * float(Eachse.steps_pmm);
   //check for Vmax Vmin
   if (Vmax < nextPrePos.Speed)nextPrePos.Speed = Vmax;
   if (Vmin > nextPrePos.Speed)nextPrePos.Speed = Vmin;
   //get travel dist
-  float gesDif = getTravelDist(&prePos, &nextPrePos);
-  if (gesDif < 0.001)
+  double gesDif = getTravelDist(&prePos, &nextPrePos);
+  if (gesDif < 0.00001){
     return;
+  }
   //get travel achseSpeed  Xv/Xdif = Speed/GesDif
-  nextPrePos.Xv = (abs(prePos.Xp - nextPrePos.Xp) / gesDif) * nextPrePos.Speed;
-  nextPrePos.Yv = (abs(prePos.Yp - nextPrePos.Yp) / gesDif) * nextPrePos.Speed;
-  nextPrePos.Zv = (abs(prePos.Zp - nextPrePos.Zp) / gesDif) * nextPrePos.Speed;
-  nextPrePos.Ev = (abs(prePos.Ep - nextPrePos.Ep) / gesDif) * nextPrePos.Speed;
+  calcSpeedForAches(gesDif);
   //calculate step time x y z e sort in buffer
-  //  Serial.print("Xv");
-  //  Serial.print(nextPrePos.Xv);
-  //  Serial.print(" Yv");
-  //  Serial.print(nextPrePos.Yv);
-  //  Serial.print(" Zv");
-  //  Serial.print(nextPrePos.Zv);
-  //  Serial.print(" Ev");
-  //  Serial.println(nextPrePos.Ev);
+
   unsigned long nextStepTime = 0;
   unsigned long noStep = -1;
   unsigned long lastMoveTime = 0;
-  unsigned long nextX = 1000000 / (nextPrePos.Xv * Xachse.steps_pmm);
-  if (nextPrePos.Xs == prePos.Xs)nextX = -1;
-  unsigned long nextY = 1000000 / (nextPrePos.Yv * Yachse.steps_pmm);
-  if (nextPrePos.Ys == prePos.Ys)nextY = -1;
-  unsigned long nextZ = 1000000 / (nextPrePos.Zv * Zachse.steps_pmm);
-  if (nextPrePos.Zs == prePos.Zs)nextZ = -1;
-  unsigned long nextE = 1000000 / (nextPrePos.Ev * Eachse.steps_pmm);
-  if (nextPrePos.Es == prePos.Es)nextE = -1;
-  //  Serial.print("nextX");
-  //  Serial.print(nextX);
-  //  Serial.print(" nextY");
-  //  Serial.print(nextY);
-  //  Serial.print(" nextZ");
-  //  Serial.print(nextZ);
-  //  Serial.print(" nextE");
-  //  Serial.println(nextE);
+  unsigned long nextX,nextY,nextZ,nextE;
+  if (nextPrePos.useX){
+    nextX = 1000000 / (nextPrePos.Xv * Xachse.steps_pmm);
+  }else{
+    nextX = 4294967295;
+  }
+  if (nextPrePos.useY){  
+    nextY = 1000000 / (nextPrePos.Yv * Yachse.steps_pmm);
+  }else{
+    nextY = 4294967295;
+  }
+  if (nextPrePos.useZ){
+    nextZ = 1000000 / (nextPrePos.Zv * Zachse.steps_pmm);
+  }else{
+    nextZ = 4294967295;
+  }
+  if (nextPrePos.useE){
+    nextE = 1000000 / (nextPrePos.Ev * Eachse.steps_pmm);
+  }else{
+    nextE = 4294967295;
+  }
   while (!prePointerOnPos()) {
     doStdTasks();
     switch (getSmalest(nextX, nextY, nextZ, nextE))
     {
       case X:
-        //      X
+        if(!nextPrePos.useX)
+          Serial.println("ERROR not enabeld axes try step (X)");
         lastMoveTime = nextX;
         nextX += 1000000 / (nextPrePos.Xv * Xachse.steps_pmm);
         nextStepTime = getSmalestValue(nextX, nextY, nextZ, nextE);
         createStep(X, &nextPrePos.Xs, &prePos.Xs, nextStepTime - lastMoveTime);
-        //        Serial.print("X lastMoveTime:");
-        //        Serial.print(lastMoveTime);
-        //        Serial.print(" nextX:");
-        //        Serial.print(nextX);
-        //        Serial.print(" nextStepTime:");
-        //        Serial.print(nextStepTime);
-        //        Serial.print(" nextStepTime-lastMoveTime:");
-        //        Serial.println(nextStepTime-lastMoveTime);
         break;
       case Y:
-        //      Y
+        if(!nextPrePos.useY)
+          Serial.println("ERROR not enabeld axes try step (Y)");
         lastMoveTime = nextY;
         nextY += 1000000 / (nextPrePos.Yv * Yachse.steps_pmm);
         nextStepTime = getSmalestValue(nextX, nextY, nextZ, nextE);
         createStep(Y, &nextPrePos.Ys, &prePos.Ys, nextStepTime - lastMoveTime);
         break;
       case Z:
-        //Z
+        if(!nextPrePos.useZ)
+          Serial.println("ERROR not enabeld axes try step (Z)");
         lastMoveTime = nextZ;
         nextZ += 1000000 / (nextPrePos.Zv * Zachse.steps_pmm);
         nextStepTime = getSmalestValue(nextX, nextY, nextZ, nextE);
         createStep(Z, &nextPrePos.Zs, &prePos.Zs, nextStepTime - lastMoveTime);
         break;
       case E:
-        //E
+        if(!nextPrePos.useE)
+          Serial.println("ERROR not enabeld axes try step (E)");
         lastMoveTime = nextE;
         nextE += 1000000 / (nextPrePos.Ev * Eachse.steps_pmm);
         nextStepTime = getSmalestValue(nextX, nextY, nextZ, nextE);
         createStep(E, &nextPrePos.Es, &prePos.Es, nextStepTime - lastMoveTime);
         break;
+      default:
+        Serial.println("ERROR get falls step to plan calculateSteps");
     }
   }
-
-  prePos.Xp = float(prePos.Xs) / float(Xachse.steps_pmm);
-  prePos.Yp = float(prePos.Ys) / float(Yachse.steps_pmm);
-  prePos.Zp = float(prePos.Zs) / float(Zachse.steps_pmm);
-  prePos.Ep = float(prePos.Es) / float(Eachse.steps_pmm);
+  
+  if(nextPrePos.useX)prePos.Xp = float(prePos.Xs) / float(Xachse.steps_pmm);
+  if(nextPrePos.useY)prePos.Yp = float(prePos.Ys) / float(Yachse.steps_pmm);
+  if(nextPrePos.useZ)prePos.Zp = float(prePos.Zs) / float(Zachse.steps_pmm);
+  if(nextPrePos.useE)prePos.Ep = float(prePos.Es) / float(Eachse.steps_pmm);
+}
+void calcSpeedForAches(double gesDif){
+  nextPrePos.Xv = (abs(prePos.Xp - nextPrePos.Xp) / gesDif) * nextPrePos.Speed;
+  nextPrePos.Yv = (abs(prePos.Yp - nextPrePos.Yp) / gesDif) * nextPrePos.Speed;
+  nextPrePos.Zv = (abs(prePos.Zp - nextPrePos.Zp) / gesDif) * nextPrePos.Speed;
+  nextPrePos.Ev = (abs(prePos.Ep - nextPrePos.Ep) / gesDif) * nextPrePos.Speed;
 }
 eAchse getSmalest(unsigned long x, unsigned long y, unsigned long z, unsigned long e) {
-  if (x < y && x < z && x < e)
+  if (!nextPrePos.useX) x = 4294967295;
+  if (!nextPrePos.useY) y = 4294967295;
+  if (!nextPrePos.useZ) z = 4294967295;
+  if (!nextPrePos.useE) e = 4294967295;
+  
+  if (x < y && x < z && x < e && nextPrePos.useX)
     return X;
-  if (y < z && y < e)
+  else if (y < z && y < e && nextPrePos.useY)
     return Y;
-  if (z < e)
+  else if (z < e && nextPrePos.useZ)
     return Z;
-  return E;
+  else if (nextPrePos.useE)
+    return E;
+  else
+    Serial.print("ERROR getSmalest no match X(");
+    Serial.print(nextPrePos.useX);
+    Serial.print(") Y(");
+    Serial.print(nextPrePos.useY);
+    Serial.print(") Z(");
+    Serial.print(nextPrePos.useZ);
+    Serial.print(") E(");
+    Serial.print(nextPrePos.useE);
+    Serial.println(")");
+    
+    Serial.print("ERROR getSmalest no match values Xv(");
+    Serial.print(x);
+    Serial.print(") Yv(");
+    Serial.print(y);
+    Serial.print(") Zv(");
+    Serial.print(z);
+    Serial.print(") Ev(");
+    Serial.print(e);
+    Serial.println(")");
+  return -1;
 }
 unsigned long getSmalestValue(unsigned long x, unsigned long y, unsigned long z, unsigned long e) {
-  if (x < y && x < z && x < e)
-    return x;
-  if (y < z && y < e)
-    return y;
-  if (z < e)
-    return z;
-  return e;
+  switch(getSmalest(x,y,z,e)){
+    case X:
+      return x;
+    case Y:
+      return y;
+    case Z:
+      return z;
+    case E:
+      return e;
+    default:
+      Serial.println("ERROR getSmalestValue no match");
+      return -1; 
+  }
 }
 bool prePointerOnPos() {
+    if (!nextPrePos.useX)nextPrePos.Xs = prePos.Xs;
+    if (!nextPrePos.useY)nextPrePos.Ys = prePos.Ys;
+    if (!nextPrePos.useZ)nextPrePos.Zs = prePos.Zs;
+    if (!nextPrePos.useE)nextPrePos.Es = prePos.Es;
+//          Serial.print("ERROR ");
+//          Serial.print("nppX:");
+//          Serial.print(nextPrePos.Xs);
+//          Serial.print(" ppX:");
+//          Serial.print(prePos.Xs);
+//          Serial.print("nppY:");
+//          Serial.print(nextPrePos.Ys);
+//          Serial.print(" ppY:");
+//          Serial.print(prePos.Ys);
+//          Serial.print("nppZ:");
+//          Serial.print(nextPrePos.Zs);
+//          Serial.print(" ppZ:");
+//          Serial.print(prePos.Zs);
+//          Serial.print("nppE:");
+//          Serial.print(nextPrePos.Es);
+//          Serial.print(" ppE:");
+//          Serial.println(prePos.Es);
+//          return 1;
+//        }
+//      }
+//    }
+//  }
   if (nextPrePos.Xs == prePos.Xs) {
     if (nextPrePos.Ys == prePos.Ys) {
       if (nextPrePos.Zs == prePos.Zs) {
@@ -475,7 +538,7 @@ bool prePointerOnPos() {
         }
       }
     }
-  }
+  }  
   return 0;
 }
 void createStep(eAchse achse, long *sollStep, long *istStep, double us) {
@@ -493,6 +556,11 @@ void createStep(eAchse achse, long *sollStep, long *istStep, double us) {
     newStep.dir = 0;
     cb_push_back(&cbSteps, &newStep);
     *istStep -= 1;
+  }else{
+//    Serial.print("ERROR steps equal soll:");
+//    Serial.print(*sollStep);
+//    Serial.print(" ist:");
+//    Serial.println(*istStep);
   }
 }
 float getTravelDist(MovePos* pPos, MovePos* nPrePos) {
@@ -500,7 +568,7 @@ float getTravelDist(MovePos* pPos, MovePos* nPrePos) {
   float Ydif = pPos->Yp - nPrePos->Yp;
   float Zdif = pPos->Zp - nPrePos->Zp;
   float gesDif = sqrt(pow(Xdif, 2) + pow(Ydif, 2) + pow(Zdif, 2));
-  if (gesDif == 0)
+  if (gesDif < 0.00001)
     return abs(pPos->Ep - nPrePos->Ep);
   return gesDif;
 }
@@ -533,7 +601,8 @@ void usToTimer(stepParam* myStep, double us) {
     myStep->preScale = 1024;//4194239us
   }
   if (myStep->ticks > T_MAX) myStep->ticks = T_MAX;
-
+  if (myStep->ticks < 0) myStep->ticks = 0;
+  if(myStep->ticks < 500)Serial.println("ticks may to fast");
   //  Serial.print(" pre:");
   //  Serial.print(myStep->preScale);
   //  Serial.print(" ticks:");
@@ -544,6 +613,7 @@ int calcPreRunPointer(File* gFile) {
   if(waitForHeat == true)
     return 0; 
   do {
+    memset(&newLine[0], 0, sizeof(newLine));
     newLine = SD_ReadLine(gFile);
   } while (newLine[0] == '\0');
   if (newLine[0] == '@') {
@@ -568,8 +638,8 @@ void processComandLine(char* newLine,bool doNow) {
     startTimer(1);
   } else {
     LineParser(newLine, &newCommand);
-    //Serial.print("values: ");
-    //Serial.println(newLine);
+    Serial.print("values: ");
+    Serial.println(newLine);
   }
 
   //Serial.print("paresed ");
@@ -578,7 +648,7 @@ void processComandLine(char* newLine,bool doNow) {
       if (Vmax < newCommand.F)newCommand.F = Vmax;
       if (Vmin > newCommand.F)newCommand.F = Vmin;
     }
-    if (newCommand.useF) {
+    if (newCommand.useF && newCommand.F != nextPrePos.Speed) {
       Serial.print("G1 F");
       Serial.println(newCommand.F);
     }
@@ -589,7 +659,7 @@ void processComandLine(char* newLine,bool doNow) {
     sendDeviceStatus();
   } else if (newCommand.com == G28) { //start move home
     Serial.println("G28");
-    addCommand(&newCommand,doNow);
+    addCommand(&newCommand,true);
   } else if (newCommand.com == G92) { //set pos
     //Serial.println("G92");
     setPrePos(&newCommand);
@@ -743,88 +813,120 @@ void StopMove() {
   cb_clear(&cbSteps);
   cb_clear(&cbCommand);
 }
-void StopAchse(eAchse achse) {
+void StopAchse(eAchse achse) {//@TODO to steps
   comParam newPos;
   switch (achse) {
     case X:
-      newPos.useX = true;
-      newPos.X = prePos.Xp;
-      //newPos.X = float(Xachse.act_step) / float(Xachse.steps_pmm);
+      nextPrePos.useX = false;
+      nextPrePos.Xp = float(Xachse.act_step) / float(Xachse.steps_pmm);
+      nextPrePos.Xs = Xachse.act_step;
+      prePos.Xp = float(Xachse.act_step) / float(Xachse.steps_pmm);
+      prePos.Xs = Xachse.act_step;
       break;
     case Y:
-      newPos.useY = true;
-      newPos.Y = prePos.Yp;
-      //newPos.Y = float(Yachse.act_step) / float(Yachse.steps_pmm);
+      nextPrePos.useY = false;
+      nextPrePos.Yp = float(Yachse.act_step) / float(Yachse.steps_pmm);
+      nextPrePos.Yp = Yachse.act_step;
+      prePos.Yp = float(Yachse.act_step) / float(Yachse.steps_pmm);
+      prePos.Ys = Yachse.act_step;
       break;
     case Z:
-      newPos.useZ = true;
-      newPos.Z = prePos.Zp;
-      //newPos.Z = float(Zachse.act_step) / float(Zachse.steps_pmm);
+      nextPrePos.useZ = false;
+      nextPrePos.Zp = float(Zachse.act_step) / float(Zachse.steps_pmm);
+      nextPrePos.Zp = Zachse.act_step;
+      prePos.Zp = float(Zachse.act_step) / float(Zachse.steps_pmm);
+      prePos.Zs = Zachse.act_step;
       break;
     case E:
-      newPos.useE = true;
-      newPos.E = prePos.Ep;
-      //newPos.E = float(Eachse.act_step) / float(Eachse.steps_pmm);
+      nextPrePos.useE = false;
+      nextPrePos.Ep = float(Eachse.act_step) / float(Eachse.steps_pmm);
+      nextPrePos.Ep = Eachse.act_step;
+      prePos.Ep = float(Eachse.act_step) / float(Eachse.steps_pmm);
+      prePos.Es = Eachse.act_step;
       break;
   }
-  setNextPrePos(&newPos);
-  setPrePos(&newPos);
+  
+//  setNextPrePos(&newPos);
+//  setPrePos(&newPos);
+//  
+//  switch (achse) {
+//    case X:
+//      nextPrePos.useX = false;
+//      break;
+//    case Y:
+//      nextPrePos.useY = false;
+//      break;
+//    case Z:
+//      nextPrePos.useZ = false;
+//      break;
+//    case E:
+//      nextPrePos.useE = false;
+//      break;
+//  }
 }
 void setNextPrePos(comParam* newPos) {
   if (newPos->useX) {
-    //Serial.println("set npp x ");
-    //Serial.print(newPos->X);
     nextPrePos.Xp = newPos->X;
     nextPrePos.Xs = nextPrePos.Xp * float(Xachse.steps_pmm);
+    nextPrePos.useX = true;
+  }else{
+    nextPrePos.useX = false;
   }
   if (newPos->useY) {
-    //Serial.println("set npp y ");
-    //Serial.print(newPos->Y);
     nextPrePos.Yp = newPos->Y;
     nextPrePos.Ys = nextPrePos.Yp * float(Yachse.steps_pmm);
+    nextPrePos.useY = true;
+  }else{
+    nextPrePos.useY = false;
   }
   if (newPos->useZ) {
-    //Serial.println("set npp z ");
-    //Serial.print(newPos->Z);
     nextPrePos.Zp = newPos->Z;
     nextPrePos.Zs = nextPrePos.Zp * float(Zachse.steps_pmm);
+    nextPrePos.useZ = true;
+  }else{
+    nextPrePos.useZ = false;
   }
   if (newPos->useE) {
-    //Serial.println("set npp e ");
     nextPrePos.Ep = newPos->E;
     nextPrePos.Es = nextPrePos.Ep * float(Eachse.steps_pmm);
+    nextPrePos.useE = true;
+  }else{
+    nextPrePos.useE = false;
   }
   if (newPos->useF)
     nextPrePos.Speed = newPos->F;
-  //Serial.println();
 }
 void setPrePos(comParam* newPos) {
   if (newPos->useX){
-    //Serial.println("set pp x ");
-    //Serial.print(newPos->X);
     prePos.Xp = newPos->X;
     prePos.Xs = prePos.Xp * float(Xachse.steps_pmm);
+    prePos.useX = true;
+  }else{
+    prePos.useX = false;
   }
   if (newPos->useY) {
-    //Serial.println("set pp y ");
-    //Serial.print(newPos->Y);
     prePos.Yp = newPos->Y;
     prePos.Ys = prePos.Yp * float(Yachse.steps_pmm);
+    prePos.useY = true;
+  }else{
+    prePos.useY = false;
   }
   if (newPos->useZ) {
-    //Serial.println("set pp z ");
-    //Serial.print(newPos->Z);
     prePos.Zp = newPos->Z;
     prePos.Zs = prePos.Zp * float(Zachse.steps_pmm);
+    prePos.useZ = true;
+  }else{
+    prePos.useZ = false;
   }
   if (newPos->useE) {
-    //Serial.println("set pp e ");
     prePos.Ep = newPos->E;
     prePos.Es = prePos.Ep * float(Eachse.steps_pmm);
+    prePos.useE = true;
+  }else{
+    prePos.useE = false;
   }
   if (newPos->useF)
     prePos.Speed = newPos->F;
-  //Serial.println();
 }
 void setRealPose(comParam* newPos) {
   if (newPos->useX)
@@ -910,7 +1012,6 @@ int SR_CheckForLine() {
   return 0;
 }
 ISR (TIMER5_OVF_vect) { // Timer1 ISR
-  digitalWrite(22, HIGH);
   cli();
   stepParam nextStep;
   comParam nextCommand;
@@ -933,22 +1034,22 @@ ISR (TIMER5_OVF_vect) { // Timer1 ISR
         break;
       case C:
         if (cb_pop_front(&cbCommand, &nextCommand) == -1)
-          Serial.print("missing command");
+          Serial.println("missing command");
         else
           performCommand(&nextCommand);
         break;
     }
 
     startTimer(nextStep.preScale);
+    //do not use 
     if ((nextStep.ticks + (16.0 / (double)nextStep.preScale) * 40) > T_MAX) {
       TCNT5 = T_MAX;
     } else {
       TCNT5 = nextStep.ticks + (16.0 / (double)nextStep.preScale) * 40;
     }
-
+    //TCNT5 = nextStep.ticks;
   }
   sei();
-  digitalWrite(22, LOW);
 }
 void addCommand(comParam* newCommand,bool doNow) {
   if(doNow){
@@ -957,7 +1058,7 @@ void addCommand(comParam* newCommand,bool doNow) {
     stepParam newStep;
     cb_push_back(&cbCommand, newCommand);
     newStep.achse = C;
-    newStep.ticks = T_MAX;
+    newStep.ticks = T_MAX-5000;
     newStep.preScale = 1;
     cb_push_back(&cbSteps, &newStep);
   }
@@ -1290,6 +1391,7 @@ void cb_clear(circular_buffer *cb) {
   cb->count = 0;
   cb->head = cb->buffer;
   cb->tail = cb->buffer;
+  Serial.println("WARNING deleting buffer");
 }
 int cb_push_back(circular_buffer *cb, const void *item) {
   while (cb->count == cb->capacity) {
