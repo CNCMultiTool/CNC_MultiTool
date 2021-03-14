@@ -1,0 +1,11 @@
+release/cnc_basefunctions.o
+release/cnc_data.o
+release/main.o
+release/mainwindow.o
+release/qcustomplot.o
+release/serial.o
+release/moc_cnc_basefunctions.o
+release/moc_cnc_data.o
+release/moc_mainwindow.o
+release/moc_qcustomplot.o
+release/moc_serial.o

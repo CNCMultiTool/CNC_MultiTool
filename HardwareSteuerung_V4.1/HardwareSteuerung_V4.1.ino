@@ -373,14 +373,7 @@ void calculateSteps() {
   nextPrePos.Zv = (abs(prePos.Zp - nextPrePos.Zp) / gesDif) * nextPrePos.Speed;
   nextPrePos.Ev = (abs(prePos.Ep - nextPrePos.Ep) / gesDif) * nextPrePos.Speed;
   //calculate step time x y z e sort in buffer
-  //  Serial.print("Xv");
-  //  Serial.print(nextPrePos.Xv);
-  //  Serial.print(" Yv");
-  //  Serial.print(nextPrePos.Yv);
-  //  Serial.print(" Zv");
-  //  Serial.print(nextPrePos.Zv);
-  //  Serial.print(" Ev");
-  //  Serial.println(nextPrePos.Ev);
+
   unsigned long nextStepTime = 0;
   unsigned long noStep = -1;
   unsigned long lastMoveTime = 0;
@@ -392,53 +385,38 @@ void calculateSteps() {
   if (nextPrePos.Zs == prePos.Zs)nextZ = -1;
   unsigned long nextE = 1000000 / (nextPrePos.Ev * Eachse.steps_pmm);
   if (nextPrePos.Es == prePos.Es)nextE = -1;
-  //  Serial.print("nextX");
-  //  Serial.print(nextX);
-  //  Serial.print(" nextY");
-  //  Serial.print(nextY);
-  //  Serial.print(" nextZ");
-  //  Serial.print(nextZ);
-  //  Serial.print(" nextE");
-  //  Serial.println(nextE);
+
   while (!prePointerOnPos()) {
     doStdTasks();
     switch (getSmalest(nextX, nextY, nextZ, nextE))
     {
       case X:
-        //      X
         lastMoveTime = nextX;
         nextX += 1000000 / (nextPrePos.Xv * Xachse.steps_pmm);
         nextStepTime = getSmalestValue(nextX, nextY, nextZ, nextE);
         createStep(X, &nextPrePos.Xs, &prePos.Xs, nextStepTime - lastMoveTime);
-        //        Serial.print("X lastMoveTime:");
-        //        Serial.print(lastMoveTime);
-        //        Serial.print(" nextX:");
-        //        Serial.print(nextX);
-        //        Serial.print(" nextStepTime:");
-        //        Serial.print(nextStepTime);
-        //        Serial.print(" nextStepTime-lastMoveTime:");
-        //        Serial.println(nextStepTime-lastMoveTime);
+        if (nextPrePos.Xs == prePos.Xs)nextX = -1;
         break;
       case Y:
-        //      Y
         lastMoveTime = nextY;
         nextY += 1000000 / (nextPrePos.Yv * Yachse.steps_pmm);
         nextStepTime = getSmalestValue(nextX, nextY, nextZ, nextE);
         createStep(Y, &nextPrePos.Ys, &prePos.Ys, nextStepTime - lastMoveTime);
+        if (nextPrePos.Ys == prePos.Ys)nextY = -1;
         break;
       case Z:
-        //Z
         lastMoveTime = nextZ;
         nextZ += 1000000 / (nextPrePos.Zv * Zachse.steps_pmm);
         nextStepTime = getSmalestValue(nextX, nextY, nextZ, nextE);
         createStep(Z, &nextPrePos.Zs, &prePos.Zs, nextStepTime - lastMoveTime);
+        if (nextPrePos.Zs == prePos.Zs)nextZ = -1;
         break;
       case E:
-        //E
         lastMoveTime = nextE;
         nextE += 1000000 / (nextPrePos.Ev * Eachse.steps_pmm);
         nextStepTime = getSmalestValue(nextX, nextY, nextZ, nextE);
         createStep(E, &nextPrePos.Es, &prePos.Es, nextStepTime - lastMoveTime);
+        if (nextPrePos.Es == prePos.Es)nextE = -1;
         break;
     }
   }

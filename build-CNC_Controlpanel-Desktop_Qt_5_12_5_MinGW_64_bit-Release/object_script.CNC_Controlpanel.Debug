@@ -1,0 +1,11 @@
+debug/cnc_basefunctions.o
+debug/cnc_data.o
+debug/main.o
+debug/mainwindow.o
+debug/qcustomplot.o
+debug/serial.o
+debug/moc_cnc_basefunctions.o
+debug/moc_cnc_data.o
+debug/moc_mainwindow.o
+debug/moc_qcustomplot.o
+debug/moc_serial.o
