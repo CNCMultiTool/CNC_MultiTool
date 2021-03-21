@@ -83,6 +83,9 @@ void MainWindow::Log(const QString &s)
     QString text = QDateTime::currentDateTime().toString("hh:mm:ss.zzz Log: ") + s;
     text.remove(QRegularExpression("\n"));
     ui->textEditLog->append(text);
+    QString toFileText = s;
+    toFileText.remove(QRegularExpression("\n"));
+    m_database->FileLog(s);
 }
 
 void MainWindow::errorLog(const QString &s)

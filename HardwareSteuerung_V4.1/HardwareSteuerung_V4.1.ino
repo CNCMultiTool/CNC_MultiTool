@@ -80,6 +80,7 @@ typedef struct comParam {//decoded comand line
   bool useF = false;
   double S = 0;
   bool useS = false;
+  unsigned int check;
 } comParam;
 typedef struct  stepParam {
   eAchse achse;
@@ -206,6 +207,8 @@ double Vmin = 10;
 double Vmax = 20;
 bool waitForHeat = false;
 
+unsigned int globCheck = 0;
+
 void setup() {
   // put your setup code here, to run once:
   Xachse.achse = X;
@@ -286,7 +289,7 @@ void setup() {
   }
 
   while (!SD.begin(53)) {
-    Serial.println("SD initialization failed!");
+    Serial.println("ERROR: SD initialization failed!");
     delay(1000);
   }
   Serial.println("SD initializ");
@@ -298,7 +301,7 @@ void setup() {
   TCCR5C = 0x00;
   setBit(&TIMSK5, (1 << TOIE5));//enable timer overflow
 
-  cb_init(&cbSteps, 100, sizeof(stepParam));
+  cb_init(&cbSteps, 200, sizeof(stepParam));
   cb_init(&cbCommand, 10, sizeof(comParam));
   setState(GCodeStop);
   Serial.println("RESTART Arduino compleated");
@@ -323,12 +326,14 @@ void loop() {
         setState(GCodeStop);
     } else if (state == GCodePause) {
       setUseES(true);//enable endswitches for manuel movements
+      calculateSteps();
     } else if (state == GCodeStop) {
       setUseES(true);//enable endswitches for manuel movements
       SD_CloseFile(&GFile);
       if (getTravelDist(&prePos, &nextPrePos) == 0) {
         setMotorsENA(true);
       }
+      calculateSteps();
     } else if (state == GCodeCreate) {
       while (getState() == GCodeCreate) {
         if (SR_CheckForLine() == 1) {
@@ -352,10 +357,9 @@ void loop() {
       sendDeviceStatus();
       setState(GCodeRun);
     } else {
-      Serial.println("unknown State");
+      Serial.println("ERROR: unknown State");
     }
-    //if(!prePointerOnPos())
-    calculateSteps();
+ 
   }
 }
 void setMotorsENA(bool b) {
@@ -367,7 +371,7 @@ void setMotorsENA(bool b) {
 void calculateSteps() {
   //get travel dist
   double gesDif = getTravelDist(&prePos, &nextPrePos);
-  if (gesDif < 0.0001)
+  if (gesDif < 0.01)
     return;
   //check for Vmax Vmin
   if (Vmax < nextPrePos.Speed)nextPrePos.Speed = Vmax;
@@ -377,7 +381,26 @@ void calculateSteps() {
   //get travel achseSpeed  Xv/Xdif = Speed/GesDif
   calcSpeedForAches(gesDif);
   //calculate step time x y z e sort in buffer
-
+  /*
+    Serial.print("gesDif ");
+    Serial.print(gesDif);
+    Serial.print(" Xdif:");
+    Serial.print(abs(prePos.Xp - nextPrePos.Xp));
+    Serial.print(" Xv:");
+    Serial.print(nextPrePos.Xv);
+    Serial.print(" Ydif:");
+    Serial.print(abs(prePos.Yp - nextPrePos.Yp));
+    Serial.print(" Yv:");
+    Serial.print(nextPrePos.Yv);
+    Serial.print(" Zdif:");
+    Serial.print(abs(prePos.Zp - nextPrePos.Zp));
+    Serial.print(" Zv:");
+    Serial.print(nextPrePos.Zv);
+    Serial.print(" Edif:");
+    Serial.print(abs(prePos.Ep - nextPrePos.Ep));
+    Serial.print(" Ev:");
+    Serial.print(nextPrePos.Ev);
+  */
   unsigned long nextStepTime = 0;
   unsigned long noStep = -1;
   unsigned long lastMoveTime = 0;
@@ -410,6 +433,11 @@ void calculateSteps() {
     nextE = 4294967295;
     nextPrePos.useE = false;
   }
+
+  bool XmakeStep = false;
+  bool YmakeStep = false;
+  bool ZmakeStep = false;
+  bool EmakeStep = false;
   
   while (!prePointerOnPos()) {
     //if a axes get set to stop ore arrive its position it is cancelt from steps calculatioons
@@ -424,6 +452,7 @@ void calculateSteps() {
           nextX += 1000000 / (nextPrePos.Xv * Xachse.steps_pmm);
           nextStepTime = getSmalestValue(nextX, nextY, nextZ, nextE);
           createStep(X, &nextPrePos.Xs, &prePos.Xs, nextStepTime - lastMoveTime);
+          XmakeStep = true;
         }
         break;
       case Y:
@@ -434,6 +463,7 @@ void calculateSteps() {
           nextY += 1000000 / (nextPrePos.Yv * Yachse.steps_pmm);
           nextStepTime = getSmalestValue(nextX, nextY, nextZ, nextE);
           createStep(Y, &nextPrePos.Ys, &prePos.Ys, nextStepTime - lastMoveTime);
+          YmakeStep = true;
         }
         break;
       case Z:
@@ -444,6 +474,7 @@ void calculateSteps() {
           nextZ += 1000000 / (nextPrePos.Zv * Zachse.steps_pmm);
           nextStepTime = getSmalestValue(nextX, nextY, nextZ, nextE);
           createStep(Z, &nextPrePos.Zs, &prePos.Zs, nextStepTime - lastMoveTime);
+          ZmakeStep = true;
         }
         break;
       case E:
@@ -454,10 +485,11 @@ void calculateSteps() {
           nextE += 1000000 / (nextPrePos.Ev * Eachse.steps_pmm);
           nextStepTime = getSmalestValue(nextX, nextY, nextZ, nextE);
           createStep(E, &nextPrePos.Es, &prePos.Es, nextStepTime - lastMoveTime);
+          EmakeStep = true;
         }
         break;
       default:
-        Serial.println("ERROR get falls step to plan calculateSteps");
+        Serial.println("ERROR: get falls step to plan calculateSteps");
         Serial.print(" X ");
         Serial.print(nextPrePos.Xs);
         Serial.print(" -> ");
@@ -476,16 +508,48 @@ void calculateSteps() {
         Serial.print(prePos.Es);
     }
   }
-  prePos.Xp = float(prePos.Xs) / float(Xachse.steps_pmm);
-  prePos.Yp = float(prePos.Ys) / float(Yachse.steps_pmm);
-  prePos.Zp = float(prePos.Zs) / float(Zachse.steps_pmm);
-  prePos.Ep = float(prePos.Es) / float(Eachse.steps_pmm);
+  if(XmakeStep)prePos.Xp = float(prePos.Xs) / float(Xachse.steps_pmm);
+  if(YmakeStep)prePos.Yp = float(prePos.Ys) / float(Yachse.steps_pmm);
+  if(ZmakeStep)prePos.Zp = float(prePos.Zs) / float(Zachse.steps_pmm);
+  if(EmakeStep)prePos.Ep = float(prePos.Es) / float(Eachse.steps_pmm);
 }
 void calcSpeedForAches(double gesDif){
-  nextPrePos.Xv = (abs(prePos.Xp - nextPrePos.Xp) / gesDif) * nextPrePos.Speed;
-  nextPrePos.Yv = (abs(prePos.Yp - nextPrePos.Yp) / gesDif) * nextPrePos.Speed;
-  nextPrePos.Zv = (abs(prePos.Zp - nextPrePos.Zp) / gesDif) * nextPrePos.Speed;
-  nextPrePos.Ev = (abs(prePos.Ep - nextPrePos.Ep) / gesDif) * nextPrePos.Speed;
+  if(prePos.Xs == nextPrePos.Xs)
+    nextPrePos.Xv = 0;
+  else
+    nextPrePos.Xv = (abs(prePos.Xp - nextPrePos.Xp) / gesDif) * nextPrePos.Speed;
+
+  if(prePos.Ys == nextPrePos.Ys)
+    nextPrePos.Yv = 0;
+  else 
+    nextPrePos.Yv = (abs(prePos.Yp - nextPrePos.Yp) / gesDif) * nextPrePos.Speed;
+
+  if(prePos.Zs == nextPrePos.Zs)
+    nextPrePos.Zv = 0;
+  else
+    nextPrePos.Zv = (abs(prePos.Zp - nextPrePos.Zp) / gesDif) * nextPrePos.Speed;
+
+  if(prePos.Es == nextPrePos.Es)
+    nextPrePos.Ev = 0;
+  else
+    nextPrePos.Ev = (abs(prePos.Ep - nextPrePos.Ep) / gesDif) * nextPrePos.Speed;
+
+  if(nextPrePos.Xv>Vmax){
+    nextPrePos.Xv = Vmax;
+    Serial.println("ERROR: X to fast");
+  }
+  if(nextPrePos.Yv>Vmax){
+    nextPrePos.Yv = Vmax;
+    Serial.println("ERROR: Y to fast");
+  }
+  if(nextPrePos.Zv>Vmax){
+    nextPrePos.Zv = Vmax;
+    Serial.println("ERROR: Z to fast");
+  }
+  if(nextPrePos.Ev>Vmax){
+    nextPrePos.Ev = Vmax;
+    Serial.println("ERROR: E to fast");
+  }
 }
 eAchse getSmalest(unsigned long x, unsigned long y, unsigned long z, unsigned long e) { 
   if (x < y && x < z && x < e)// && nextPrePos.useX)
@@ -497,7 +561,7 @@ eAchse getSmalest(unsigned long x, unsigned long y, unsigned long z, unsigned lo
   else// if (nextPrePos.useE)
     return E;
   //else{
-    Serial.print("ERROR getSmalest no match X(");
+    Serial.print("ERROR: getSmalest no match X(");
     Serial.print(nextPrePos.useX);
     Serial.print(") Y(");
     Serial.print(nextPrePos.useY);
@@ -507,7 +571,7 @@ eAchse getSmalest(unsigned long x, unsigned long y, unsigned long z, unsigned lo
     Serial.print(nextPrePos.useE);
     Serial.println(")");
     
-    Serial.print("ERROR getSmalest no match values Xv(");
+    Serial.print("ERROR: getSmalest no match values Xv(");
     Serial.print(x);
     Serial.print(") Yv(");
     Serial.print(y);
@@ -530,7 +594,7 @@ unsigned long getSmalestValue(unsigned long x, unsigned long y, unsigned long z,
     case E:
       return e;
     default:
-      Serial.println("ERROR getSmalestValue no match");
+      Serial.println("ERROR: getSmalestValue no match");
       return -1; 
   }
 }
@@ -563,7 +627,8 @@ bool prePointerOnPos() {
 void createStep(eAchse achse, long *sollStep, long *istStep, double us) {
   stepParam newStep;
   newStep.achse = achse;
-  usToTimer(&newStep, us);
+  if(us<0)Serial.println("ERROR: in createStep us < 0");
+  usToTimer(&newStep, abs(us));
   if (*sollStep > *istStep) {
     newStep.dir = 1;
     cb_push_back(&cbSteps, &newStep);
@@ -573,16 +638,34 @@ void createStep(eAchse achse, long *sollStep, long *istStep, double us) {
     cb_push_back(&cbSteps, &newStep);
     *istStep -= 1;
   }else{
-    Serial.println("ERROR steps equal soll:");
+    Serial.println("ERROR: steps equal soll:");
   }
 }
 float getTravelDist(MovePos* pPos, MovePos* nPrePos) {
-  float Xdif = pPos->Xp - nPrePos->Xp;
-  float Ydif = pPos->Yp - nPrePos->Yp;
-  float Zdif = pPos->Zp - nPrePos->Zp;
+  float Xdif,Ydif,Zdif,Edif;
+  if(pPos->Xs == nPrePos->Xs)
+    Xdif = 0;
+  else
+    Xdif = pPos->Xp - nPrePos->Xp;
+
+  if(pPos->Ys == nPrePos->Ys)
+    Ydif = 0;
+  else
+    Ydif = pPos->Yp - nPrePos->Yp;
+  
+  if(pPos->Zs == nPrePos->Zs)
+    Zdif = 0;
+  else
+    Zdif = pPos->Zp - nPrePos->Zp;
+
   float gesDif = sqrt(pow(Xdif, 2) + pow(Ydif, 2) + pow(Zdif, 2));
-  if (gesDif < 0.0001)
-    return abs(pPos->Ep - nPrePos->Ep);
+  if (gesDif < 0.02){
+    if(pPos->Es == nPrePos->Es)
+      Edif = 0;
+    else
+      Edif = pPos->Ep - nPrePos->Ep;
+    return abs(Edif);
+  }
   return gesDif;
 }
 void usToTimer(stepParam* myStep, double us) {
@@ -597,6 +680,7 @@ void usToTimer(stepParam* myStep, double us) {
   if (us < 0) {
     myStep->ticks = T_MAX;
     myStep->preScale = 1;//4096us
+    Serial.println("ERROR: us smaler 0");
   } else if (us < 4095) {
     myStep->ticks =  T_MAX - (usF / 1.0) * us;
     myStep->preScale = 1;//4096us
@@ -615,7 +699,7 @@ void usToTimer(stepParam* myStep, double us) {
   }
   if (myStep->ticks > T_MAX) myStep->ticks = T_MAX;
   if (myStep->ticks < 0) myStep->ticks = 0;
-  if(myStep->ticks < 500)Serial.println("ticks may to fast");
+  if(myStep->ticks < 500)Serial.println("ERROR: ticks may to fast");
   //  Serial.print(" pre:");
   //  Serial.print(myStep->preScale);
   //  Serial.print(" ticks:");
@@ -665,6 +749,7 @@ void processComandLine(char* newLine,bool doNow) {
       Serial.println(newCommand.F);
     }
     setNextPrePos(&newCommand);
+    calculateSteps();
   } else if (newCommand.com == G9) { //stop movement
     Serial.println("G9");
     StopMove();
@@ -738,7 +823,7 @@ void processComandLine(char* newLine,bool doNow) {
       setState(GCodeCreate);
       SD_createFile(&GFile, fileName);
     } else
-      Serial.println("write can only start when stoped");
+      Serial.println("ERROR: write can only start when stoped");
   } else if (newCommand.com == Q102) { //close file after write G-Code
     Serial.println("Q102");
   } else if (newCommand.com == Q103) { //Pause G-Code
@@ -761,7 +846,7 @@ void processComandLine(char* newLine,bool doNow) {
     Serial.println("Q107");
     SD_removeFile(fileName);
   } else {
-    Serial.print("unknown GCode: ");
+    Serial.print("ERROR: unknown GCode: ");
     Serial.println(newLine);
   }
   //sendDeviceStatus();
@@ -1003,10 +1088,18 @@ ISR (TIMER5_OVF_vect) { // Timer1 ISR
         performStep(&Eachse, nextStep.dir);
         break;
       case C:
-        if (cb_pop_front(&cbCommand, &nextCommand) == -1)
-          Serial.println("missing command");
-        else
+        if (cb_pop_front(&cbCommand, &nextCommand) == -1){
+          Serial.println("ERROR: missing command");
+        }else{
+          if(nextCommand.check != nextStep.ticks){
+            Serial.print("ERROR: missmatch commmands check: step->");
+            Serial.print(nextStep.ticks);
+            Serial.print(" command->");
+            Serial.print(nextCommand.check);
+          }
           performCommand(&nextCommand);
+          nextStep.ticks = T_MAX;
+        }
         break;
     }
 
@@ -1025,12 +1118,16 @@ void addCommand(comParam* newCommand,bool doNow) {
   if(doNow){
     performCommand(newCommand);
   }else{
+    
     stepParam newStep;
+    newCommand->check = globCheck;
+    newStep.ticks = globCheck;
     cb_push_back(&cbCommand, newCommand);
     newStep.achse = C;
-    newStep.ticks = T_MAX;
+    //newStep.ticks = T_MAX;
     newStep.preScale = 1;
     cb_push_back(&cbSteps, &newStep);
+    globCheck++;
   }
 }
 void performStep(StepMotorBig *mot, bool dir) {
@@ -1090,7 +1187,7 @@ void performCommand(comParam* newCommand) {
       sendTemperature();
       break;
     default:
-      Serial.print("unknown Command ");
+      Serial.print("ERROR: unknown Command ");
       Serial.println(newCommand->com);
   }
 }
@@ -1127,7 +1224,7 @@ void startTimer(int prescale) {
       setBit(&TCCR5B, (1 << CS12));
       break;
     default:
-      Serial.print("unknown prescalar:");
+      Serial.print("ERROR: unknown prescalar:");
       Serial.println(prescale);
       setBit(&TCCR5B, (1 << CS10));
       resetBit(&TCCR5B, (1 << CS11));
@@ -1139,13 +1236,13 @@ void startTimer(int prescale) {
 int SD_OpenFile(File *file , char *fileName) {
   file->close();
   if (!SD.exists(fileName)) {
-    Serial.println("ERROR file dose not exist");
+    Serial.println("ERROR: file dose not exist");
     setState(GCodeStop);
     return -1;
   }
   *file = SD.open(fileName, FILE_READ);
   if (!file) {
-    Serial.println("ERROR file cant be open");
+    Serial.println("ERROR: file cant be open");
     setState(GCodeStop);
     return -1;
   }
@@ -1155,7 +1252,7 @@ char* SD_ReadLine(File* file) {
   static char newLine[128];
   newLine[0] = '@';
   if (!file) {
-    Serial.println("ERROR file is not open");
+    Serial.println("ERROR: file is not open");
     return newLine;
   }
   if (file->available())
@@ -1231,7 +1328,7 @@ void SD_createFile(File *myFile, const char* fileName) {
   Serial.print("create file to write ");
   Serial.println(fileName);
   if (!*myFile) {
-    Serial.println("create_file: errorFileOpen");
+    Serial.println("ERROR: create_file: errorFileOpen");
     setState(GCodeStop);
   } else {
     Serial.println("GC_NL");
