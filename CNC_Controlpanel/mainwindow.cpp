@@ -197,10 +197,13 @@ void MainWindow::show_state(float state){
 }
 
 void MainWindow::show_waitForHeat(float isWaiting){
-    if(isWaiting)
+    if(isWaiting){
         ui->label_waitForHeat->setStyleSheet("background-color: yellow");
-    else
+        ui->label_waitForHeat->setText("wait for Heat");
+    }else{
         ui->label_waitForHeat->setStyleSheet("background-color: lightblue");
+        ui->label_waitForHeat->setText("wait not for Heat");
+    }
 }
 
 

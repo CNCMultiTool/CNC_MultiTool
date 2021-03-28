@@ -209,6 +209,10 @@ bool waitForHeat = false;
 
 unsigned int globCheck = 0;
 
+unsigned long TlastX;
+unsigned long TlastY;
+
+
 void setup() {
   // put your setup code here, to run once:
   Xachse.achse = X;
@@ -301,7 +305,7 @@ void setup() {
   TCCR5C = 0x00;
   setBit(&TIMSK5, (1 << TOIE5));//enable timer overflow
 
-  cb_init(&cbSteps, 200, sizeof(stepParam));
+  cb_init(&cbSteps, 100, sizeof(stepParam));
   cb_init(&cbCommand, 10, sizeof(comParam));
   setState(GCodeStop);
   Serial.println("RESTART Arduino compleated");
@@ -362,6 +366,7 @@ void loop() {
  
   }
 }
+
 void setMotorsENA(bool b) {
   digitalWrite(Xachse.pinENA, b);
   digitalWrite(Yachse.pinENA, b);
@@ -1067,7 +1072,8 @@ int SR_CheckForLine() {
 }
 ISR (TIMER5_OVF_vect) { // Timer1 ISR
   cli();
-  digitalWrite(22,HIGH);
+  //digitalWrite(22,HIGH);
+  unsigned long Tnow = micros();
   stepParam nextStep;
   comParam nextCommand;
   if (cb_pop_front(&cbSteps, &nextStep) == -1) {
@@ -1077,9 +1083,19 @@ ISR (TIMER5_OVF_vect) { // Timer1 ISR
     switch (nextStep.achse) {
       case X:
         performStep(&Xachse, nextStep.dir);
+        if (Tnow - TlastX < 500){
+          Serial.print("Xachse to fast: ");
+          Serial.println(Tnow - TlastX);
+        } 
+        TlastX = micros();
         break;
       case Y:
         performStep(&Yachse, nextStep.dir);
+        if (Tnow - TlastY < 500){
+          Serial.print("Yachse to fast: ");
+          Serial.println(Tnow - TlastY);
+        }
+        TlastY = micros();
         break;
       case Z:
         performStep(&Zachse, nextStep.dir);
@@ -1105,13 +1121,14 @@ ISR (TIMER5_OVF_vect) { // Timer1 ISR
 
     startTimer(nextStep.preScale);
     //do not use 
-    if ((nextStep.ticks + (16.0 / (double)nextStep.preScale) * 40) > T_MAX) {
+    TCNT5 = nextStep.ticks;;
+/*    if ((nextStep.ticks + (16.0 / (double)nextStep.preScale) * 40) > T_MAX) {
       TCNT5 = T_MAX;
     } else {
       TCNT5 = nextStep.ticks + (16.0 / (double)nextStep.preScale) * 40;
-    }
+    }*/
   }
-  digitalWrite(22,LOW);
+  //digitalWrite(22,LOW);
   sei();
 }
 void addCommand(comParam* newCommand,bool doNow) {
