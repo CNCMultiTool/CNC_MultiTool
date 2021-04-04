@@ -443,13 +443,14 @@ void calculateSteps() {
   bool YmakeStep = false;
   bool ZmakeStep = false;
   bool EmakeStep = false;
+
+  eAchse nextAchse;
   
   while (!prePointerOnPos()) {
     //if a axes get set to stop ore arrive its position it is cancelt from steps calculatioons
     doStdTasks();
-    switch (getSmalest(nextX, nextY, nextZ, nextE))
-    {
-      case X:
+    nextAchse = getSmalest(nextX, nextY, nextZ, nextE);
+    if(nextAchse == X){
         if (nextPrePos.useX == false){
           nextX = 4294967295;
         }else{
@@ -459,8 +460,7 @@ void calculateSteps() {
           createStep(X, &nextPrePos.Xs, &prePos.Xs, nextStepTime - lastMoveTime);
           XmakeStep = true;
         }
-        break;
-      case Y:
+      }else if(nextAchse == Y){
         if (nextPrePos.useY == false){
           nextY = 4294967295;
         }else{
@@ -470,8 +470,7 @@ void calculateSteps() {
           createStep(Y, &nextPrePos.Ys, &prePos.Ys, nextStepTime - lastMoveTime);
           YmakeStep = true;
         }
-        break;
-      case Z:
+      }else if(nextAchse == Z){
         if (nextPrePos.useZ == false){
           nextZ = 4294967295;
         }else{
@@ -481,8 +480,7 @@ void calculateSteps() {
           createStep(Z, &nextPrePos.Zs, &prePos.Zs, nextStepTime - lastMoveTime);
           ZmakeStep = true;
         }
-        break;
-      case E:
+      }else if(nextAchse == E){
         if (nextPrePos.useE == false){
           nextE = 4294967295;
         }else{
@@ -492,8 +490,7 @@ void calculateSteps() {
           createStep(E, &nextPrePos.Es, &prePos.Es, nextStepTime - lastMoveTime);
           EmakeStep = true;
         }
-        break;
-      default:
+      }else{
         Serial.println("ERROR: get falls step to plan calculateSteps");
         Serial.print(" X ");
         Serial.print(nextPrePos.Xs);
@@ -511,7 +508,7 @@ void calculateSteps() {
         Serial.print(nextPrePos.Es);
         Serial.print(" -> ");
         Serial.print(prePos.Es);
-    }
+      }
   }
   if(XmakeStep)prePos.Xp = float(prePos.Xs) / float(Xachse.steps_pmm);
   if(YmakeStep)prePos.Yp = float(prePos.Ys) / float(Yachse.steps_pmm);
@@ -565,28 +562,6 @@ eAchse getSmalest(unsigned long x, unsigned long y, unsigned long z, unsigned lo
     return Z;
   else// if (nextPrePos.useE)
     return E;
-  //else{
-    Serial.print("ERROR: getSmalest no match X(");
-    Serial.print(nextPrePos.useX);
-    Serial.print(") Y(");
-    Serial.print(nextPrePos.useY);
-    Serial.print(") Z(");
-    Serial.print(nextPrePos.useZ);
-    Serial.print(") E(");
-    Serial.print(nextPrePos.useE);
-    Serial.println(")");
-    
-    Serial.print("ERROR: getSmalest no match values Xv(");
-    Serial.print(x);
-    Serial.print(") Yv(");
-    Serial.print(y);
-    Serial.print(") Zv(");
-    Serial.print(z);
-    Serial.print(") Ev(");
-    Serial.print(e);
-    Serial.println(")");
-  //}
-  return -1;
 }
 unsigned long getSmalestValue(unsigned long x, unsigned long y, unsigned long z, unsigned long e) {
   switch(getSmalest(x,y,z,e)){
@@ -1073,37 +1048,40 @@ int SR_CheckForLine() {
 ISR (TIMER5_OVF_vect) { // Timer1 ISR
   cli();
   //digitalWrite(22,HIGH);
-  unsigned long Tnow = micros();
+  //unsigned long Tnow = micros();
   stepParam nextStep;
   comParam nextCommand;
   if (cb_pop_front(&cbSteps, &nextStep) == -1) {
     TCNT5 = 1;//T_MAX;
     startTimer(1);
   } else {
-    switch (nextStep.achse) {
-      case X:
+    if(nextStep.achse == X) {
         performStep(&Xachse, nextStep.dir);
-        if (Tnow - TlastX < 500){
+        /*if (Tnow - TlastX < 5000){
           Serial.print("Xachse to fast: ");
-          Serial.println(Tnow - TlastX);
+          Serial.print(Tnow - TlastX);
+          Serial.print(" pri: ");
+          Serial.print(nextStep.preScale);
+          Serial.print(" tick: ");
+          Serial.println(nextStep.ticks);
         } 
-        TlastX = micros();
-        break;
-      case Y:
+        TlastX = micros();*/
+    }else if(nextStep.achse == Y) {
         performStep(&Yachse, nextStep.dir);
-        if (Tnow - TlastY < 500){
+        /*if (Tnow - TlastY < 5000){
           Serial.print("Yachse to fast: ");
-          Serial.println(Tnow - TlastY);
+          Serial.print(Tnow - TlastY);
+          Serial.print(" pri: ");
+          Serial.print(nextStep.preScale);
+          Serial.print(" tick: ");
+          Serial.println(nextStep.ticks);
         }
-        TlastY = micros();
-        break;
-      case Z:
+        TlastY = micros();*/
+    }else if(nextStep.achse == Z) {
         performStep(&Zachse, nextStep.dir);
-        break;
-      case E:
+    }else if(nextStep.achse == E) {
         performStep(&Eachse, nextStep.dir);
-        break;
-      case C:
+    }else if(nextStep.achse == C) {
         if (cb_pop_front(&cbCommand, &nextCommand) == -1){
           Serial.println("ERROR: missing command");
         }else{
@@ -1116,13 +1094,12 @@ ISR (TIMER5_OVF_vect) { // Timer1 ISR
           performCommand(&nextCommand);
           nextStep.ticks = T_MAX;
         }
-        break;
     }
 
     startTimer(nextStep.preScale);
     //do not use 
-    TCNT5 = nextStep.ticks;;
-/*    if ((nextStep.ticks + (16.0 / (double)nextStep.preScale) * 40) > T_MAX) {
+    TCNT5 = nextStep.ticks;
+  /*  if ((nextStep.ticks + (16.0 / (double)nextStep.preScale) * 40) > T_MAX) {
       TCNT5 = T_MAX;
     } else {
       TCNT5 = nextStep.ticks + (16.0 / (double)nextStep.preScale) * 40;
@@ -1274,9 +1251,9 @@ char* SD_ReadLine(File* file) {
   }
   if (file->available())
   {
-    cli();
+    //cli();
     int write_idx = 0;
-    char read_buf = "";
+    char read_buf = '\0';
     while (file->available() && read_buf != '\n')
     {
       read_buf = file->read();
@@ -1286,7 +1263,9 @@ char* SD_ReadLine(File* file) {
       } else if (read_buf == ';') { //remove comments out of the G-Code
         while (read_buf != '\n')
         {
+          cli();
           read_buf = file->read();
+          sei();
         }
         newLine[write_idx] = '\0';
       }
@@ -1296,7 +1275,7 @@ char* SD_ReadLine(File* file) {
         write_idx++;
       }
     }
-    sei();
+    //sei();
   }
   return newLine;
 }
