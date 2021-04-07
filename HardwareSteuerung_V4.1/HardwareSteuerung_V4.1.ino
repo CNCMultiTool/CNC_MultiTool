@@ -303,7 +303,7 @@ void setup() {
   TCCR5C = 0x00;
   setBit(&TIMSK5, (1 << TOIE5));//enable timer overflow
 
-  cb_init(&cbSteps, 5, sizeof(stepParam));
+  cb_init(&cbSteps, 100, sizeof(stepParam));
   setState(GCodeStop);
   Serial.println("RESTART Arduino compleated");
 }
@@ -1054,7 +1054,7 @@ ISR (TIMER5_OVF_vect) { // Timer1 ISR
   stepParam nextStep;
   comParam nextCommand;
   if (cb_pop_front(&cbSteps, &nextStep) == -1) {
-    if(!waitForHeat && getState()==GCodeRun)Serial.println("Buffer was empty");
+    //if(!waitForHeat && getState()==GCodeRun)Serial.println("Buffer was empty");
     startTimer(0);    
   } else {
     if(nextStep.achse == X) {
@@ -1446,7 +1446,7 @@ int cb_push_back(circular_buffer *cb, const void *item) {
   cb->count++;
   if(!readBit(TCCR5B, (1 << CS10))&&!readBit(TCCR5B, (1 << CS11))&&!readBit(TCCR5B, (1 << CS12)))
   {
-    Serial.println("restat timer");
+    //Serial.println("restat timer");
     TCNT5 = T_MAX;
     startTimer(1);
   }
