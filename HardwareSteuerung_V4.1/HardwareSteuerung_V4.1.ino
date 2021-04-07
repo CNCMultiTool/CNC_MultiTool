@@ -87,6 +87,7 @@ typedef struct  stepParam {
   bool dir;
   unsigned int ticks;
   int preScale;
+  comParam *com = nullptr;
 } stepParam;
 typedef struct circular_buffer {
   void *buffer;     // data buffer
@@ -150,7 +151,6 @@ sComand lComandList[24] = {
   {Q107, "Q107"}
 };
 circular_buffer cbSteps;
-circular_buffer cbCommand;
 eGCodeState state;
 File GFile;
 File HomeFile;
@@ -206,8 +206,6 @@ double BmMax = 150;
 double Vmin = 10;
 double Vmax = 20;
 bool waitForHeat = false;
-
-unsigned int globCheck = 0;
 
 unsigned long TlastX;
 unsigned long TlastY;
@@ -305,14 +303,13 @@ void setup() {
   TCCR5C = 0x00;
   setBit(&TIMSK5, (1 << TOIE5));//enable timer overflow
 
-  cb_init(&cbSteps, 100, sizeof(stepParam));
-  cb_init(&cbCommand, 10, sizeof(comParam));
+  cb_init(&cbSteps, 5, sizeof(stepParam));
   setState(GCodeStop);
   Serial.println("RESTART Arduino compleated");
 }
 
 void loop() {
-  startTimer(1);//start intterrupt timer
+  //startTimer(1);//start intterrupt timer
   while (true) {
     time_now = micros();
     doStdTasks();
@@ -564,19 +561,25 @@ eAchse getSmalest(unsigned long x, unsigned long y, unsigned long z, unsigned lo
     return E;
 }
 unsigned long getSmalestValue(unsigned long x, unsigned long y, unsigned long z, unsigned long e) {
+  unsigned long smalest;
   switch(getSmalest(x,y,z,e)){
     case X:
-      return x;
+      smalest = x;
+      break;
     case Y:
-      return y;
+      smalest =  y;
+      break;
     case Z:
-      return z;
+      smalest =  z;
+      break;
     case E:
-      return e;
+      smalest =  e;
+      break;
     default:
       Serial.println("ERROR: getSmalestValue no match");
       return -1; 
-  }
+  }  
+  return smalest;
 }
 bool prePointerOnPos() {
   if (nextPrePos.Xs == prePos.Xs)
@@ -711,7 +714,7 @@ void processComandLine(char* newLine,bool doNow) {
     Serial.println(fileName);
   } else if (newCommand.com == G9) {
     Serial.println("find G9 ");
-    startTimer(1);
+    //startTimer(1);
   } else {
     LineParser(newLine, &newCommand);
     //Serial.print("values: ");
@@ -887,7 +890,6 @@ void StopMove() {
   StopAchse(Z);
   StopAchse(E);
   cb_clear(&cbSteps);
-  cb_clear(&cbCommand);
 }
 void StopAchse(eAchse achse) {//@TODO to steps
   //comParam newPos;
@@ -1052,54 +1054,33 @@ ISR (TIMER5_OVF_vect) { // Timer1 ISR
   stepParam nextStep;
   comParam nextCommand;
   if (cb_pop_front(&cbSteps, &nextStep) == -1) {
-    TCNT5 = 1;//T_MAX;
-    startTimer(1);
+    if(!waitForHeat && getState()==GCodeRun)Serial.println("Buffer was empty");
+    startTimer(0);    
   } else {
     if(nextStep.achse == X) {
         performStep(&Xachse, nextStep.dir);
-        /*if (Tnow - TlastX < 5000){
-          Serial.print("Xachse to fast: ");
-          Serial.print(Tnow - TlastX);
-          Serial.print(" pri: ");
-          Serial.print(nextStep.preScale);
-          Serial.print(" tick: ");
-          Serial.println(nextStep.ticks);
-        } 
-        TlastX = micros();*/
     }else if(nextStep.achse == Y) {
         performStep(&Yachse, nextStep.dir);
-        /*if (Tnow - TlastY < 5000){
-          Serial.print("Yachse to fast: ");
-          Serial.print(Tnow - TlastY);
-          Serial.print(" pri: ");
-          Serial.print(nextStep.preScale);
-          Serial.print(" tick: ");
-          Serial.println(nextStep.ticks);
-        }
-        TlastY = micros();*/
     }else if(nextStep.achse == Z) {
         performStep(&Zachse, nextStep.dir);
     }else if(nextStep.achse == E) {
         performStep(&Eachse, nextStep.dir);
     }else if(nextStep.achse == C) {
-        if (cb_pop_front(&cbCommand, &nextCommand) == -1){
-          Serial.println("ERROR: missing command");
-        }else{
-          if(nextCommand.check != nextStep.ticks){
-            Serial.print("ERROR: missmatch commmands check: step->");
-            Serial.print(nextStep.ticks);
-            Serial.print(" command->");
-            Serial.print(nextCommand.check);
-          }
-          performCommand(&nextCommand);
-          nextStep.ticks = T_MAX;
-        }
+        performCommand(nextStep.com);
+        delete nextStep.com;
+    }else{
+      Serial.print("ERROR: unknown step achse:");
+      Serial.print(nextStep.achse);
+      Serial.print(" ticks:");
+      Serial.print(nextStep.ticks);
+      Serial.print(" preScale:");
+      Serial.print(nextStep.preScale);
     }
 
     startTimer(nextStep.preScale);
     //do not use 
     TCNT5 = nextStep.ticks;
-  /*  if ((nextStep.ticks + (16.0 / (double)nextStep.preScale) * 40) > T_MAX) {
+    /*if ((nextStep.ticks + (16.0 / (double)nextStep.preScale) * 40) > T_MAX) {
       TCNT5 = T_MAX;
     } else {
       TCNT5 = nextStep.ticks + (16.0 / (double)nextStep.preScale) * 40;
@@ -1112,16 +1093,13 @@ void addCommand(comParam* newCommand,bool doNow) {
   if(doNow){
     performCommand(newCommand);
   }else{
-    
     stepParam newStep;
-    newCommand->check = globCheck;
-    newStep.ticks = globCheck;
-    cb_push_back(&cbCommand, newCommand);
+    comParam* newCom = malloc(sizeof(comParam));
+    memcpy(newCom, newCommand, sizeof(comParam));
+    newStep.com = newCom;
     newStep.achse = C;
-    //newStep.ticks = T_MAX;
     newStep.preScale = 1;
     cb_push_back(&cbSteps, &newStep);
-    globCheck++;
   }
 }
 void performStep(StepMotorBig *mot, bool dir) {
@@ -1187,11 +1165,11 @@ void performCommand(comParam* newCommand) {
 }
 void startTimer(int prescale) {
   switch (prescale) {
-  //    case 0:
-  //      resetBit(&TCCR5B, (1 << CS10));
-  //      resetBit(&TCCR5B, (1 << CS11));
-  //      resetBit(&TCCR5B, (1 << CS12));
-  //      break;
+    case 0:
+      resetBit(&TCCR5B, (1 << CS10));
+      resetBit(&TCCR5B, (1 << CS11));
+      resetBit(&TCCR5B, (1 << CS12));
+      break;
     case 1:
       setBit(&TCCR5B, (1 << CS10));
       resetBit(&TCCR5B, (1 << CS11));
@@ -1458,19 +1436,24 @@ void cb_clear(circular_buffer *cb) {
 }
 int cb_push_back(circular_buffer *cb, const void *item) {
   while (cb->count == cb->capacity) {
-    digitalWrite(24, HIGH);
     doStdTasks();
   }
-  digitalWrite(24, LOW);
   memcpy(cb->head, item, cb->sz);
   cb->head = (char*)cb->head + cb->sz;
   if (cb->head == cb->buffer_end)
     cb->head = cb->buffer;
   cb->count++;
+  if(!readBit(TCCR5B, (1 << CS10))&&!readBit(TCCR5B, (1 << CS11))&&!readBit(TCCR5B, (1 << CS12)))
+  {
+    Serial.println("restat timer");
+    TCNT5 = T_MAX;
+    startTimer(1);
+  }
+    
   return cb->count;
 }
 int cb_pop_front(circular_buffer *cb, void *item) {
-  if (cb->count == 0) {
+  if (cb->count <= 0) {
     return -1;
   }
   memcpy(item, cb->tail, cb->sz);
@@ -1547,6 +1530,9 @@ void setBit(volatile uint8_t* B, unsigned char b) {
 void resetBit(volatile uint8_t* B, unsigned char b) {
   //reset a bit in a Byte
   *B &= ~b;
+}
+bool readBit(unsigned char B, unsigned char b) {
+  return b == (B & b);
 }
 void applayValues(comParam* newValue, double *X, double *Y, double *Z, double *E, double *S, double *F) {
   if (newValue->useX)
