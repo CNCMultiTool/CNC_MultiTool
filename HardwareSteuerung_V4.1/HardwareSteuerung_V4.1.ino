@@ -682,7 +682,7 @@ void usToTimer(stepParam* myStep, double us) {
   }
   if (myStep->ticks > T_MAX) myStep->ticks = T_MAX;
   if (myStep->ticks < 0) myStep->ticks = 0;
-  if(myStep->ticks < 500)Serial.println("ERROR: ticks may to fast");
+  //if(myStep->ticks < 500)Serial.println("ERROR: ticks may to fast");
   //  Serial.print(" pre:");
   //  Serial.print(myStep->preScale);
   //  Serial.print(" ticks:");
@@ -1438,6 +1438,7 @@ int cb_push_back(circular_buffer *cb, const void *item) {
   while (cb->count == cb->capacity) {
     doStdTasks();
   }
+  cli();
   memcpy(cb->head, item, cb->sz);
   cb->head = (char*)cb->head + cb->sz;
   if (cb->head == cb->buffer_end)
@@ -1449,7 +1450,7 @@ int cb_push_back(circular_buffer *cb, const void *item) {
     TCNT5 = T_MAX;
     startTimer(1);
   }
-    
+  sei();
   return cb->count;
 }
 int cb_pop_front(circular_buffer *cb, void *item) {
