@@ -214,6 +214,7 @@ void cnc_basefunctions::send_newHome(float X,float Y,float Z)
                             " E0");
     //m_ComandLines.push_back("G9 ");
     m_ComandLines.push_back("Q102 ");
+    m_ComandLines.push_back("Q102 ");
    // start sending
    m_send_buffer_counter = 0;
    m_send_counter = 0;

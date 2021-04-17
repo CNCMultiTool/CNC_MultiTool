@@ -87,6 +87,8 @@ private slots:
     void on_pushButtonUseES_clicked();
 
     void show_waitForHeat(float isWaiting);
+    void on_pushButtonInit_clicked();
+
 private:
     Ui::MainWindow *ui;
 

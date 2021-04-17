@@ -212,6 +212,9 @@ unsigned long TlastY;
 
 
 void setup() {
+  soll_T_Bed = 0;
+  soll_T = 0;
+
   // put your setup code here, to run once:
   Xachse.achse = X;
   Xachse.act_step = 0;
@@ -286,14 +289,16 @@ void setup() {
   digitalWrite(28, LOW);
 
   Serial.begin(115200);
-  while (!Serial) {
-    ; // wait for serial port to connect. Needed for native USB port only
-  }
+  //  while (!Serial) {
+  //    ; // wait for serial port to connect. Needed for native USB port only
+  //  }
 
-  while (!SD.begin(53)) {
+  for(int i =0;i<5;i++){
+    if(SD.begin(53))break;
     Serial.println("ERROR: SD initialization failed!");
     delay(1000);
   }
+
   Serial.println("SD initializ");
 
   //init the timer5
@@ -327,14 +332,14 @@ void loop() {
         setState(GCodeStop);
     } else if (state == GCodePause) {
       setUseES(true);//enable endswitches for manuel movements
-      calculateSteps();
+      //calculateSteps();
     } else if (state == GCodeStop) {
       setUseES(true);//enable endswitches for manuel movements
       SD_CloseFile(&GFile);
       if (getTravelDist(&prePos, &nextPrePos) == 0) {
         setMotorsENA(true);
       }
-      calculateSteps();
+      //calculateSteps();
     } else if (state == GCodeCreate) {
       while (getState() == GCodeCreate) {
         if (SR_CheckForLine() == 1) {
@@ -345,7 +350,7 @@ void loop() {
       if (SD_OpenFile(&HomeFile , "home.txt") == 0) {
         setState(GCodeRunHome);
         setUseES(true);
-        Xachse.ESstate = 0;
+        Xachse.ESstate = 0;//trigger send of all endswitches
         Yachse.ESstate = 0;
         Zachse.ESstate = 0;
       }
@@ -360,7 +365,7 @@ void loop() {
     } else {
       Serial.println("ERROR: unknown State");
     }
- 
+    calculateSteps();
   }
 }
 
@@ -383,26 +388,7 @@ void calculateSteps() {
   //get travel achseSpeed  Xv/Xdif = Speed/GesDif
   calcSpeedForAches(gesDif);
   //calculate step time x y z e sort in buffer
-  /*
-    Serial.print("gesDif ");
-    Serial.print(gesDif);
-    Serial.print(" Xdif:");
-    Serial.print(abs(prePos.Xp - nextPrePos.Xp));
-    Serial.print(" Xv:");
-    Serial.print(nextPrePos.Xv);
-    Serial.print(" Ydif:");
-    Serial.print(abs(prePos.Yp - nextPrePos.Yp));
-    Serial.print(" Yv:");
-    Serial.print(nextPrePos.Yv);
-    Serial.print(" Zdif:");
-    Serial.print(abs(prePos.Zp - nextPrePos.Zp));
-    Serial.print(" Zv:");
-    Serial.print(nextPrePos.Zv);
-    Serial.print(" Edif:");
-    Serial.print(abs(prePos.Ep - nextPrePos.Ep));
-    Serial.print(" Ev:");
-    Serial.print(nextPrePos.Ev);
-  */
+ 
   unsigned long nextStepTime = 0;
   unsigned long noStep = -1;
   unsigned long lastMoveTime = 0;
@@ -584,23 +570,23 @@ unsigned long getSmalestValue(unsigned long x, unsigned long y, unsigned long z,
 bool prePointerOnPos() {
   if (nextPrePos.Xs == prePos.Xs)
     nextPrePos.useX = false;
-  else
-    nextPrePos.useX = true;
+  //  else
+  //    nextPrePos.useX = true;
 
   if (nextPrePos.Ys == prePos.Ys)
     nextPrePos.useY = false;
-  else
-    nextPrePos.useY = true;
+  //  else
+  //    nextPrePos.useY = true;
 
   if (nextPrePos.Zs == prePos.Zs)
     nextPrePos.useZ = false;
-  else
-    nextPrePos.useZ = true;
+  //  else
+  //    nextPrePos.useZ = true;
 
   if (nextPrePos.Es == prePos.Es)
     nextPrePos.useE = false;
-  else
-    nextPrePos.useE = true;
+  //  else
+  //    nextPrePos.useE = true;
  
   if(!nextPrePos.useX && !nextPrePos.useY && !nextPrePos.useZ && !nextPrePos.useE)
     return 1;
@@ -646,7 +632,7 @@ float getTravelDist(MovePos* pPos, MovePos* nPrePos) {
     if(pPos->Es == nPrePos->Es)
       Edif = 0;
     else
-      Edif = pPos->Ep - nPrePos->Ep;
+      Edif = (pPos->Ep - nPrePos->Ep)*2;//half the speed if only e is used
     return abs(Edif);
   }
   return gesDif;
@@ -732,7 +718,7 @@ void processComandLine(char* newLine,bool doNow) {
       Serial.println(newCommand.F);
     }
     setNextPrePos(&newCommand);
-    calculateSteps();
+    //calculateSteps();
   } else if (newCommand.com == G9) { //stop movement
     Serial.println("G9");
     StopMove();
@@ -763,6 +749,15 @@ void processComandLine(char* newLine,bool doNow) {
     double fila = -1;
     applayValues(&newCommand, &BmMax, &Vmin, &Vmax, &help, &fila, &help);
     if (fila != -1)Eachse.steps_pmm = fila;
+    
+    //send endswitch status (may a get seperat command)
+    Xachse.ESstate = 0;//trigger send of all endswitches
+    Yachse.ESstate = 0;
+    Zachse.ESstate = 0;
+    setUseES(true);
+    checkEndswitches();
+    setUseES(false);
+
     Serial.print("Q10 X");
     Serial.print(BmMax);
     Serial.print(" Y");
@@ -850,39 +845,41 @@ void sendDeviceStatus() {
   Serial.print(Zachse.act_step / double(Zachse.steps_pmm));
   Serial.print(" E");
   Serial.println(Eachse.act_step / double(Eachse.steps_pmm));
-  //  Serial.print("prePos X");
-  //  Serial.print(prePos.Xp);
-  //  Serial.print(" , ");
-  //  Serial.print(prePos.Xs / double(Xachse.steps_pmm));
-  //  Serial.print(" Y");
-  //  Serial.print(prePos.Yp);
-  //  Serial.print(" , ");
-  //  Serial.print(prePos.Ys / double(Yachse.steps_pmm));
-  //  Serial.print(" Z");
-  //  Serial.print(prePos.Zp);
-  //  Serial.print(" , ");
-  //  Serial.print(prePos.Zs / double(Zachse.steps_pmm));
-  //  Serial.print(" E");
-  //  Serial.print(prePos.Ep);
-  //  Serial.print(" , ");
-  //  Serial.println(prePos.Es / double(Eachse.steps_pmm));
-  //
-  //  Serial.print("nextPrePos X");
-  //  Serial.print(nextPrePos.Xp);
-  //  Serial.print(" , ");
-  //  Serial.print(nextPrePos.Xs / double(Xachse.steps_pmm));
-  //  Serial.print(" Y");
-  //  Serial.print(nextPrePos.Yp);
-  //  Serial.print(" , ");
-  //  Serial.print(nextPrePos.Ys / double(Yachse.steps_pmm));
-  //  Serial.print(" Z");
-  //  Serial.print(nextPrePos.Zp);
-  //  Serial.print(" , ");
-  //  Serial.print(nextPrePos.Zs / double(Zachse.steps_pmm));
-  //  Serial.print(" E");
-  //  Serial.print(nextPrePos.Ep);
-  //  Serial.print(" , ");
-  //  Serial.println(nextPrePos.Es / double(Eachse.steps_pmm));
+  /*
+  Serial.print("prePos X");
+  Serial.print(prePos.Xp);
+  Serial.print(" , ");
+  Serial.print(prePos.Xs / double(Xachse.steps_pmm));
+  Serial.print(" Y");
+  Serial.print(prePos.Yp);
+  Serial.print(" , ");
+  Serial.print(prePos.Ys / double(Yachse.steps_pmm));
+  Serial.print(" Z");
+  Serial.print(prePos.Zp);
+  Serial.print(" , ");
+  Serial.print(prePos.Zs / double(Zachse.steps_pmm));
+  Serial.print(" E");
+  Serial.print(prePos.Ep);
+  Serial.print(" , ");
+  Serial.println(prePos.Es / double(Eachse.steps_pmm));
+  
+  Serial.print("nextPrePos X");
+  Serial.print(nextPrePos.Xp);
+  Serial.print(" , ");
+  Serial.print(nextPrePos.Xs / double(Xachse.steps_pmm));
+  Serial.print(" Y");
+  Serial.print(nextPrePos.Yp);
+  Serial.print(" , ");
+  Serial.print(nextPrePos.Ys / double(Yachse.steps_pmm));
+  Serial.print(" Z");
+  Serial.print(nextPrePos.Zp);
+  Serial.print(" , ");
+  Serial.print(nextPrePos.Zs / double(Zachse.steps_pmm));
+  Serial.print(" E");
+  Serial.print(nextPrePos.Ep);
+  Serial.print(" , ");
+  Serial.println(nextPrePos.Es / double(Eachse.steps_pmm));
+  */
 }
 void StopMove() {
   StopAchse(X);
@@ -891,7 +888,7 @@ void StopMove() {
   StopAchse(E);
   cb_clear(&cbSteps);
 }
-void StopAchse(eAchse achse) {//@TODO to steps
+void StopAchse(eAchse achse) {
   //comParam newPos;
   switch (achse) {
     case X:
@@ -923,6 +920,7 @@ void StopAchse(eAchse achse) {//@TODO to steps
       prePos.Es = Eachse.act_step;
       break;
   }
+
 }
 void setNextPrePos(comParam* newPos) {
   if (newPos->useX) {
@@ -1003,15 +1001,15 @@ void checkEndswitches() {
   }
 }
 void handleES(StepMotorBig* mot, char* msg) {
-  if (digitalRead(mot->pinNull) == HIGH && mot->ESstate == 0){
+  if (digitalRead(mot->pinNull) == HIGH && mot->ESstate != -1){
     mot->ESstate = -1;
-    StopAchse(mot->achse);
+    //StopAchse(mot->achse);
     Serial.print("ES ");
     Serial.print(msg);
     Serial.println(mot->ESstate);
-  }else if(digitalRead(mot->pinPlus) == HIGH && mot->ESstate == 0){
+  }else if(digitalRead(mot->pinPlus) == HIGH && mot->ESstate != 1){
     mot->ESstate = 1;
-    StopAchse(mot->achse);
+    //StopAchse(mot->achse);
     Serial.print("ES ");
     Serial.print(msg);
     Serial.println(mot->ESstate);
@@ -1054,17 +1052,17 @@ ISR (TIMER5_OVF_vect) { // Timer1 ISR
   stepParam nextStep;
   comParam nextCommand;
   if (cb_pop_front(&cbSteps, &nextStep) == -1) {
-    //if(!waitForHeat && getState()==GCodeRun)Serial.println("Buffer was empty");
+    if(!waitForHeat && getState()==GCodeRun)Serial.println("Buffer was empty");
     startTimer(0);    
   } else {
     if(nextStep.achse == X) {
-        performStep(&Xachse, nextStep.dir);
+        performStep(&Xachse, nextStep.dir,nextStep.achse);
     }else if(nextStep.achse == Y) {
-        performStep(&Yachse, nextStep.dir);
+        performStep(&Yachse, nextStep.dir,nextStep.achse);
     }else if(nextStep.achse == Z) {
-        performStep(&Zachse, nextStep.dir);
+        performStep(&Zachse, nextStep.dir,nextStep.achse);
     }else if(nextStep.achse == E) {
-        performStep(&Eachse, nextStep.dir);
+        performStep(&Eachse, nextStep.dir,nextStep.achse);
     }else if(nextStep.achse == C) {
         performCommand(nextStep.com);
         delete nextStep.com;
@@ -1079,12 +1077,12 @@ ISR (TIMER5_OVF_vect) { // Timer1 ISR
 
     startTimer(nextStep.preScale);
     //do not use 
-    TCNT5 = nextStep.ticks;
-    /*if ((nextStep.ticks + (16.0 / (double)nextStep.preScale) * 40) > T_MAX) {
+    //TCNT5 = nextStep.ticks;
+    if ((nextStep.ticks + (16.0 / (double)nextStep.preScale) * 40) > T_MAX) {
       TCNT5 = T_MAX;
     } else {
       TCNT5 = nextStep.ticks + (16.0 / (double)nextStep.preScale) * 40;
-    }*/
+    }
   }
   //digitalWrite(22,LOW);
   sei();
@@ -1102,13 +1100,15 @@ void addCommand(comParam* newCommand,bool doNow) {
     cb_push_back(&cbSteps, &newStep);
   }
 }
-void performStep(StepMotorBig *mot, bool dir) {
+void performStep(StepMotorBig *mot, bool dir, eAchse achse) {
   if (dir && useES && mot->pinPlus != 0) {
     if (digitalRead(mot->pinPlus) == HIGH) {
+      StopAchse(achse);
       return;
     }
   } else if (!dir && useES && mot->pinNull != 0) {
     if (digitalRead(mot->pinNull) == HIGH) {
+      StopAchse(achse);
       return;
     }
   }
