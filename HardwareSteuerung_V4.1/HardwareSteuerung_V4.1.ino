@@ -396,33 +396,38 @@ void calculateSteps() {
   calcSpeedForAches(gesDif,&prePos, &nextPrePos);
   //calculate step time x y z e sort in buffer
   */
+
   unsigned long nextStepTime = 0;
   unsigned long noStep = -1;
   unsigned long lastMoveTime = 0;
   unsigned long nextX,nextY,nextZ,nextE;
   if (nextPrePos.Xs != prePos.Xs){
-    nextX = 1000000 / (nextPrePos.Xv * Xachse.steps_pmm);
+    nextX = 1000000 / (abs(nextPrePos.Xv) * Xachse.steps_pmm);
     nextPrePos.useX = true;
+    //Serial.print("activeX ");
+    //Serial.println(nextPrePos.Xv);
   }else{
     nextX = 4294967295;
     nextPrePos.useX = false;
   }
   if (nextPrePos.Ys != prePos.Ys){  
-    nextY = 1000000 / (nextPrePos.Yv * Yachse.steps_pmm);
+    nextY = 1000000 / (abs(nextPrePos.Yv) * Yachse.steps_pmm);
     nextPrePos.useY = true;
+    //Serial.print("activeY ");
+    //Serial.println(nextPrePos.Yv);
   }else{
     nextY = 4294967295;
     nextPrePos.useY = false;
   }
   if (nextPrePos.Zs != prePos.Zs){
-    nextZ = 1000000 / (nextPrePos.Zv * Zachse.steps_pmm);
+    nextZ = 1000000 / (abs(nextPrePos.Zv) * Zachse.steps_pmm);
     nextPrePos.useZ = true;
   }else{
     nextZ = 4294967295;
     nextPrePos.useZ = false;
   }
   if (nextPrePos.Es != prePos.Es){
-    nextE = 1000000 / (nextPrePos.Ev * Eachse.steps_pmm);
+    nextE = 1000000 / (abs(nextPrePos.Ev) * Eachse.steps_pmm);
     nextPrePos.useE = true;
   }else{
     nextE = 4294967295;
@@ -704,8 +709,8 @@ int readNextCommand(File* gFile){
     newLine = SD_ReadLine(gFile);
     if(newLine[0] != '\0' && newLine[0] != '@'){
       //parse and push back
-      Serial.print("readNextCommand:");
-      Serial.println(newLine);
+      //Serial.print("readNextCommand:");
+      //Serial.println(newLine);
       newCommand = getCommandFromLine(newLine);
       cb_push_back(&cbRawCommands,&newCommand);
     }else if(newLine[0] == '@') {
@@ -727,8 +732,8 @@ comParam getCommandFromLine(char* newLine){
     Serial.println("find G9 ");
   } else {
     LineParser(newLine, &newCommand);
-    Serial.print("values: ");
-    Serial.println(newLine);
+    //Serial.print("values: ");
+    //Serial.println(newLine);
   }
   return newCommand;
 }
@@ -738,11 +743,24 @@ int calcPreRunPointer(File* gFile) {
   if(waitForHeat == true)
     return 0; 
 
-    if(cbModifiedCommands.count > 0){
-      cb_pop_front(&cbModifiedCommands,&nextCommand);
-      processComandLine(nextCommand,false);
-      return 0;
+  comParam newCommand;
+  if(BmMax == 0)
+  {
+    newLine = SD_ReadLine(gFile);
+    if(newLine[0] != '\0' && newLine[0] != '@'){
+      newCommand = getCommandFromLine(newLine);
+      processComandLine(newCommand,false);
+    }else if(newLine[0] == '@') {
+      return -1;
     }
+    return 0;
+  }
+
+  if(cbModifiedCommands.count > 0){
+    cb_pop_front(&cbModifiedCommands,&nextCommand);
+    processComandLine(nextCommand,false);
+    return 0;
+  }
 
   //Serial.println("1 start");
   //fill first buffer with at least two points
@@ -818,11 +836,10 @@ void calcNextPos(comParam *newCommand){
   setNextPrePos(newCommand);
   double gesDif = getTravelDist(&prePos, &nextPrePos);
   calcSpeedForAches(gesDif,&prePos, &nextPrePos);
-  calcAccForAches(gesDif,&prePos, &nextPrePos);
+  //calcAccForAches(gesDif,&prePos, &nextPrePos);
 }
-void processComandLine(comParam newCommand,bool doNow) {
-
-  Serial.print("Com ");
+void printCommand(comParam newCommand){
+     Serial.print("Com ");
   Serial.print(newCommand.com);
   Serial.print(" X");
   Serial.print(newCommand.X);
@@ -845,6 +862,10 @@ void processComandLine(comParam newCommand,bool doNow) {
     Serial.print(" txt");
     Serial.println(newCommand.txt);
   }
+}
+void processComandLine(comParam newCommand,bool doNow) {
+
+  //printCommand(newCommand);
   //Serial.print("paresed ");
   if (newCommand.com == G1) {
     if (newCommand.useF) {
@@ -961,8 +982,7 @@ void processComandLine(comParam newCommand,bool doNow) {
     Serial.println("Q107");
     SD_removeFile(newCommand.txt);
   } else {
-    Serial.print("ERROR: unknown GCode: ");
-    Serial.println(newCommand.txt);
+    Serial.print("ERROR: unknown GCode");
   }
   //sendDeviceStatus();
 }
@@ -1063,25 +1083,25 @@ void setNextPrePos(comParam* newPos) {
   if (newPos->useX) {
     nextPrePos.Xp = newPos->X;
     nextPrePos.Xs = nextPrePos.Xp * float(Xachse.steps_pmm);
+    nextPrePos.useX = true;
   }
   if (newPos->useY) {
     nextPrePos.Yp = newPos->Y;
     nextPrePos.Ys = nextPrePos.Yp * float(Yachse.steps_pmm);
+    nextPrePos.useY = true;
   }
   if (newPos->useZ) {
     nextPrePos.Zp = newPos->Z;
     nextPrePos.Zs = nextPrePos.Zp * float(Zachse.steps_pmm);
+    nextPrePos.useZ = true;
   }
   if (newPos->useE) {
     nextPrePos.Ep = newPos->E;
     nextPrePos.Es = nextPrePos.Ep * float(Eachse.steps_pmm);
+    nextPrePos.useE = true;
   }
   if (newPos->useF)
     nextPrePos.Speed = newPos->F;
-
-  double gesDif = getTravelDist(&prePos, &nextPrePos);
-  calcSpeedForAches(gesDif,&prePos, &nextPrePos);
-  calcAccForAches(gesDif,&prePos, &nextPrePos);
 }
 void setPrePos(comParam* newPos) {
   if (newPos->useX){
