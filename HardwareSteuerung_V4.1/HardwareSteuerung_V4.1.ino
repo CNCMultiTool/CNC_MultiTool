@@ -81,6 +81,7 @@ typedef struct comParam {//decoded comand line
   double S = 0;
   bool useS = false;
   unsigned int check;
+  char *txt;
 } comParam;
 typedef struct  stepParam {
   eAchse achse;
@@ -150,13 +151,21 @@ sComand lComandList[24] = {
   {Q106, "Q106"}, //get list of File on SD Card
   {Q107, "Q107"}
 };
+
 circular_buffer cbSteps;
-eGCodeState state;
+circular_buffer cbRawCommands;
+circular_buffer cbModifiedCommands;
+
+eGCodeState state;//current state of the machine
+
 File GFile;
 File HomeFile;
+
 comParam nextMove;
+
 MovePos prePos;
 MovePos nextPrePos;
+
 char reciveBuf[128];
 unsigned int reciveWindex = 0;
 char GCodeFileName[32];
@@ -289,9 +298,6 @@ void setup() {
   digitalWrite(28, LOW);
 
   Serial.begin(115200);
-  //  while (!Serial) {
-  //    ; // wait for serial port to connect. Needed for native USB port only
-  //  }
 
   for(int i =0;i<5;i++){
     if(SD.begin(53))break;
@@ -309,6 +315,9 @@ void setup() {
   setBit(&TIMSK5, (1 << TOIE5));//enable timer overflow
 
   cb_init(&cbSteps, 100, sizeof(stepParam));
+  cb_init(&cbRawCommands, 3, sizeof(comParam));
+  cb_init(&cbModifiedCommands, 5, sizeof(comParam));
+  
   setState(GCodeStop);
   Serial.println("RESTART Arduino compleated");
 }
@@ -377,18 +386,16 @@ void setMotorsENA(bool b) {
 }
 void calculateSteps() {
   //get travel dist
+  /*
   double gesDif = getTravelDist(&prePos, &nextPrePos);
   if (gesDif < 0.01)
     return;
   //check for Vmax Vmin
-  if (Vmax < nextPrePos.Speed)nextPrePos.Speed = Vmax;
-  if (Vmin > nextPrePos.Speed)nextPrePos.Speed = Vmin;
 
-  //sendDeviceStatus();
   //get travel achseSpeed  Xv/Xdif = Speed/GesDif
-  calcSpeedForAches(gesDif);
+  calcSpeedForAches(gesDif,&prePos, &nextPrePos);
   //calculate step time x y z e sort in buffer
- 
+  */
   unsigned long nextStepTime = 0;
   unsigned long noStep = -1;
   unsigned long lastMoveTime = 0;
@@ -438,7 +445,7 @@ void calculateSteps() {
           nextX = 4294967295;
         }else{
           lastMoveTime = nextX;
-          nextX += 1000000 / (nextPrePos.Xv * Xachse.steps_pmm);
+          nextX += 1000000 / (abs(nextPrePos.Xv) * Xachse.steps_pmm);
           nextStepTime = getSmalestValue(nextX, nextY, nextZ, nextE);
           createStep(X, &nextPrePos.Xs, &prePos.Xs, nextStepTime - lastMoveTime);
           XmakeStep = true;
@@ -448,7 +455,7 @@ void calculateSteps() {
           nextY = 4294967295;
         }else{
           lastMoveTime = nextY;
-          nextY += 1000000 / (nextPrePos.Yv * Yachse.steps_pmm);
+          nextY += 1000000 / (abs(nextPrePos.Yv) * Yachse.steps_pmm);
           nextStepTime = getSmalestValue(nextX, nextY, nextZ, nextE);
           createStep(Y, &nextPrePos.Ys, &prePos.Ys, nextStepTime - lastMoveTime);
           YmakeStep = true;
@@ -458,7 +465,7 @@ void calculateSteps() {
           nextZ = 4294967295;
         }else{
           lastMoveTime = nextZ;
-          nextZ += 1000000 / (nextPrePos.Zv * Zachse.steps_pmm);
+          nextZ += 1000000 / (abs(nextPrePos.Zv) * Zachse.steps_pmm);
           nextStepTime = getSmalestValue(nextX, nextY, nextZ, nextE);
           createStep(Z, &nextPrePos.Zs, &prePos.Zs, nextStepTime - lastMoveTime);
           ZmakeStep = true;
@@ -468,7 +475,7 @@ void calculateSteps() {
           nextE = 4294967295;
         }else{
           lastMoveTime = nextE;
-          nextE += 1000000 / (nextPrePos.Ev * Eachse.steps_pmm);
+          nextE += 1000000 / (abs(nextPrePos.Ev) * Eachse.steps_pmm);
           nextStepTime = getSmalestValue(nextX, nextY, nextZ, nextE);
           createStep(E, &nextPrePos.Es, &prePos.Es, nextStepTime - lastMoveTime);
           EmakeStep = true;
@@ -498,43 +505,59 @@ void calculateSteps() {
   if(ZmakeStep)prePos.Zp = float(prePos.Zs) / float(Zachse.steps_pmm);
   if(EmakeStep)prePos.Ep = float(prePos.Es) / float(Eachse.steps_pmm);
 }
-void calcSpeedForAches(double gesDif){
-  if(prePos.Xs == nextPrePos.Xs)
-    nextPrePos.Xv = 0;
-  else
-    nextPrePos.Xv = (abs(prePos.Xp - nextPrePos.Xp) / gesDif) * nextPrePos.Speed;
+void calcSpeedForAches(double gesDif,MovePos *startPos,MovePos *goalPos){
+  if (Vmax < goalPos->Speed)goalPos->Speed = Vmax;
+  if (Vmin > goalPos->Speed)goalPos->Speed = Vmin;
 
-  if(prePos.Ys == nextPrePos.Ys)
-    nextPrePos.Yv = 0;
+  if(startPos->Xs == goalPos->Xs)
+    goalPos->Xv = 0;
+  else
+    goalPos->Xv = ((goalPos->Xp - startPos->Xp) / gesDif) * goalPos->Speed;
+
+  if(startPos->Ys == goalPos->Ys)
+    goalPos->Yv = 0;
   else 
-    nextPrePos.Yv = (abs(prePos.Yp - nextPrePos.Yp) / gesDif) * nextPrePos.Speed;
+    goalPos->Yv = ((goalPos->Yp - startPos->Yp) / gesDif) * goalPos->Speed;
 
-  if(prePos.Zs == nextPrePos.Zs)
-    nextPrePos.Zv = 0;
+  if(startPos->Zs == goalPos->Zs)
+    goalPos->Zv = 0;
   else
-    nextPrePos.Zv = (abs(prePos.Zp - nextPrePos.Zp) / gesDif) * nextPrePos.Speed;
+    goalPos->Zv = ((goalPos->Zp - startPos->Zp) / gesDif) * goalPos->Speed;
 
-  if(prePos.Es == nextPrePos.Es)
-    nextPrePos.Ev = 0;
+  if(startPos->Es == goalPos->Es)
+    goalPos->Ev = 0;
   else
-    nextPrePos.Ev = (abs(prePos.Ep - nextPrePos.Ep) / gesDif) * nextPrePos.Speed;
-
-  if(nextPrePos.Xv>Vmax){
-    nextPrePos.Xv = Vmax;
+    goalPos->Ev = ((goalPos->Ep - startPos->Ep) / gesDif) * goalPos->Speed;
+  /*
+  if(goalPos->Xv>Vmax){
+    goalPos->Xv = Vmax;
     Serial.println("ERROR: X to fast");
   }
-  if(nextPrePos.Yv>Vmax){
-    nextPrePos.Yv = Vmax;
+  if(goalPos->Yv>Vmax){
+    goalPos->Yv = Vmax;
     Serial.println("ERROR: Y to fast");
   }
-  if(nextPrePos.Zv>Vmax){
-    nextPrePos.Zv = Vmax;
+  if(goalPos->Zv>Vmax){
+    goalPos->Zv = Vmax;
     Serial.println("ERROR: Z to fast");
   }
-  if(nextPrePos.Ev>Vmax){
-    nextPrePos.Ev = Vmax;
+  if(goalPos->Ev>Vmax){
+    goalPos->Ev = Vmax;
     Serial.println("ERROR: E to fast");
-  }
+  }*/
+}
+void calcAccForAches(double gesDif,MovePos *startPos,MovePos *goalPos){
+  if(startPos->Xs != goalPos->Xs)
+    goalPos->Xb = (BmMax/gesDif)*abs(goalPos->Xp-startPos->Xp);
+
+  if(startPos->Ys != goalPos->Ys)
+    goalPos->Yb = (BmMax/gesDif)*abs(goalPos->Yp-startPos->Yp);
+
+  if(startPos->Zs != goalPos->Zs)
+    goalPos->Zb = (BmMax/gesDif)*abs(goalPos->Zp-startPos->Zp);
+
+  if(startPos->Es != goalPos->Es)
+    goalPos->Eb = (BmMax/gesDif)*abs(goalPos->Ep-startPos->Ep);
 }
 eAchse getSmalest(unsigned long x, unsigned long y, unsigned long z, unsigned long e) { 
   if (x < y && x < z && x < e)// && nextPrePos.useX)
@@ -674,39 +697,154 @@ void usToTimer(stepParam* myStep, double us) {
   //  Serial.print(" ticks:");
   //  Serial.println(myStep->ticks);
 }
-int calcPreRunPointer(File* gFile) {
+int readNextCommand(File* gFile){
   char *newLine;
-  if(waitForHeat == true)
-    return 0; 
-  do {
+  comParam newCommand;
+  while(cbRawCommands.count<2){
     newLine = SD_ReadLine(gFile);
-  } while (newLine[0] == '\0');
-  if (newLine[0] == '@') {
-    return -1;
+    if(newLine[0] != '\0' && newLine[0] != '@'){
+      //parse and push back
+      Serial.print("readNextCommand:");
+      Serial.println(newLine);
+      newCommand = getCommandFromLine(newLine);
+      cb_push_back(&cbRawCommands,&newCommand);
+    }else if(newLine[0] == '@') {
+      return -1;
+    }
   }
-  processComandLine(newLine,false);
   return 0;
 }
-void processComandLine(char* newLine,bool doNow) {
+comParam getCommandFromLine(char* newLine){
   comParam newCommand;
-  char* fileName;
   newCommand.com = ComandParser(newLine);
-
   if (newCommand.com == Q100 ||
-      newCommand.com == Q101 ||
-      newCommand.com == Q107) {
-    fileName = getName(newLine);
+    newCommand.com == Q101 ||
+    newCommand.com == Q107) {
+    newCommand.txt = getName(newLine);
     Serial.print("name: ");
-    Serial.println(fileName);
+    Serial.println(newCommand.txt);
   } else if (newCommand.com == G9) {
     Serial.println("find G9 ");
-    //startTimer(1);
   } else {
     LineParser(newLine, &newCommand);
-    //Serial.print("values: ");
-    //Serial.println(newLine);
+    Serial.print("values: ");
+    Serial.println(newLine);
   }
+  return newCommand;
+}
+int calcPreRunPointer(File* gFile) {
+  char *newLine;
+  comParam nextCommand,peekCommand;
+  if(waitForHeat == true)
+    return 0; 
 
+    if(cbModifiedCommands.count > 0){
+      cb_pop_front(&cbModifiedCommands,&nextCommand);
+      processComandLine(nextCommand,false);
+      return 0;
+    }
+
+  //Serial.println("1 start");
+  //fill first buffer with at least two points
+  if(readNextCommand(gFile) == -1 && cbRawCommands.count == 0){
+    //Serial.println("X stop");
+    return -1;
+  }
+  //Serial.println("2 read command");
+
+  if(cb_pop_front(&cbRawCommands,&nextCommand) == -1){
+    Serial.println("ERROR: cant find objekt in rawCommand");
+    return -1;
+  }
+  //Serial.println("3 get new command");
+  //if next point in buffer is not G1
+  //   push int in a second buffer
+  if(nextCommand.com != G1 || BmMax == 0){//if BmMax == 0 do not use acc
+    cb_push_back(&cbModifiedCommands,&nextCommand);
+    //Serial.println("4 push new command");
+  }else{
+    if(cb_peek_front(&cbRawCommands, &peekCommand) == -1){
+      Serial.println("ERROR: cant find objekt in peek");
+      return -1;
+    }
+    //if point after next is not G1
+    //  Calc a point in break distanst to the actual point and push it in buffer with wanted speed
+    //  push actual point in Buffer with speed 0
+    //if point after next is G1
+    //  calc point in grind distent to the actuel point and push it in buffer with wanted speed
+    if(peekCommand.com != G1){
+      addStopPoint(&nextCommand);//to cbModifiedCommands
+    }else{
+      addStopPoint(&nextCommand);
+      //addGrindPoint(&nextCommand,&peekCommand);//to cbModifiedCommands
+    }
+  }
+    //Serial.println("5 execute");
+    //next command is now used to execute all comands in cbModifiedCommands
+
+  //need a raw command buffer with the actual commands from the G-Code
+  //second buffer with the correctet and added grind points and commands  
+  return 0;
+}
+void addStopPoint(comParam *nextCommand){
+  comParam breakPoint;
+  float xg = nextCommand->X - prePos.Xp;//einzel achsen strecke
+  float yg = nextCommand->Y - prePos.Yp;
+  float zg = nextCommand->Z - prePos.Zp;
+  float eg = nextCommand->E - prePos.Ep;
+  float sg = sqrt(pow(xg,2)+pow(yg,2)+pow(zg,2));//gesamt strecke
+  if(sg<0.02) sg = abs(eg)*2;
+
+  float tb = (nextCommand->F - Vmin)/BmMax;// zeit um ziehlgeschwindigkeit zu erreichen
+  float sb = sg - BmMax*pow(tb,2)/2+Vmin*tb;//distanz von start punkt ab dem gebremst werden muss
+  
+  breakPoint.X = (sb/sg) * xg;
+  breakPoint.Y = (sb/sg) * yg;
+  breakPoint.Z = (sb/sg) * zg;
+  breakPoint.E = (sb/sg) * eg;
+  breakPoint.F = nextCommand->F;
+
+  breakPoint.useX = nextCommand->useX;
+  breakPoint.useY = nextCommand->useY;
+  breakPoint.useZ = nextCommand->useZ;
+  breakPoint.useE = nextCommand->useE;
+  breakPoint.useF = nextCommand->useF;
+  cb_push_back(&cbModifiedCommands,&breakPoint);
+
+  nextCommand->F = 0;
+  cb_push_back(&cbModifiedCommands,&nextCommand);
+}
+void calcNextPos(comParam *newCommand){
+  setNextPrePos(newCommand);
+  double gesDif = getTravelDist(&prePos, &nextPrePos);
+  calcSpeedForAches(gesDif,&prePos, &nextPrePos);
+  calcAccForAches(gesDif,&prePos, &nextPrePos);
+}
+void processComandLine(comParam newCommand,bool doNow) {
+
+  Serial.print("Com ");
+  Serial.print(newCommand.com);
+  Serial.print(" X");
+  Serial.print(newCommand.X);
+  Serial.print(",");
+  Serial.print(newCommand.useX);
+  Serial.print(" Y");
+  Serial.print(newCommand.Y);
+  Serial.print(",");
+  Serial.print(newCommand.useY);
+  Serial.print(" Z");
+  Serial.print(newCommand.Z);  
+  Serial.print(",");
+  Serial.print(newCommand.useZ);
+  Serial.print(" E");
+  Serial.println(newCommand.E);
+  if (newCommand.com == Q100 ||
+    newCommand.com == Q101 ||
+    newCommand.com == Q107)
+  {
+    Serial.print(" txt");
+    Serial.println(newCommand.txt);
+  }
   //Serial.print("paresed ");
   if (newCommand.com == G1) {
     if (newCommand.useF) {
@@ -717,8 +855,7 @@ void processComandLine(char* newLine,bool doNow) {
       Serial.print("G1 F");
       Serial.println(newCommand.F);
     }
-    setNextPrePos(&newCommand);
-    //calculateSteps();
+    calcNextPos(&newCommand);
   } else if (newCommand.com == G9) { //stop movement
     Serial.println("G9");
     StopMove();
@@ -792,14 +929,14 @@ void processComandLine(char* newLine,bool doNow) {
     widerstand1_Bed = newCommand.Z;
   } else if (newCommand.com == Q100) { //Execute G-Code if File exist
     Serial.println("Q100");
-    strcpy(GCodeFileName, fileName);
+    strcpy(GCodeFileName, newCommand.txt);
     if (getState() == GCodeStop)
       setState(GCodeStart);
   } else if (newCommand.com == Q101) { //open file to write G-Code in it
     Serial.println("Q101");
     if (getState() == GCodeStop) {
       setState(GCodeCreate);
-      SD_createFile(&GFile, fileName);
+      SD_createFile(&GFile, newCommand.txt);
     } else
       Serial.println("ERROR: write can only start when stoped");
   } else if (newCommand.com == Q102) { //close file after write G-Code
@@ -822,10 +959,10 @@ void processComandLine(char* newLine,bool doNow) {
     SD_printDirectory(GFile, root, 0);
   } else if (newCommand.com == Q107) { //Delete File
     Serial.println("Q107");
-    SD_removeFile(fileName);
+    SD_removeFile(newCommand.txt);
   } else {
     Serial.print("ERROR: unknown GCode: ");
-    Serial.println(newLine);
+    Serial.println(newCommand.txt);
   }
   //sendDeviceStatus();
 }
@@ -941,6 +1078,10 @@ void setNextPrePos(comParam* newPos) {
   }
   if (newPos->useF)
     nextPrePos.Speed = newPos->F;
+
+  double gesDif = getTravelDist(&prePos, &nextPrePos);
+  calcSpeedForAches(gesDif,&prePos, &nextPrePos);
+  calcAccForAches(gesDif,&prePos, &nextPrePos);
 }
 void setPrePos(comParam* newPos) {
   if (newPos->useX){
@@ -1024,7 +1165,7 @@ void handleES(StepMotorBig* mot, char* msg) {
 int checkSerial() {
   if (SR_CheckForLine() == 1) {
     setMotorsENA(false);
-    processComandLine(reciveBuf,true);
+    processComandLine(getCommandFromLine(reciveBuf),true);
     memset(&reciveBuf[0], 0, sizeof(reciveBuf));
   }
 }
@@ -1234,7 +1375,9 @@ char* SD_ReadLine(File* file) {
     char read_buf = '\0';
     while (file->available() && read_buf != '\n')
     {
+      cli();
       read_buf = file->read();
+      sei();
       if (read_buf == '\n') //detekt end of line
       {
         newLine[write_idx] = '\0';
@@ -1462,6 +1605,13 @@ int cb_pop_front(circular_buffer *cb, void *item) {
   if (cb->tail == cb->buffer_end)
     cb->tail = cb->buffer;
   cb->count--;
+  return cb->count;
+}
+int cb_peek_front(circular_buffer *cb, void *item) {
+  if (cb->count <= 0) {
+    return -1;
+  }
+  memcpy(item, cb->tail, cb->sz);
   return cb->count;
 }
 void doStdTasks() {
