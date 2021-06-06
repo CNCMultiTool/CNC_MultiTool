@@ -443,7 +443,7 @@ void calculateSteps() {
   
   while (!prePointerOnPos()) {
     //if a axes get set to stop ore arrive its position it is cancelt from steps calculatioons
-    doStdTasks();
+    //doStdTasks();
     nextAchse = getSmalest(nextX, nextY, nextZ, nextE);
     if(nextAchse == X){
         if (nextPrePos.useX == false){
@@ -533,23 +533,6 @@ void calcSpeedForAches(double gesDif,MovePos *startPos,MovePos *goalPos){
     goalPos->Ev = 0;
   else
     goalPos->Ev = ((goalPos->Ep - startPos->Ep) / gesDif) * goalPos->Speed;
-  /*
-  if(goalPos->Xv>Vmax){
-    goalPos->Xv = Vmax;
-    Serial.println("ERROR: X to fast");
-  }
-  if(goalPos->Yv>Vmax){
-    goalPos->Yv = Vmax;
-    Serial.println("ERROR: Y to fast");
-  }
-  if(goalPos->Zv>Vmax){
-    goalPos->Zv = Vmax;
-    Serial.println("ERROR: Z to fast");
-  }
-  if(goalPos->Ev>Vmax){
-    goalPos->Ev = Vmax;
-    Serial.println("ERROR: E to fast");
-  }*/
 }
 void calcAccForAches(double gesDif,MovePos *startPos,MovePos *goalPos){
   if(startPos->Xs != goalPos->Xs)
@@ -1207,7 +1190,7 @@ int SR_CheckForLine() {
   return 0;
 }
 ISR (TIMER5_OVF_vect) { // Timer1 ISR
-  cli();
+  //cli();
   //digitalWrite(22,HIGH);
   //unsigned long Tnow = micros();
   stepParam nextStep;
@@ -1246,7 +1229,7 @@ ISR (TIMER5_OVF_vect) { // Timer1 ISR
     }
   }
   //digitalWrite(22,LOW);
-  sei();
+  //sei();
 }
 void addCommand(comParam* newCommand,bool doNow) {
   if(doNow){
@@ -1395,18 +1378,18 @@ char* SD_ReadLine(File* file) {
     char read_buf = '\0';
     while (file->available() && read_buf != '\n')
     {
-      cli();
+      //cli();
       read_buf = file->read();
-      sei();
+      //sei();
       if (read_buf == '\n') //detekt end of line
       {
         newLine[write_idx] = '\0';
       } else if (read_buf == ';') { //remove comments out of the G-Code
         while (read_buf != '\n')
         {
-          cli();
+          //cli();
           read_buf = file->read();
-          sei();
+          //sei();
         }
         newLine[write_idx] = '\0';
       }
