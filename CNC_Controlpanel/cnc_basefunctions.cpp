@@ -226,8 +226,12 @@ void cnc_basefunctions::send_moveHome(){
 }
 
 
-void cnc_basefunctions::send_toggleES(){
-    emit serial_send("Q11 ");
+void cnc_basefunctions::send_setESuse(bool state){
+    emit serial_send("Q11 X"+QString::number(state));
+}
+
+void cnc_basefunctions::send_setMotorUse(bool state){
+    emit serial_send("Q12 X"+QString::number(state));
 }
 
 void  cnc_basefunctions::processLine(const QString &s)
@@ -249,6 +253,7 @@ void  cnc_basefunctions::processLine(const QString &s)
         m_ComandLines.clear();
         emit Log("create file failed");
     }
+
     if(s.indexOf("M114 X")!=-1)
     {
         int start = s.indexOf("M114 X")+6;
@@ -348,7 +353,13 @@ void  cnc_basefunctions::processLine(const QString &s)
     {
         int start = s.indexOf("useES ")+6;
         int end = s.length();
-        emit show_useES(s.mid(start,end-start).toFloat());
+        m_database->setUseEs(s.mid(start,end-start).toFloat());
+    }
+    if(s.indexOf("motorState ")!=-1)
+    {
+        int start = s.indexOf("motorState ")+11;
+        int end = s.length();
+        m_database->setMotorUse(s.mid(start,end-start).toFloat());
     }
     if(s.indexOf("newState ")!=-1)
     {

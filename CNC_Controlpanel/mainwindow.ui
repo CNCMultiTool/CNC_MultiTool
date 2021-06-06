@@ -761,17 +761,27 @@
      </rect>
     </property>
     <layout class="QGridLayout" name="gridLayout">
-     <item row="4" column="0">
-      <widget class="QPushButton" name="pushButton_startGCode">
-       <property name="text">
-        <string>Start G-Code</string>
-       </property>
-      </widget>
-     </item>
      <item row="4" column="1">
       <widget class="QPushButton" name="pushButton_continueGCode">
        <property name="text">
         <string>Continue G-Code</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1" colspan="3">
+      <widget class="QLineEdit" name="lineEdit_fileGCode"/>
+     </item>
+     <item row="5" column="3">
+      <widget class="QPushButton" name="pushButton_MoveHome">
+       <property name="text">
+        <string>Move Home</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <widget class="QPushButton" name="pushButton_startGCode">
+       <property name="text">
+        <string>Start G-Code</string>
        </property>
       </widget>
      </item>
@@ -789,53 +799,29 @@
        </property>
       </widget>
      </item>
-     <item row="3" column="0">
-      <widget class="QPushButton" name="pushButton_StartCreation">
-       <property name="text">
-        <string>Start creation</string>
-       </property>
-      </widget>
-     </item>
-     <item row="5" column="0">
+     <item row="4" column="3">
       <widget class="QPushButton" name="pushButton_AboardGCode">
        <property name="text">
         <string>Aboard G-Code</string>
        </property>
       </widget>
      </item>
-     <item row="5" column="1">
-      <widget class="QPushButton" name="pushButton_DeleteFile">
+     <item row="5" column="0">
+      <widget class="QPushButton" name="pushButton_MotorState">
        <property name="text">
-        <string>Delete File</string>
-       </property>
-      </widget>
-     </item>
-     <item row="5" column="2">
-      <widget class="QPushButton" name="pushButton_ShowFiles">
-       <property name="text">
-        <string>Show Files</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="3">
-      <widget class="QPushButton" name="pushButton_NewHome">
-       <property name="text">
-        <string>New Home</string>
-       </property>
-      </widget>
-     </item>
-     <item row="5" column="3">
-      <widget class="QPushButton" name="pushButton_MoveHome">
-       <property name="text">
-        <string>Move Home</string>
+        <string>Motors</string>
        </property>
       </widget>
      </item>
      <item row="3" column="1" colspan="3">
       <widget class="QLineEdit" name="lineEdit_fileToCNC"/>
      </item>
-     <item row="2" column="1" colspan="3">
-      <widget class="QLineEdit" name="lineEdit_fileGCode"/>
+     <item row="5" column="1">
+      <widget class="QPushButton" name="pushButtonUseES">
+       <property name="text">
+        <string>use Endswitch</string>
+       </property>
+      </widget>
      </item>
     </layout>
    </widget>
@@ -1066,20 +1052,13 @@
        </property>
       </widget>
      </item>
-     <item row="1" column="3">
-      <widget class="QPushButton" name="pushButtonUseES">
-       <property name="text">
-        <string>use Endswitch</string>
-       </property>
-      </widget>
-     </item>
     </layout>
    </widget>
    <widget class="QPushButton" name="pushButton_Test">
     <property name="geometry">
      <rect>
       <x>730</x>
-      <y>620</y>
+      <y>610</y>
       <width>115</width>
       <height>23</height>
      </rect>
@@ -1109,6 +1088,19 @@
     </property>
     <property name="text">
      <string>Init</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pushButton_StartCreation">
+    <property name="geometry">
+     <rect>
+      <x>760</x>
+      <y>650</y>
+      <width>173</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Start creation</string>
     </property>
    </widget>
   </widget>

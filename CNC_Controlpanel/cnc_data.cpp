@@ -30,6 +30,9 @@ cnc_data::cnc_data()
 
     m_z_offset = 0;
 
+    m_useES = true;
+    m_motorUse = true;
+
     m_max_speed = 25;
     m_max_acc = 25;
     m_min_speed = 5;
@@ -85,6 +88,27 @@ void cnc_data::set_endswitch(int X,int Y,int Z)
     m_endswitch_Y = Y;
     m_endswitch_Z = Z;
     emit show_endswitch(X,Y,Z);
+}
+
+void cnc_data::setUseEs(bool state)
+{
+    m_useES = state;
+    emit show_useES(state);
+
+}
+bool cnc_data::getUseEs()
+{
+    return m_useES;
+}
+void cnc_data::setMotorUse(bool state)
+{
+    m_motorUse = state;
+    emit show_motorUse(state);
+
+}
+bool cnc_data::getMotorUse()
+{
+    return m_motorUse;
 }
 
 void cnc_data::loadSettings()

@@ -1,0 +1,10 @@
+20.08.2020 20:41:36.493 serialClose
+20.08.2020 20:46:38.101 serialClose
+20.08.2020 20:48:18.940 serialClose
+20.08.2020 20:49:37.308 serialClose
+20.08.2020 20:49:47.808 serialClose
+20.08.2020 21:03:41.516 serialClose
+20.08.2020 21:06:25.957 serialClose
+20.08.2020 21:08:12.064 send Serial not open
+20.08.2020 21:13:16.548 serialClose
+20.08.2020 21:14:45.189 serialClose

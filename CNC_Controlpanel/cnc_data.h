@@ -49,6 +49,9 @@ public:
     float m_endswitch_Y;
     float m_endswitch_Z;
 
+    bool m_useES;
+    bool m_motorUse;
+
 
     //TCP hight in home
     float m_Zmax_nozzel;
@@ -80,6 +83,7 @@ public:
     void set_position(float X,float Y,float Z,float E);
     void set_settings(float speed,float temperatur,float filament,float soll_temperatur);
     void set_endswitch(int X,int Y,int Z);
+    void setUseEs(bool state);
 
     void saveSettings();
     void loadSettings();
@@ -87,6 +91,10 @@ public:
     QString m_SerialPortName;
     bool m_SerialIsOpen;
 
+
+    bool getUseEs();
+    void setMotorUse(bool state);
+    bool getMotorUse();
 private:
     QString m_LogFileName = "CNC_Log.txt";
     QFile *m_LogFile;
@@ -99,6 +107,9 @@ signals:
     void show_position();
     void show_settings();
     void show_endswitch(float X,float Y,float Z);
+    void show_useES(bool state);
+    void show_motorUse(bool state);
+
 };
 
 #endif // CNC_DATA_H

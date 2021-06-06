@@ -41,12 +41,14 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_basefunctions,SIGNAL(show_speed()),this,SLOT(show_speed()));
     connect(m_basefunctions,SIGNAL(show_acc_speed_fila()),this,SLOT(show_acc_speed_fila()));
     connect(m_basefunctions,SIGNAL(show_act_temp()),this,SLOT(show_act_temp()));
-    connect(m_basefunctions,SIGNAL(show_useES(float)),this,SLOT(show_useES(float)));
     connect(m_basefunctions,SIGNAL(show_state(float)),this,SLOT(show_state(float)));
     connect(m_basefunctions,SIGNAL(show_waitForHeat(float)),this,SLOT(show_waitForHeat(float)));
 
+    connect(m_database,SIGNAL(show_useES(bool)),this,SLOT(show_useES(bool)));
+    connect(m_database,SIGNAL(show_motorUse(bool)),this,SLOT(show_motorUse(bool)));
     connect(m_database,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_database,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
+
 
     connect(m_serial,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_serial,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
@@ -156,11 +158,19 @@ void MainWindow::show_endswitch()
     endswitchButtonColor(m_database->m_endswitch_Z,ui->pushButtonMoveZPos,ui->pushButtonMoveZNeg);
 }
 
-void MainWindow::show_useES(float ES){
+void MainWindow::show_useES(bool ES){
     if(ES)
         ui->pushButtonUseES->setStyleSheet("background-color: green");
     else
         ui->pushButtonUseES->setStyleSheet("background-color: red");
+}
+
+
+void MainWindow::show_motorUse(bool motorUse){
+    if(motorUse)
+        ui->pushButton_MotorState->setStyleSheet("background-color: green");
+    else
+        ui->pushButton_MotorState->setStyleSheet("background-color: red");
 }
 
 void MainWindow::show_state(float state){
@@ -685,7 +695,10 @@ void MainWindow::on_pushButton_MoveHome_clicked()
 
 void MainWindow::on_pushButtonUseES_clicked()
 {
-    m_basefunctions->send_toggleES();
+    m_basefunctions->send_setESuse(!m_database->getUseEs());
 }
 
-
+void MainWindow::on_pushButton_MotorState_clicked()
+{
+    m_basefunctions->send_setMotorUse(!m_database->getMotorUse());
+}
