@@ -54,7 +54,7 @@ public:
 
 
     //TCP hight in home
-    float m_Zmax_nozzel;
+    float m_Z_inHome;
     float m_X_inHome,m_Y_inHome;
 
     float m_calibplateX;

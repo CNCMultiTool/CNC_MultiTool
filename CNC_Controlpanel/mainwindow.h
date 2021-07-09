@@ -10,8 +10,10 @@
 #include <QFormLayout>
 #include <QTime>
 //#include <QRegularExpression.h>
+
 #include <cnc_basefunctions.h>
 #include <cnc_data.h>
+#include <cnc_autofunctions.h>
 #include <serial.h>
 
 QT_BEGIN_NAMESPACE
@@ -97,7 +99,8 @@ private:
 
     cnc_data *m_database = new cnc_data();
     Serial *m_serial = new Serial(m_database);
-    cnc_basefunctions *m_basefunctions = new cnc_basefunctions(m_database,m_serial);
+    cnc_autofunctions *m_autofunctions = new cnc_autofunctions(m_database);
+    cnc_basefunctions *m_basefunctions = new cnc_basefunctions(m_database,m_autofunctions,m_serial);
 
     void endswitchButtonColor(float value,QPushButton *PosButton,QPushButton *NegButton);
     QTime time;

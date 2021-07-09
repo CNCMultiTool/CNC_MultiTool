@@ -761,34 +761,38 @@
      </rect>
     </property>
     <layout class="QGridLayout" name="gridLayout">
-     <item row="4" column="1">
-      <widget class="QPushButton" name="pushButton_continueGCode">
+     <item row="3" column="2">
+      <widget class="QPushButton" name="pushButton_pauseGCode">
        <property name="text">
-        <string>Continue G-Code</string>
+        <string>Pause G-Code</string>
        </property>
       </widget>
      </item>
-     <item row="2" column="1" colspan="3">
-      <widget class="QLineEdit" name="lineEdit_fileGCode"/>
-     </item>
-     <item row="5" column="3">
+     <item row="4" column="3">
       <widget class="QPushButton" name="pushButton_MoveHome">
        <property name="text">
         <string>Move Home</string>
        </property>
       </widget>
      </item>
-     <item row="4" column="0">
+     <item row="3" column="0">
       <widget class="QPushButton" name="pushButton_startGCode">
        <property name="text">
         <string>Start G-Code</string>
        </property>
       </widget>
      </item>
-     <item row="4" column="2">
-      <widget class="QPushButton" name="pushButton_pauseGCode">
+     <item row="4" column="1">
+      <widget class="QPushButton" name="pushButtonUseES">
        <property name="text">
-        <string>Pause G-Code</string>
+        <string>use Endswitch</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="QPushButton" name="pushButton_continueGCode">
+       <property name="text">
+        <string>Continue G-Code</string>
        </property>
       </widget>
      </item>
@@ -799,27 +803,20 @@
        </property>
       </widget>
      </item>
-     <item row="4" column="3">
+     <item row="2" column="1" colspan="3">
+      <widget class="QLineEdit" name="lineEdit_fileGCode"/>
+     </item>
+     <item row="3" column="3">
       <widget class="QPushButton" name="pushButton_AboardGCode">
        <property name="text">
         <string>Aboard G-Code</string>
        </property>
       </widget>
      </item>
-     <item row="5" column="0">
+     <item row="4" column="0">
       <widget class="QPushButton" name="pushButton_MotorState">
        <property name="text">
         <string>Motors</string>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="1" colspan="3">
-      <widget class="QLineEdit" name="lineEdit_fileToCNC"/>
-     </item>
-     <item row="5" column="1">
-      <widget class="QPushButton" name="pushButtonUseES">
-       <property name="text">
-        <string>use Endswitch</string>
        </property>
       </widget>
      </item>

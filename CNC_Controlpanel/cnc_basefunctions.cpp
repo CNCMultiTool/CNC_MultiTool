@@ -1,15 +1,15 @@
 #include "cnc_basefunctions.h"
 
-cnc_basefunctions::cnc_basefunctions(cnc_data *database,Serial *mySerial)
+cnc_basefunctions::cnc_basefunctions(cnc_data *database,cnc_autofunctions *autofunc,Serial *mySerial)
 {
     m_database = database;
     m_mySerial = mySerial;
+    m_auto = autofunc;
 }
 
 cnc_basefunctions::~cnc_basefunctions()
 {
-    this->quit();
-    this->exit();
+
 }
 
 void cnc_basefunctions::send_moveparam(float *acc,float *min_speed,float *max_speed,float *threshAngle,float *filament)
@@ -97,7 +97,12 @@ void cnc_basefunctions::send_stop()
 
 void cnc_basefunctions::send_GCodeStart(QString file)
 {
-    emit serial_send("Q100 "+file);
+    //emit serial_send("Q100 "+file);
+    m_auto->GC_open(file);
+    m_database->m_G_Code_State = 1;//run gcode
+    QString newLine = m_auto->GC_getNextLine();
+    emit Log("newLine: "+newLine);
+    emit serial_send(newLine+" ");
 }
 void cnc_basefunctions::send_CreateFile(QString fileSorce,QString fileDest)
 {
@@ -222,7 +227,14 @@ void cnc_basefunctions::send_newHome(float X,float Y,float Z)
 }
 
 void cnc_basefunctions::send_moveHome(){
-    emit serial_send("G28 ");
+    emit serial_send("M114 ");
+    emit serial_send("Q12 X1");
+    emit serial_send("Q11 X1");
+    emit serial_send("G1 Z9999");
+    emit serial_send("G1 X-9999 Y-9999");
+    emit serial_send(QString("G92 X%1 Y%2 Z%3 E0").arg(m_database->m_X_inHome).arg(m_database->m_Y_inHome).arg(m_database->m_Z_inHome));
+    emit serial_send("M114 ");
+    emit serial_send("Q11 X0");
 }
 
 
@@ -248,6 +260,22 @@ void  cnc_basefunctions::processLine(const QString &s)
             emit Log("Process "+QString::number(m_send_counter)+" of "+QString::number(m_read_counter));
         }
     }
+
+    if(s.indexOf("request")!=-1 && m_database->m_G_Code_State == 1){
+        emit Log("get request");
+        int start = s.indexOf("request ")+7;
+        int end = s.length();
+        int requests = s.mid(start,end-start).toFloat();
+        QString newLine;
+        if(requests > 1){
+            for(int i = 0;i < 1; i++){
+                newLine = m_auto->GC_getNextLine();
+                emit Log("1 newLine: "+newLine);
+                emit serial_send(newLine+" ");
+            }
+        }
+    }
+
     if(s.indexOf("errorFileOpen")!=-1)
     {
         m_ComandLines.clear();

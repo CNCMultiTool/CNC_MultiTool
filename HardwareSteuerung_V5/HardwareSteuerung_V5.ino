@@ -474,24 +474,24 @@ void calcSpeedForAches(double gesDif,MovePos *startPos,MovePos *goalPos){
   if (Vmax < goalPos->Speed)goalPos->Speed = Vmax;
   if (Vmin > goalPos->Speed)goalPos->Speed = Vmin;
 
-  if(startPos->Xs == goalPos->Xs)
-    goalPos->Xv = 0;
-  else
+  //if(startPos->Xs == goalPos->Xs)
+  //  goalPos->Xv = 0;
+  //else
     goalPos->Xv = ((goalPos->Xp - startPos->Xp) / gesDif) * goalPos->Speed;
 
-  if(startPos->Ys == goalPos->Ys)
-    goalPos->Yv = 0;
-  else 
+  //if(startPos->Ys == goalPos->Ys)
+  //  goalPos->Yv = 0;
+  //else 
     goalPos->Yv = ((goalPos->Yp - startPos->Yp) / gesDif) * goalPos->Speed;
 
-  if(startPos->Zs == goalPos->Zs)
-    goalPos->Zv = 0;
-  else
+  //if(startPos->Zs == goalPos->Zs)
+  //  goalPos->Zv = 0;
+  //else
     goalPos->Zv = ((goalPos->Zp - startPos->Zp) / gesDif) * goalPos->Speed;
 
-  if(startPos->Es == goalPos->Es)
-    goalPos->Ev = 0;
-  else
+  //if(startPos->Es == goalPos->Es)
+  //  goalPos->Ev = 0;
+  //else
     goalPos->Ev = ((goalPos->Ep - startPos->Ep) / gesDif) * goalPos->Speed;
 }
 void calcAccForAches(double gesDif,MovePos *startPos,MovePos *goalPos){
@@ -583,26 +583,26 @@ void createStep(eAchse achse, long *sollStep, long *istStep, double us) {
 }
 float getTravelDist(MovePos* pPos, MovePos* nPrePos) {
   float Xdif,Ydif,Zdif,Edif;
-  if(pPos->Xs == nPrePos->Xs)
-    Xdif = 0;
-  else
+  //  if(pPos->Xs == nPrePos->Xs)
+  //    Xdif = 0;
+  //  else
     Xdif = pPos->Xp - nPrePos->Xp;
 
-  if(pPos->Ys == nPrePos->Ys)
-    Ydif = 0;
-  else
+  //  if(pPos->Ys == nPrePos->Ys)
+  //    Ydif = 0;
+  //  else
     Ydif = pPos->Yp - nPrePos->Yp;
   
-  if(pPos->Zs == nPrePos->Zs)
-    Zdif = 0;
-  else
+  //  if(pPos->Zs == nPrePos->Zs)
+  //   Zdif = 0;
+  //  else
     Zdif = pPos->Zp - nPrePos->Zp;
 
   float gesDif = sqrt(pow(Xdif, 2) + pow(Ydif, 2) + pow(Zdif, 2));
   if (gesDif < 0.02){
-    if(pPos->Es == nPrePos->Es)
-      Edif = 0;
-    else
+    //if(pPos->Es == nPrePos->Es)
+    //  Edif = 0;
+    //else
       Edif = (pPos->Ep - nPrePos->Ep)*2;//half the speed if only e is used
     return abs(Edif);
   }
@@ -645,10 +645,6 @@ void usToTimer(stepParam* myStep, double us) {
   //  Serial.print(" ticks:");
   //  Serial.println(myStep->ticks);
 }
-void requestNextCommands(){
-  Serial.print("request ");
-  Serial.println(10 - cbCommands.count);
-}
 comParam getCommandFromLine(char* newLine){
   comParam newCommand;
   newCommand.com = ComandParser(newLine);
@@ -670,55 +666,28 @@ comParam getCommandFromLine(char* newLine){
 int calcPreRunPointer() {
   char *newLine;
   comParam nextCommand;
-  if(waitForHeat == true){
+  comParam newCommand;
+  if(waitForHeat == true ){
     return 0;
   }
-  comParam newCommand;
-    if(cbCommands.count < 10){
-      requestNextCommands();
-    }
-    while(cbCommands.count == 0){
-      doStdTasks();
-    }
-    cb_pop_front(&cbCommands,&newCommand);
-    processComandLine(newCommand,false);
+  if(cbCommands.count == 0){
+    doStdTasks();
+    return;
+  }
+  cb_pop_front(&cbCommands,&newCommand);
+  if(cbCommands.count < 10){
+    requestNextCommands();
+  }
+  processComandLine(newCommand,false);
   return 0;
 }
-
 void calcNextPos(comParam *newCommand){
   setNextPrePos(newCommand);
   double gesDif = getTravelDist(&prePos, &nextPrePos);
   calcSpeedForAches(gesDif,&prePos, &nextPrePos);
   //calcAccForAches(gesDif,&prePos, &nextPrePos);
 }
-void printCommand(comParam newCommand){
-     Serial.print("Com ");
-  Serial.print(newCommand.com);
-  Serial.print(" X");
-  Serial.print(newCommand.X);
-  Serial.print(",");
-  Serial.print(newCommand.useX);
-  Serial.print(" Y");
-  Serial.print(newCommand.Y);
-  Serial.print(",");
-  Serial.print(newCommand.useY);
-  Serial.print(" Z");
-  Serial.print(newCommand.Z);  
-  Serial.print(",");
-  Serial.print(newCommand.useZ);
-  Serial.print(" E");
-  Serial.println(newCommand.E);
-  if (newCommand.com == Q100 ||
-    newCommand.com == Q101 ||
-    newCommand.com == Q107)
-  {
-    Serial.print(" txt");
-    Serial.println(newCommand.txt);
-  }
-}
 void processComandLine(comParam newCommand,bool doNow) {
-
-  printCommand(newCommand);
   if (newCommand.com == G1) {
     if (newCommand.useF) {
       if (Vmax < newCommand.F)newCommand.F = Vmax;
@@ -822,7 +791,7 @@ void processComandLine(comParam newCommand,bool doNow) {
     }
     StopMove();
   } else {
-    Serial.print("ERROR: unknown GCode");
+    Serial.println("ERROR: unknown GCode");
   }
   //sendDeviceStatus();
 }
@@ -992,7 +961,7 @@ eGCodeState getState() {
   return state;
 }
 void checkEndswitches() {
-  if (getState() == GCodeRunHome || useES) {
+  if (useES) {
     //Serial.println("check es");
     handleES(&Xachse, "X");
     handleES(&Yachse, "Y");
@@ -1021,17 +990,28 @@ void handleES(StepMotorBig* mot, char* msg) {
   }
 }
 int checkSerial() {
-  if (SR_CheckForLine() == 1) {
+  if(SR_CheckForLine() == 1) {
     //setMotorsENA(false);
     comParam recCom = getCommandFromLine(reciveBuf);
-
-    if(recCom.com == G9){
-      processComandLine(recCom,false);
-    }else{
-      cb_push_back(&cbCommands,&recCom);
-    }
     memset(&reciveBuf[0], 0, sizeof(reciveBuf));
+
+    //sofot comands
+    if(recCom.com == G9){
+      Serial.println("checkSerial");
+      processComandLine(recCom,false);
+    }
+
+    if(cbCommands.count < cbCommands.capacity){
+      cb_push_back(&cbCommands,&recCom);
+      if(cbCommands.count < 10){
+        requestNextCommands();
+      }
+    }
   }
+}
+void requestNextCommands(){
+  Serial.print("request ");
+  Serial.println(10 - cbCommands.count);
 }
 int SR_CheckForLine() {
   char caLine[1];

@@ -23,7 +23,7 @@ cnc_data::cnc_data()
     m_endswitch_Y = 0;
     m_endswitch_Z = 0;
 
-    m_Zmax_nozzel = 170.95;
+    m_Z_inHome = 170.95;
     m_calibplateX = 0;
     m_calibplateY = 127.0;
     m_calibplateZ =  1;
@@ -115,7 +115,7 @@ void cnc_data::loadSettings()
 {
     QSettings settings("CNC_settings.ini", QSettings::IniFormat);
 
-    m_Zmax_nozzel = settings.value("m_Zmax_nozzel").toDouble();
+    m_Z_inHome = settings.value("m_Zmax_nozzel").toDouble();
     m_X_inHome = settings.value("m_X_inHome").toDouble();
     m_Y_inHome = settings.value("m_Y_inHome").toDouble();
 
@@ -155,7 +155,7 @@ void cnc_data::saveSettings()
 {
     QSettings settings("CNC_settings.ini", QSettings::IniFormat);
 
-    settings.setValue("m_Zmax_nozzel",m_Zmax_nozzel);
+    settings.setValue("m_Zmax_nozzel",m_Z_inHome);
     settings.setValue("m_X_inHome",m_X_inHome);
     settings.setValue("m_Y_inHome",m_Y_inHome);
 

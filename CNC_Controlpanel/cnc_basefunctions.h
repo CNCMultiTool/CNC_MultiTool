@@ -7,12 +7,13 @@
 #include <QObject>
 #include <QVector>
 #include <serial.h>
+#include "cnc_autofunctions.h"
 
-class cnc_basefunctions: public QThread
+class cnc_basefunctions: public QObject
 {
     Q_OBJECT
 public:
-    cnc_basefunctions(cnc_data *database = nullptr,Serial *mySerial = nullptr);
+    cnc_basefunctions(cnc_data *database = nullptr,cnc_autofunctions *autofunc = nullptr  ,Serial *mySerial = nullptr);
     ~cnc_basefunctions();
     void test();
 
@@ -52,6 +53,7 @@ private:
     QTextStream m_in;
     //void run() override;
     cnc_data *m_database;
+    cnc_autofunctions *m_auto;
     Serial *m_mySerial;
     QVector<QString> m_ComandLines;
     int m_send_buffer_counter;

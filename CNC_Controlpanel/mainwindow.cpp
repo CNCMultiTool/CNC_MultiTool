@@ -49,6 +49,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_database,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_database,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
 
+    connect(m_autofunctions,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
+    connect(m_autofunctions,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
+
 
     connect(m_serial,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_serial,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
@@ -257,7 +260,10 @@ void MainWindow::on_pushButtonInit_clicked()
     m_basefunctions->send_Speed(m_database->m_soll_speed);
     m_basefunctions->send_BedTemp(0);
     m_basefunctions->send_HotendTemp(0);
+    m_basefunctions->send_setESuse(1);
+    m_basefunctions->send_setMotorUse(1);
     m_basefunctions->send_stop();
+
 }
 
 void MainWindow::on_pushButtonMoveXPos_pressed()
@@ -406,7 +412,7 @@ void MainWindow::calibratenValueBox()
     //nozzel home high
     QDoubleSpinBox *DSpinBox_TCP_higth = new QDoubleSpinBox(&dialog);
     DSpinBox_TCP_higth->setRange(-9999999,999999);
-    DSpinBox_TCP_higth->setValue(m_database->m_Zmax_nozzel);
+    DSpinBox_TCP_higth->setValue(m_database->m_Z_inHome);
     form.addRow("Nozzel Home Z", DSpinBox_TCP_higth);
 
 
@@ -484,7 +490,7 @@ void MainWindow::calibratenValueBox()
         Log("save values");
 
         //TCP hight in home
-        m_database->m_Zmax_nozzel = DSpinBox_TCP_higth->value();
+        m_database->m_Z_inHome = DSpinBox_TCP_higth->value();
         m_database->m_X_inHome = DSpinBox_TCP_X_inHome->value();
         m_database->m_Y_inHome = DSpinBox_TCP_Y_inHome->value();
         m_database->m_calibplateX = DSpinBox_calibplateX->value();
@@ -639,7 +645,7 @@ void MainWindow::on_pushButton_browseGCode_clicked()
 
 void MainWindow::on_pushButton_startGCode_clicked()
 {
-    m_basefunctions->send_GCodeStart(ui->lineEdit_fileToCNC->text());
+    m_basefunctions->send_GCodeStart(ui->lineEdit_fileGCode->text());
 }
 
 void MainWindow::on_pushButton_pauseGCode_clicked()
@@ -654,17 +660,24 @@ void MainWindow::on_pushButton_continueGCode_clicked()
 
 void MainWindow::on_pushButton_AboardGCode_clicked()
 {
-    m_basefunctions->send_GCodeStop();
+    //m_basefunctions->send_GCodeStop();
+    m_database->m_G_Code_State = 0;
+    m_autofunctions->GC_close();
+    m_basefunctions->send_stop();
+    m_basefunctions->send_stop();
+    m_basefunctions->send_stop();
+    m_basefunctions->send_stop();
+    m_basefunctions->send_stop();
 }
 
 void MainWindow::on_pushButton_StartCreation_clicked()
 {
-    m_basefunctions->send_CreateFile(ui->lineEdit_fileGCode->text(),ui->lineEdit_fileToCNC->text());
+    m_basefunctions->send_CreateFile(ui->lineEdit_fileGCode->text(),ui->lineEdit_fileGCode->text());
 }
 
 void MainWindow::on_pushButton_DeleteFile_clicked()
 {
-    m_basefunctions->send_DeleteFile(ui->lineEdit_fileToCNC->text());
+    m_basefunctions->send_DeleteFile(ui->lineEdit_fileGCode->text());
 }
 
 void MainWindow::on_pushButton_ShowFiles_clicked()
@@ -684,7 +697,7 @@ void MainWindow::on_pushButton_NewHome_clicked()
 {
     float X = m_database->m_X_inHome;
     float Y = m_database->m_Y_inHome;
-    float Z = m_database->m_Zmax_nozzel;
+    float Z = m_database->m_Z_inHome;
     m_basefunctions->send_newHome(X,Y,Z);
 }
 

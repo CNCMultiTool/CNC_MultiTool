@@ -16,6 +16,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    cnc_autofunctions.cpp \
     cnc_basefunctions.cpp \
     cnc_data.cpp \
     main.cpp \
@@ -24,6 +25,7 @@ SOURCES += \
     serial.cpp
 
 HEADERS += \
+    cnc_autofunctions.h \
     cnc_basefunctions.h \
     cnc_data.h \
     mainwindow.h \
