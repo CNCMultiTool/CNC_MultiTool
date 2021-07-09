@@ -72,27 +72,18 @@ private slots:
     void show_speed();
     void show_act_temp();
     void show_useES(bool ES);
-    void show_state(float state);
+    void show_state(quint64 state);
     void show_motorUse(bool motorUse);
 
-
-    void on_pushButton_StartCreation_clicked();
-    void on_pushButton_DeleteFile_clicked();
-    void on_pushButton_ShowFiles_clicked();
     void on_pushButton_Test_clicked();
-    void on_pushButton_NewHome_clicked();
     void on_pushButton_MoveHome_clicked();
-
     void on_pushButtonThreshAngle_clicked();
-
     void on_pushButtonGetPosition_clicked();
-
     void on_pushButtonUseES_clicked();
-
     void show_waitForHeat(float isWaiting);
     void on_pushButtonInit_clicked();
-
     void on_pushButton_MotorState_clicked();
+    void on_pushButton_waitForHeat_clicked();
 
 private:
     Ui::MainWindow *ui;

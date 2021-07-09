@@ -32,6 +32,7 @@ cnc_data::cnc_data()
 
     m_useES = true;
     m_motorUse = true;
+    m_waitForHeat = false;
 
     m_max_speed = 25;
     m_max_acc = 25;

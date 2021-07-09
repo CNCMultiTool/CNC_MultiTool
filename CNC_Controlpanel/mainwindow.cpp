@@ -7,7 +7,7 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     ui->textEditLog->setReadOnly(true);
-    //ui->textEditLog_error->setReadOnly(true);
+    ui->textEditLog_error->setReadOnly(true);
 
     m_database->loadSettings();
 
@@ -41,7 +41,6 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_basefunctions,SIGNAL(show_speed()),this,SLOT(show_speed()));
     connect(m_basefunctions,SIGNAL(show_acc_speed_fila()),this,SLOT(show_acc_speed_fila()));
     connect(m_basefunctions,SIGNAL(show_act_temp()),this,SLOT(show_act_temp()));
-    connect(m_basefunctions,SIGNAL(show_state(float)),this,SLOT(show_state(float)));
     connect(m_basefunctions,SIGNAL(show_waitForHeat(float)),this,SLOT(show_waitForHeat(float)));
 
     connect(m_database,SIGNAL(show_useES(bool)),this,SLOT(show_useES(bool)));
@@ -51,7 +50,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(m_autofunctions,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_autofunctions,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
-
+    connect(m_autofunctions,SIGNAL(show_state(quint64)),this,SLOT(show_state(quint64)));
 
     connect(m_serial,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_serial,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
@@ -97,7 +96,7 @@ void MainWindow::errorLog(const QString &s)
 {
     QString text = QDateTime::currentDateTime().toString("hh:mm:ss.zzz Error: ") + s;
     text.remove(QRegularExpression("\n"));
-    //ui->textEditLog_error->append(text);
+    ui->textEditLog_error->append(text);
     ui->textEditLog->append(text);
 }
 
@@ -176,47 +175,20 @@ void MainWindow::show_motorUse(bool motorUse){
         ui->pushButton_MotorState->setStyleSheet("background-color: red");
 }
 
-void MainWindow::show_state(float state){
-    switch(int(state)){
-    case 0:
-        ui->label_state->setText("GCodeStart");
-                break;
-    case 1:
-        ui->label_state->setText("GCodeRun");
-                break;
-    case 2:
-        ui->label_state->setText("GCodePause");
-                break;
-    case 3:
-        ui->label_state->setText("GCodeStop");
-                break;
-    case 4:
-        ui->label_state->setText("GCodeCreate");
-                break;
-    case 5:
-        ui->label_state->setText("GCodeStartHome");
-                break;
-    case 6:
-        ui->label_state->setText("GCodeRunHome");
-                break;
-    case 7:
-        ui->label_state->setText("GCodeStopHome");
-                break;
-    default:
-        ui->label_state->setText("unknown state");
-                break;
-    }
-
-}
-
 void MainWindow::show_waitForHeat(float isWaiting){
     if(isWaiting){
-        ui->label_waitForHeat->setStyleSheet("background-color: yellow");
-        ui->label_waitForHeat->setText("wait for Heat");
+        ui->pushButton_waitForHeat->setStyleSheet("background-color: yellow");
+        ui->pushButton_waitForHeat->setText("wait for Heat");
+        m_database->m_waitForHeat = isWaiting;
     }else{
-        ui->label_waitForHeat->setStyleSheet("background-color: lightblue");
-        ui->label_waitForHeat->setText("wait not for Heat");
+        ui->pushButton_waitForHeat->setStyleSheet("background-color: lightblue");
+        ui->pushButton_waitForHeat->setText("wait not for Heat");
+        m_database->m_waitForHeat = isWaiting;
     }
+}
+
+void MainWindow::show_state(quint64 count){
+    ui->label_lineCount->setText("Count: "+QString::number(count));
 }
 
 
@@ -646,6 +618,8 @@ void MainWindow::on_pushButton_browseGCode_clicked()
 void MainWindow::on_pushButton_startGCode_clicked()
 {
     m_basefunctions->send_GCodeStart(ui->lineEdit_fileGCode->text());
+    QString currentTime = QDateTime::currentDateTime().toString("hh:mm");
+    ui->label_startTime->setText("Start: "+currentTime);
 }
 
 void MainWindow::on_pushButton_pauseGCode_clicked()
@@ -660,29 +634,12 @@ void MainWindow::on_pushButton_continueGCode_clicked()
 
 void MainWindow::on_pushButton_AboardGCode_clicked()
 {
-    //m_basefunctions->send_GCodeStop();
     m_database->m_G_Code_State = 0;
     m_autofunctions->GC_close();
-    m_basefunctions->send_stop();
-    m_basefunctions->send_stop();
-    m_basefunctions->send_stop();
-    m_basefunctions->send_stop();
-    m_basefunctions->send_stop();
-}
-
-void MainWindow::on_pushButton_StartCreation_clicked()
-{
-    m_basefunctions->send_CreateFile(ui->lineEdit_fileGCode->text(),ui->lineEdit_fileGCode->text());
-}
-
-void MainWindow::on_pushButton_DeleteFile_clicked()
-{
-    m_basefunctions->send_DeleteFile(ui->lineEdit_fileGCode->text());
-}
-
-void MainWindow::on_pushButton_ShowFiles_clicked()
-{
-    m_basefunctions->send_GetFileList();
+    m_basefunctions->send_GCodeStop();
+    m_basefunctions->send_resetWaitForHeat();
+    m_basefunctions->send_HotendTemp(0);
+    m_basefunctions->send_BedTemp(0);
 }
 
 void MainWindow::on_pushButton_Test_clicked()
@@ -691,14 +648,6 @@ void MainWindow::on_pushButton_Test_clicked()
     //m_basefunctions->send_NTC_values_bed(&m_database->m_bValue_Bed,&m_database->m_R_nen_Bed,&m_database->m_R_vor_Bed);
     //m_basefunctions->send_NTC_values(&m_database->m_bValue,&m_database->m_R_nen,&m_database->m_R_vor);
     //m_basefunctions->send_PID_values(&m_database->m_KP,&m_database->m_KI,&m_database->m_KD,&m_database->m_POn);
-}
-
-void MainWindow::on_pushButton_NewHome_clicked()
-{
-    float X = m_database->m_X_inHome;
-    float Y = m_database->m_Y_inHome;
-    float Z = m_database->m_Z_inHome;
-    m_basefunctions->send_newHome(X,Y,Z);
 }
 
 void MainWindow::on_pushButton_MoveHome_clicked()
@@ -714,4 +663,9 @@ void MainWindow::on_pushButtonUseES_clicked()
 void MainWindow::on_pushButton_MotorState_clicked()
 {
     m_basefunctions->send_setMotorUse(!m_database->getMotorUse());
+}
+
+void MainWindow::on_pushButton_waitForHeat_clicked()
+{
+    m_basefunctions->send_resetWaitForHeat();
 }

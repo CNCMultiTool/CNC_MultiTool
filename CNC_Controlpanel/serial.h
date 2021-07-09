@@ -29,12 +29,16 @@ public:
 
 private:
     int m_send_timeout = 10;
+    int m_send_reciveTimeout = 50;
     int m_recive_timeout = 10;
 
     QSerialPort m_serial;
     cnc_data *m_database;
     QTimer *timer = new QTimer(this);
+    QTimer *sendAnswerTimeout = new QTimer(this);
+
     QByteArray m_recivedBytes;
+    QString m_lastsend = "";
 
 signals:
     void Log(const QString &s);
@@ -45,20 +49,15 @@ signals:
 public slots:
     //void serial_read();
     void serial_send(QString mes);
-
+    void serial_sendTimeout();
     void serial_read(); //changed to slot
-    void myslot()
-    {
-      //Here I want to put myfunction into a thread
-      moveToThread(&thread);
-      connect(&thread, SIGNAL(started()), this, SLOT(serial_read())); //cant have parameter sorry, when using connect
-      thread.start();
-    }
-
-
-
-
-
+//    void myslot()
+//    {
+//      //Here I want to put myfunction into a thread
+//      moveToThread(&thread);
+//      connect(&thread, SIGNAL(started()), this, SLOT(serial_read())); //cant have parameter sorry, when using connect
+//      thread.start();
+//    }
 };
 
 #endif // SERIAL_H

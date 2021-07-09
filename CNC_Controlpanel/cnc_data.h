@@ -51,6 +51,7 @@ public:
 
     bool m_useES;
     bool m_motorUse;
+    bool m_waitForHeat;
 
 
     //TCP hight in home

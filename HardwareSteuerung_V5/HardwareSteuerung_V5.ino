@@ -29,7 +29,6 @@ enum eComandName {
   XXX,
   G1,//move
   G9,//stop
-  G28,//move home
   G92,//set position to
   M104,//set hotend temperature
   M114,//get position
@@ -39,17 +38,11 @@ enum eComandName {
   Q10,//max Accelaration//acc- max- min- speed
   Q11,//set endswitch use
   Q12,//set motor ENA
+  Q13,//reset wait for heat
+  Q14,//empty movebuffer buffer
   Q20,//max speed//bitwertNTC widerstandNTC widerstand1   for hotend
   Q21,//min speed//P I D ON for hotend
   Q30,//min speed//bitwertNTC widerstandNTC widerstand1   for bed
-  Q100,//Execute G-Code if File exist
-  Q101,//open file to write G-Code in it
-  Q102,//close file after write G-Code
-  Q103,//Pause G-Code
-  Q104,//Continue G-Code
-  Q105,//Abord G-code
-  Q106,//get list of File on SD Card
-  Q107,//Delete File
 };
 typedef struct StepMotorBig {
   //Settings
@@ -128,31 +121,24 @@ StepMotorBig Xachse;
 StepMotorBig Yachse;
 StepMotorBig Zachse;
 StepMotorBig Eachse;
-sComand lComandList[25] = {
+sComand lComandList[26] = {
   {XXX, "XXX"},
-  {G1, "G1"},
-  {G9, "G9"},
-  {G28, "G28"},
-  {G92, "G92"},
-  {M104, "M104"},
-  {M114, "M114"},
-  {M140, "M140"},
-  {M109, "M109"},
-  {M190, "M190"},
-  {Q10, "Q10"},
-  {Q11, "Q11"},
-  {Q12, "Q12"},
-  {Q20, "Q20"},
-  {Q21, "Q21"},
-  {Q30, "Q30"},
-  {Q100, "Q100"}, //Execute G-Code if File exist
-  {Q101, "Q101"}, //open file to write G-Code in it
-  {Q102, "Q102"}, //close file after write G-Code
-  {Q103, "Q103"}, //Pause G-Code
-  {Q104, "Q104"}, //Continue G-Code
-  {Q105, "Q105"}, //Abord G-code
-  {Q106, "Q106"}, //get list of File on SD Card
-  {Q107, "Q107"}
+  {G1, "G1"},//move
+  {G9, "G9"},//stop
+  {G92, "G92"},//set pos
+  {M104, "M104"},//set hotend temp
+  {M114, "M114"},//get pos
+  {M140, "M140"},//set bed temp
+  {M109, "M109"},//set and wait hotend temp
+  {M190, "M190"},//set and wait bed temp
+  {Q10, "Q10"},//move params
+  {Q11, "Q11"},//switch endswitch on off
+  {Q12, "Q12"},// switch motors on off
+  {Q13, "Q13"},//set wait for heat off
+  {Q14, "Q14"},//empty command buffer
+  {Q20, "Q20"},//thermo fühler NTC hotend
+  {Q21, "Q21"},//regler hotend
+  {Q30, "Q30"},//thermo fühler NTC bed
 };
 
 circular_buffer cbSteps;
@@ -301,13 +287,13 @@ void setup() {
 
   Serial.begin(115200);
 
-  for(int i =0;i<5;i++){
-    if(SD.begin(53))break;
-    Serial.println("ERROR: SD initialization failed!");
-    delay(1000);
-  }
+  //  for(int i =0;i<5;i++){
+  //  if(SD.begin(53))break;
+  //  Serial.println("ERROR: SD initialization failed!");
+  //  delay(1000);
+  //}
 
-  Serial.println("SD initializ");
+  //Serial.println("SD initializ");
 
   //init the timer5
   TCNT5 = 0;
@@ -474,24 +460,24 @@ void calcSpeedForAches(double gesDif,MovePos *startPos,MovePos *goalPos){
   if (Vmax < goalPos->Speed)goalPos->Speed = Vmax;
   if (Vmin > goalPos->Speed)goalPos->Speed = Vmin;
 
-  //if(startPos->Xs == goalPos->Xs)
-  //  goalPos->Xv = 0;
-  //else
+  if(startPos->Xs == goalPos->Xs)
+    goalPos->Xv = 0;
+  else
     goalPos->Xv = ((goalPos->Xp - startPos->Xp) / gesDif) * goalPos->Speed;
 
-  //if(startPos->Ys == goalPos->Ys)
-  //  goalPos->Yv = 0;
-  //else 
+  if(startPos->Ys == goalPos->Ys)
+    goalPos->Yv = 0;
+  else 
     goalPos->Yv = ((goalPos->Yp - startPos->Yp) / gesDif) * goalPos->Speed;
 
-  //if(startPos->Zs == goalPos->Zs)
-  //  goalPos->Zv = 0;
-  //else
+  if(startPos->Zs == goalPos->Zs)
+    goalPos->Zv = 0;
+  else
     goalPos->Zv = ((goalPos->Zp - startPos->Zp) / gesDif) * goalPos->Speed;
 
-  //if(startPos->Es == goalPos->Es)
-  //  goalPos->Ev = 0;
-  //else
+  if(startPos->Es == goalPos->Es)
+    goalPos->Ev = 0;
+  else
     goalPos->Ev = ((goalPos->Ep - startPos->Ep) / gesDif) * goalPos->Speed;
 }
 void calcAccForAches(double gesDif,MovePos *startPos,MovePos *goalPos){
@@ -541,23 +527,23 @@ unsigned long getSmalestValue(unsigned long x, unsigned long y, unsigned long z,
 bool prePointerOnPos() {
   if (nextPrePos.Xs == prePos.Xs)
     nextPrePos.useX = false;
-  //  else
-  //    nextPrePos.useX = true;
+  else
+    nextPrePos.useX = true;
 
   if (nextPrePos.Ys == prePos.Ys)
     nextPrePos.useY = false;
-  //  else
-  //    nextPrePos.useY = true;
+  else
+    nextPrePos.useY = true;
 
   if (nextPrePos.Zs == prePos.Zs)
     nextPrePos.useZ = false;
-  //  else
-  //    nextPrePos.useZ = true;
+  else
+    nextPrePos.useZ = true;
 
   if (nextPrePos.Es == prePos.Es)
     nextPrePos.useE = false;
-  //  else
-  //    nextPrePos.useE = true;
+  else
+    nextPrePos.useE = true;
  
   if(!nextPrePos.useX && !nextPrePos.useY && !nextPrePos.useZ && !nextPrePos.useE)
     return 1;
@@ -583,26 +569,26 @@ void createStep(eAchse achse, long *sollStep, long *istStep, double us) {
 }
 float getTravelDist(MovePos* pPos, MovePos* nPrePos) {
   float Xdif,Ydif,Zdif,Edif;
-  //  if(pPos->Xs == nPrePos->Xs)
-  //    Xdif = 0;
-  //  else
+  if(pPos->Xs == nPrePos->Xs)
+    Xdif = 0;
+  else
     Xdif = pPos->Xp - nPrePos->Xp;
 
-  //  if(pPos->Ys == nPrePos->Ys)
-  //    Ydif = 0;
-  //  else
+  if(pPos->Ys == nPrePos->Ys)
+    Ydif = 0;
+  else
     Ydif = pPos->Yp - nPrePos->Yp;
   
-  //  if(pPos->Zs == nPrePos->Zs)
-  //   Zdif = 0;
-  //  else
+  if(pPos->Zs == nPrePos->Zs)
+    Zdif = 0;
+  else
     Zdif = pPos->Zp - nPrePos->Zp;
 
   float gesDif = sqrt(pow(Xdif, 2) + pow(Ydif, 2) + pow(Zdif, 2));
   if (gesDif < 0.02){
-    //if(pPos->Es == nPrePos->Es)
-    //  Edif = 0;
-    //else
+    if(pPos->Es == nPrePos->Es)
+      Edif = 0;
+    else
       Edif = (pPos->Ep - nPrePos->Ep)*2;//half the speed if only e is used
     return abs(Edif);
   }
@@ -648,13 +634,7 @@ void usToTimer(stepParam* myStep, double us) {
 comParam getCommandFromLine(char* newLine){
   comParam newCommand;
   newCommand.com = ComandParser(newLine);
-  if (newCommand.com == Q100 ||
-    newCommand.com == Q101 ||
-    newCommand.com == Q107) {
-    newCommand.txt = getName(newLine);
-    Serial.print("name: ");
-    Serial.println(newCommand.txt);
-  } else if (newCommand.com == G9) {
+  if (newCommand.com == G9) {
     Serial.println("find G9 ");
   } else {
     LineParser(newLine, &newCommand);
@@ -667,13 +647,16 @@ int calcPreRunPointer() {
   char *newLine;
   comParam nextCommand;
   comParam newCommand;
+
   if(waitForHeat == true ){
     return 0;
   }
+
   if(cbCommands.count == 0){
     doStdTasks();
     return;
   }
+
   cb_pop_front(&cbCommands,&newCommand);
   if(cbCommands.count < 10){
     requestNextCommands();
@@ -702,9 +685,6 @@ void processComandLine(comParam newCommand,bool doNow) {
     Serial.println("G9");
     StopMove();
     sendDeviceStatus();
-  } else if (newCommand.com == G28) { //start move home
-    Serial.println("G28");
-    addCommand(&newCommand,true);
   } else if (newCommand.com == G92) { //set pos
     //Serial.println("G92");
     setPrePos(&newCommand);
@@ -771,29 +751,9 @@ void processComandLine(comParam newCommand,bool doNow) {
     bitwertNTC_Bed = newCommand.X;
     widerstandNTC_Bed = newCommand.Y;
     widerstand1_Bed = newCommand.Z;
-  } else if (newCommand.com == Q100) { //Execute G-Code if File exist
-    Serial.println("Q100");
-    strcpy(GCodeFileName, newCommand.txt);
-    if (getState() == GCodeStop)
-      setState(GCodeStart);
-  } else if (newCommand.com == Q102) { //close file after write G-Code
-    Serial.println("Q102");
-  } else if (newCommand.com == Q103) { //Pause G-Code
-    Serial.println("Q103");
-  } else if (newCommand.com == Q104) { //Continue G-Code
-    Serial.println("Q104");
-  } else if (newCommand.com == Q105) { //Abord G-code
-    Serial.println("Q105");
-    if (getState() == GCodeRun) {
-      setState(GCodeStop);
-    } else if (getState() == GCodeRunHome) {
-      setState(GCodeStopHome);
-    }
-    StopMove();
   } else {
     Serial.println("ERROR: unknown GCode");
   }
-  //sendDeviceStatus();
 }
 void setUseES(bool newES){
     useES = newES;
@@ -991,14 +951,25 @@ void handleES(StepMotorBig* mot, char* msg) {
 }
 int checkSerial() {
   if(SR_CheckForLine() == 1) {
+    Serial.println("rec");
     //setMotorsENA(false);
     comParam recCom = getCommandFromLine(reciveBuf);
     memset(&reciveBuf[0], 0, sizeof(reciveBuf));
 
     //sofot comands
     if(recCom.com == G9){
-      Serial.println("checkSerial");
       processComandLine(recCom,false);
+      return;
+    }
+    if(recCom.com == Q13){
+      setWaitForHeat(false);
+      return;
+    }
+    if(recCom.com == Q14){
+      cb_clear(&cbCommands);
+      StopMove();
+      sendDeviceStatus();
+      return;
     }
 
     if(cbCommands.count < cbCommands.capacity){
@@ -1031,9 +1002,6 @@ int SR_CheckForLine() {
   return 0;
 }
 ISR (TIMER5_OVF_vect) { // Timer1 ISR
-  //cli();
-  //digitalWrite(22,HIGH);
-  //unsigned long Tnow = micros();
   stepParam nextStep;
   comParam nextCommand;
   if (cb_pop_front(&cbSteps, &nextStep) == -1) {
@@ -1069,8 +1037,6 @@ ISR (TIMER5_OVF_vect) { // Timer1 ISR
       TCNT5 = nextStep.ticks + (16.0 / (double)nextStep.preScale) * 40;
     }
   }
-  //digitalWrite(22,LOW);
-  //sei();
 }
 void addCommand(comParam* newCommand,bool doNow) {
   if(doNow){
@@ -1114,9 +1080,6 @@ void performCommand(comParam* newCommand) {
     case G92:
       setRealPose(newCommand);
       //sendDeviceStatus();
-      break;
-    case G28:
-      setState(GCodeStartHome);
       break;
     case M104:
       soll_T = newCommand->S;

@@ -29,6 +29,7 @@ bool Serial::serial_open()
     m_recivedBytes.clear();
     m_serial.clear();
     connect(timer, SIGNAL(timeout()), this, SLOT(serial_read()));
+    connect(sendAnswerTimeout, SIGNAL(timeout()), this, SLOT(serial_sendTimeout()));
     timer->start(1);
     //connect(&m_serial,SIGNAL(readyRead()),this,SLOT(serial_read()));
     emit show_serial(true);
@@ -43,9 +44,19 @@ void Serial::serial_close()
     //disconnect(&m_serial,SIGNAL(readyRead()),this,SLOT(serial_read()));
     disconnect(timer, SIGNAL(timeout()), this, SLOT(serial_read()));
     timer->stop();
+    disconnect(sendAnswerTimeout, SIGNAL(timeout()), this, SLOT(serial_sendTimeout()));
+    sendAnswerTimeout->stop();
     m_serial.close();
     emit show_serial(false);
     m_database->m_SerialIsOpen = false;
+}
+
+void Serial::serial_sendTimeout()
+{
+    emit errorLog("error: no recive");
+    serial_close();
+
+    serial_open();
 }
 
 /**
@@ -63,9 +74,21 @@ void Serial::serial_read()
         if(command_end>0){
             QByteArray helper = m_recivedBytes;
             QString Line = QString(helper.remove(command_end+1,helper.length()));
+            m_recivedBytes.remove(0,command_end+1);
+
+            if(Line.contains("rec")){
+                sendAnswerTimeout->stop();
+                m_lastsend = "";
+                return;
+            }else if(Line.contains("resend")){
+                if(m_lastsend == "")
+                    emit errorLog("resend request but empty m_lastsend");
+                else
+                    serial_send(m_lastsend);
+                return;
+            }
             emit Log("rec: "+Line);
             emit recLine(Line);
-            m_recivedBytes.remove(0,command_end+1);
         }
     }
 }
@@ -81,14 +104,14 @@ void Serial::serial_send(QString mes)
 {
     if(!m_serial.isOpen())
     {
-        emit Log("Serial not open");
         emit errorLog("Serial not open");
         emit show_serial(false);
         return;
     }
     emit Log("send: "+mes);
+    m_lastsend = mes;
     mes += QString(" \n").toUtf8();
     m_serial.write(mes.toUtf8());
     m_serial.waitForBytesWritten(m_send_timeout);
-
+    sendAnswerTimeout->start(m_send_reciveTimeout);
 }

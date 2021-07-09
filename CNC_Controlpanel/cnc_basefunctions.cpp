@@ -94,57 +94,13 @@ void cnc_basefunctions::send_stop()
 {
     emit serial_send("G9 ");
 }
-
 void cnc_basefunctions::send_GCodeStart(QString file)
 {
-    //emit serial_send("Q100 "+file);
     m_auto->GC_open(file);
     m_database->m_G_Code_State = 1;//run gcode
     QString newLine = m_auto->GC_getNextLine();
     emit Log("newLine: "+newLine);
     emit serial_send(newLine+" ");
-}
-void cnc_basefunctions::send_CreateFile(QString fileSorce,QString fileDest)
-{
-    m_fileName = fileDest;
-    m_ComandLines.clear();
-    if(!m_inputFile.isOpen())
-    {
-        m_inputFile.setFileName(fileSorce);
-        m_inputFile.open(QIODevice::ReadOnly);
-        m_in.setDevice(&m_inputFile);
-        m_in.setCodec("UTF-8");
-    }else{
-        emit errorLog("start g-code FAILD file is already open");
-    }
-
-    emit Log("send_CreateFile: reading sending gCode");
-    QString newLine;
-    m_read_counter = 0;
-    do{
-        newLine = m_in.readLine();
-        if(newLine[0]!=';'){
-            m_ComandLines.push_back(newLine);
-            m_read_counter++;
-        }
-        if(m_read_counter == 6){
-            m_send_buffer_counter = 0;
-            m_mySerial->serial_send("Q101 "+m_fileName);
-            emit Log("start sending G-code");
-            m_send_counter = 0;
-        }
-        if(m_read_counter%100 == 0){
-            emit Log("read "+QString::number(m_read_counter)+"Lines from G-code");
-        }
-    }while(!newLine.isNull());
-    m_inputFile.close();
-    m_ComandLines.push_back("Q102 ");
-    emit Log("send_CreateFile: finish reading gCode LineTotal "+QString::number(m_read_counter));
-}
-
-void cnc_basefunctions::send_CloseFile()
-{
-    emit serial_send("Q102 ");
 }
 void cnc_basefunctions::send_GCodePause()
 {
@@ -156,17 +112,8 @@ void cnc_basefunctions::send_GCodeContinue()
 }
 void cnc_basefunctions::send_GCodeStop()
 {
-    emit serial_send("Q105 ");
+    emit serial_send("Q14 ");
 }
-void cnc_basefunctions::send_GetFileList()
-{
-    emit serial_send("Q106 ");
-}
-void cnc_basefunctions::send_DeleteFile(QString file)
-{
-    emit serial_send("Q107 "+file);
-}
-
 void cnc_basefunctions::send_XXX()
 {
     emit serial_send("XXX ");
@@ -207,25 +154,6 @@ void cnc_basefunctions::send_setPosition(float *X, float *Y, float *Z, float *E)
         Line += " E"+QString::number(*E);
     emit serial_send(Line);
 }
-
-void cnc_basefunctions::send_newHome(float X,float Y,float Z)
-{
-    m_ComandLines.clear();
-    m_ComandLines.push_back("G1 Z9999 F1800");
-    m_ComandLines.push_back("G1 X-9999 Y-9999");
-    m_ComandLines.push_back("G92 X"+QString::number(X)+
-                            " Y"+QString::number(Y)+
-                            " Z"+QString::number(Z)+
-                            " E0");
-    //m_ComandLines.push_back("G9 ");
-    m_ComandLines.push_back("Q102 ");
-    m_ComandLines.push_back("Q102 ");
-   // start sending
-   m_send_buffer_counter = 0;
-   m_send_counter = 0;
-   emit serial_send("Q101 HOME.TXT");
-}
-
 void cnc_basefunctions::send_moveHome(){
     emit serial_send("M114 ");
     emit serial_send("Q12 X1");
@@ -246,6 +174,11 @@ void cnc_basefunctions::send_setMotorUse(bool state){
     emit serial_send("Q12 X"+QString::number(state));
 }
 
+void cnc_basefunctions::send_resetWaitForHeat()
+{
+    emit serial_send("Q13 ");
+}
+
 void  cnc_basefunctions::processLine(const QString &s)
 {
     if(s.indexOf("GC_NL")!=-1)
@@ -262,7 +195,7 @@ void  cnc_basefunctions::processLine(const QString &s)
     }
 
     if(s.indexOf("request")!=-1 && m_database->m_G_Code_State == 1){
-        emit Log("get request");
+        //emit Log("get request");
         int start = s.indexOf("request ")+7;
         int end = s.length();
         int requests = s.mid(start,end-start).toFloat();
@@ -270,7 +203,7 @@ void  cnc_basefunctions::processLine(const QString &s)
         if(requests > 1){
             for(int i = 0;i < 1; i++){
                 newLine = m_auto->GC_getNextLine();
-                emit Log("1 newLine: "+newLine);
+                //emit Log("1 newLine: "+newLine);
                 emit serial_send(newLine+" ");
             }
         }
@@ -388,12 +321,6 @@ void  cnc_basefunctions::processLine(const QString &s)
         int start = s.indexOf("motorState ")+11;
         int end = s.length();
         m_database->setMotorUse(s.mid(start,end-start).toFloat());
-    }
-    if(s.indexOf("newState ")!=-1)
-    {
-        int start = s.indexOf("newState ")+9;
-        int end = s.length();
-        emit show_state(s.mid(start,end-start).toFloat());
     }
     if(s.indexOf("waitForHeat ")!=-1)
     {

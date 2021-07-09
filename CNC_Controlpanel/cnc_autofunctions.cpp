@@ -24,16 +24,18 @@ void cnc_autofunctions::GC_open(QString fileName)
     {
         emit Log("file not open");
     }
+    m_lineCount = 0;
+    emit show_state(m_lineCount);
 }
 QString cnc_autofunctions::GC_getNextLine()
 {
     QString newLine = "";
     //if line is commend read next line
     if(m_LineBuffer.length() == 0){
-        emit Log("read new line");
+        //emit Log("read new line");
         GC_readNextLine();
         if(m_LineBuffer.length() > 0){
-            emit Log("use new line");
+            //emit Log("use new line");
             newLine = m_LineBuffer.first();
             m_LineBuffer.removeFirst();
         }else{
@@ -43,10 +45,11 @@ QString cnc_autofunctions::GC_getNextLine()
     else
     {
         //send from linebuffer
-        emit Log("has line in buffer");
+        //emit Log("has line in buffer");
         newLine = m_LineBuffer.first();
         m_LineBuffer.removeFirst();
     }
+    emit show_state(++m_lineCount);
     return newLine;
 }
 
@@ -127,7 +130,10 @@ void cnc_autofunctions::G_Code_Parser(QString newLine)
             m_LineBuffer.append("Q11 X1");//switch on endswitch
             m_LineBuffer.append("G1 Z9999");
             m_LineBuffer.append("G1 X-9999 Y-9999");
-            m_LineBuffer.append("G92 X%1 Y%2 Z%3 E0");
+            m_LineBuffer.append(QString("G92 X%1 Y%2 Z%3 E0")
+                                .arg(m_database->m_X_inHome)
+                                .arg(m_database->m_Y_inHome)
+                                .arg(m_database->m_Z_inHome));
             m_LineBuffer.append("Q11 X0");//switch of endswitch
             m_LineBuffer.append("M114 ");
         }

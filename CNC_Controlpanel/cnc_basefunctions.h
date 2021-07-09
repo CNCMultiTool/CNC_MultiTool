@@ -30,23 +30,17 @@ public:
     void send_stop();
 
     void send_GCodeStart(QString file);
-    void send_CreateFile(QString fileSorce,QString fileDest);
-    void send_CloseFile();
     void send_GCodePause();
     void send_GCodeContinue();
     void send_GCodeStop();
-    void send_GetFileList();
-    void send_DeleteFile(QString file);
-    void send_newHome(float X,float Y,float Z);
-
 
     void send_XXX();
-
 
     void send_moveHome();
     void send_getPosition();
     void send_setESuse(bool state);
     void send_setMotorUse(bool state);
+    void send_resetWaitForHeat();
 private:
     QString m_fileName;
     QFile m_inputFile;
@@ -70,7 +64,6 @@ signals:
     void show_acc_speed_fila();
     void show_speed();
     void show_act_temp();
-    void show_state(float);
     void show_waitForHeat(float);
 
 

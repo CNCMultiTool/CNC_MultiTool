@@ -29,6 +29,8 @@ private:
     QTextStream m_in;
     cnc_data* m_database = nullptr;
 
+    quint64 m_lineCount = 0;
+
     QStringList m_LineBuffer;
 
     void getValue(const QString indent,const QString line,float *target);
@@ -38,6 +40,7 @@ private:
 signals:
     void Log(const QString &s);
     void errorLog(const QString &s);
+    void show_state(quint64);
 
 };
 
