@@ -654,7 +654,7 @@ int calcPreRunPointer() {
 
   if(cbCommands.count == 0){
     doStdTasks();
-    return;
+    return 0;
   }
 
   cb_pop_front(&cbCommands,&newCommand);
@@ -959,17 +959,17 @@ int checkSerial() {
     //sofot comands
     if(recCom.com == G9){
       processComandLine(recCom,false);
-      return;
+      return 0;
     }
     if(recCom.com == Q13){
       setWaitForHeat(false);
-      return;
+      return 0;
     }
     if(recCom.com == Q14){
       cb_clear(&cbCommands);
       StopMove();
       sendDeviceStatus();
-      return;
+      return 0;
     }
 
     if(cbCommands.count < cbCommands.capacity){
