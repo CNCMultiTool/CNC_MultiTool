@@ -49,15 +49,13 @@ private:
     cnc_data *m_database;
     cnc_autofunctions *m_auto;
     Serial *m_mySerial;
-    QVector<QString> m_ComandLines;
-    int m_send_buffer_counter;
-    int m_send_counter;
-    int m_read_counter;
+    //int m_send_counter;
+    //int m_read_counter;
 
 signals:
     void Log(const QString &s);
     void errorLog(const QString &s);
-    void serial_send(const QString &mes);
+    void serial_send(const QByteArray &mes);
     void show_position();
     void show_temp();
     void show_endswitch();

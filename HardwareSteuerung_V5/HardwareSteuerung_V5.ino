@@ -5,6 +5,9 @@
 #include<avr/io.h>
 #include<avr/interrupt.h>
 #include <PID_v1.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <assert.h>
 
 #define CPU 16000000.00
 #define T_MAX 65535.00
@@ -311,7 +314,6 @@ void setup() {
 
   setMotorsENA(true);
 }
-
 void loop() {
   //startTimer(1);//start intterrupt timer
   while (true) {
@@ -321,7 +323,6 @@ void loop() {
     calculateSteps();
   }
 }
-
 void setMotorsENA(bool b) {
   Serial.print("motorState ");
   Serial.println(b);
@@ -950,8 +951,33 @@ void handleES(StepMotorBig* mot, char* msg) {
   }
 }
 int checkSerial() {
-  if(SR_CheckForLine() == 1) {
-    Serial.println("rec");
+  if(SR_CheckForLine() != 0) {
+    char buffer[128];
+    size_t recLen = cobsDecode(reciveBuf,reciveWindex, buffer);
+    reciveWindex = 0;
+
+    //check the length of the pac
+    if(recLen-1 != int(buffer[0])){
+      //error handling
+      Serial.println("resend");
+      return 0;
+    }
+
+    //check the checksumm of the package
+    char checksumm = 0;
+    for(int i = 1;i<recLen-2;i++){
+      checksumm += buffer[i];
+    }
+    if(checksumm != buffer[recLen-2]){
+      //error handling
+      Serial.println("resend");
+      return 0;
+    }
+
+    //pass all checks send package acknolage
+    Serial.println("rec");//answer to stop the timeout
+    Serial.println("successfully");
+    return 0;
     //setMotorsENA(false);
     comParam recCom = getCommandFromLine(reciveBuf);
     memset(&reciveBuf[0], 0, sizeof(reciveBuf));
@@ -980,6 +1006,67 @@ int checkSerial() {
     }
   }
 }
+/** COBS encode data to buffer
+	@param data Pointer to input data to encode
+	@param length Number of bytes to encode
+	@param buffer Pointer to encoded output buffer
+	@return Encoded buffer length in bytes
+	@note Does not output delimiter byte
+*/
+size_t cobsEncode(const void *data, size_t length, uint8_t *buffer)
+{
+	assert(data && buffer);
+
+	uint8_t *encode = buffer; // Encoded byte pointer
+	uint8_t *codep = encode++; // Output code pointer
+	uint8_t code = 1; // Code value
+
+	for (const uint8_t *byte = (const uint8_t *)data; length--; ++byte)
+	{
+		if (*byte) // Byte not zero, write it
+			*encode++ = *byte, ++code;
+
+		if (!*byte || code == 0xff) // Input is zero or block completed, restart
+		{
+			*codep = code, code = 1, codep = encode;
+			if (!*byte || length)
+				++encode;
+		}
+	}
+	*codep = code; // Write final code value
+
+	return (size_t)(encode - buffer);
+}
+/** COBS decode data from buffer
+	@param buffer Pointer to encoded input bytes
+	@param length Number of bytes to decode
+	@param data Pointer to decoded output data
+	@return Number of bytes successfully decoded
+	@note Stops decoding if delimiter byte is found
+*/
+size_t cobsDecode(const uint8_t *buffer, size_t length, void *data)
+{
+	assert(buffer && data);
+
+	const uint8_t *byte = buffer; // Encoded input byte pointer
+	uint8_t *decode = (uint8_t *)data; // Decoded output byte pointer
+
+	for (uint8_t code = 0xff, block = 0; byte < buffer + length; --block)
+	{
+		if (block) // Decode block byte
+			*decode++ = *byte++;
+		else
+		{
+			if (code != 0xff) // Encoded zero, write it
+				*decode++ = 0;
+			block = code = *byte++; // Next block length
+			if (!code) // Delimiter code found
+				break;
+		}
+	}
+
+	return (size_t)(decode - (uint8_t *)data);
+}
 void requestNextCommands(){
   Serial.print("request ");
   Serial.println(10 - cbCommands.count);
@@ -989,15 +1076,12 @@ int SR_CheckForLine() {
   comParam newCommand;
   while (Serial.available()) {
     Serial.readBytes(caLine, 1);
-    if (caLine[0] == '\n')
-    {
-      reciveBuf[reciveWindex] = '\0';
-      caLine[0] = ' ';
-      reciveWindex = 0;
-      return 1;
-    }
     reciveBuf[reciveWindex] = caLine[0];
     reciveWindex++;
+    if (caLine[0] == 0)
+    {
+      return reciveWindex;
+    }
   }
   return 0;
 }

@@ -36,10 +36,12 @@ private:
     cnc_data *m_database;
     QTimer *timer = new QTimer(this);
     QTimer *sendAnswerTimeout = new QTimer(this);
+    void addChecksum(QByteArray *mes);
 
     QByteArray m_recivedBytes;
-    QString m_lastsend = "";
+    QByteArray m_lastsend = "";
 
+    void CobsEncode(const QByteArray &rawData, QByteArray &encodedData);
 signals:
     void Log(const QString &s);
     void errorLog(const QString &s);
@@ -47,17 +49,9 @@ signals:
     void recLine(const QString &s);
 
 public slots:
-    //void serial_read();
-    void serial_send(QString mes);
+    void serial_send(QByteArray mes);
     void serial_sendTimeout();
     void serial_read(); //changed to slot
-//    void myslot()
-//    {
-//      //Here I want to put myfunction into a thread
-//      moveToThread(&thread);
-//      connect(&thread, SIGNAL(started()), this, SLOT(serial_read())); //cant have parameter sorry, when using connect
-//      thread.start();
-//    }
 };
 
 #endif // SERIAL_H

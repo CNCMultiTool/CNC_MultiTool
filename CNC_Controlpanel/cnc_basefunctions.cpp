@@ -26,7 +26,7 @@ void cnc_basefunctions::send_moveparam(float *acc,float *min_speed,float *max_sp
     if(filament != nullptr)
         Line += " S"+QString::number(*filament);
 
-    emit serial_send(Line);
+    m_auto->G_Code_Parser(Line);
 }
 
 void cnc_basefunctions::send_NTC_values(float *bitwertNTC,float *widerstandNTC,float *widerstand1)
@@ -39,7 +39,7 @@ void cnc_basefunctions::send_NTC_values(float *bitwertNTC,float *widerstandNTC,f
     if(widerstand1 != nullptr)
         Line += " Z"+QString::number(*widerstand1);
 
-    emit serial_send(Line);
+    m_auto->G_Code_Parser(Line);
 }
 
 void cnc_basefunctions::send_PID_values(float *P,float *I,float *D,bool *E)
@@ -54,7 +54,7 @@ void cnc_basefunctions::send_PID_values(float *P,float *I,float *D,bool *E)
     if(E != nullptr)
         Line += " E"+QString::number(*E);
 
-    emit serial_send(Line);
+    m_auto->G_Code_Parser(Line);
 }
 
 void cnc_basefunctions::send_NTC_values_bed(float *bitwertNTC_bed,float *widerstandNTC_bed,float *widerstand1_bed)
@@ -67,61 +67,60 @@ void cnc_basefunctions::send_NTC_values_bed(float *bitwertNTC_bed,float *widerst
     if(widerstand1_bed != nullptr)
         Line += " Z"+QString::number(*widerstand1_bed);
 
-    emit serial_send(Line);
+    m_auto->G_Code_Parser(Line);
 }
 
 void cnc_basefunctions::send_Speed(float F)
 {
-    emit serial_send("G1 F"+QString::number(F*60));
+    m_auto->G_Code_Parser("G1 F"+QString::number(F*60));
 }
 
 void cnc_basefunctions::send_Filament(float S)
 {
-    emit serial_send("Q10 S"+QString::number(S));
+    m_auto->G_Code_Parser("Q10 S"+QString::number(S));
 }
 
 void cnc_basefunctions::send_BedTemp(float S)
 {
-    emit serial_send("M140 S"+QString::number(S));
+    m_auto->G_Code_Parser("M140 S"+QString::number(S));
 }
 
 void cnc_basefunctions::send_HotendTemp(float S)
 {
-    emit serial_send("M104 S"+QString::number(S));
+    m_auto->G_Code_Parser("M104 S"+QString::number(S));
 }
 
 void cnc_basefunctions::send_stop()
 {
-    emit serial_send("G9 ");
+    m_auto->G_Code_Parser("G9 ");
 }
 void cnc_basefunctions::send_GCodeStart(QString file)
 {
     m_auto->GC_open(file);
     m_database->m_G_Code_State = 1;//run gcode
-    QString newLine = m_auto->GC_getNextLine();
-    emit Log("newLine: "+newLine);
-    emit serial_send(newLine+" ");
+    QByteArray newBA = m_auto->GC_getNextLine();
+    emit serial_send(newBA);
 }
 void cnc_basefunctions::send_GCodePause()
 {
-    emit serial_send("Q103 ");
+    //m_auto->G_Code_Parser("Q103 ");
 }
 void cnc_basefunctions::send_GCodeContinue()
 {
-    emit serial_send("Q104 ");
+    //m_auto->G_Code_Parser("Q104 ");
 }
 void cnc_basefunctions::send_GCodeStop()
 {
-    emit serial_send("Q14 ");
+    m_auto->G_Code_Parser("Q14 ");
 }
 void cnc_basefunctions::send_XXX()
 {
-    emit serial_send("XXX ");
+    m_auto->G_Code_Parser("XXX ");
 }
 
 void cnc_basefunctions::send_getPosition()
 {
-    emit serial_send("M114 ");
+    m_auto->G_Code_Parser("M114 ");
 }
 
 void cnc_basefunctions::send_move(float *X,float *Y,float *Z,float *E,float *F)
@@ -138,7 +137,7 @@ void cnc_basefunctions::send_move(float *X,float *Y,float *Z,float *E,float *F)
     if(F != nullptr)
         Line += " F"+QString::number(*F * 60);
 
-    emit serial_send(Line);
+    m_auto->G_Code_Parser(Line);
 }
 
 void cnc_basefunctions::send_setPosition(float *X, float *Y, float *Z, float *E)
@@ -152,67 +151,41 @@ void cnc_basefunctions::send_setPosition(float *X, float *Y, float *Z, float *E)
         Line += " Z"+QString::number(*Z);
     if(E != nullptr)
         Line += " E"+QString::number(*E);
-    emit serial_send(Line);
+    m_auto->G_Code_Parser(Line);
 }
 void cnc_basefunctions::send_moveHome(){
-    emit serial_send("M114 ");
-    emit serial_send("Q12 X1");
-    emit serial_send("Q11 X1");
-    emit serial_send("G1 Z9999");
-    emit serial_send("G1 X-9999 Y-9999");
-    emit serial_send(QString("G92 X%1 Y%2 Z%3 E0").arg(m_database->m_X_inHome).arg(m_database->m_Y_inHome).arg(m_database->m_Z_inHome));
-    emit serial_send("M114 ");
-    emit serial_send("Q11 X0");
+    m_auto->G_Code_Parser("G28 ");
 }
 
 
 void cnc_basefunctions::send_setESuse(bool state){
-    emit serial_send("Q11 X"+QString::number(state));
+    m_auto->G_Code_Parser("Q11 X"+QString::number(state));
 }
 
 void cnc_basefunctions::send_setMotorUse(bool state){
-    emit serial_send("Q12 X"+QString::number(state));
+    m_auto->G_Code_Parser("Q12 X"+QString::number(state));
 }
 
 void cnc_basefunctions::send_resetWaitForHeat()
 {
-    emit serial_send("Q13 ");
+    m_auto->G_Code_Parser("Q13 ");
 }
 
 void  cnc_basefunctions::processLine(const QString &s)
 {
-    if(s.indexOf("GC_NL")!=-1)
-    {
-        m_send_buffer_counter--;
-        while(m_ComandLines.length()!=0 && m_send_buffer_counter<5)
-        {
-            m_send_buffer_counter++;
-            emit serial_send(m_ComandLines[0]);
-            m_ComandLines.pop_front();
-            m_send_counter++;
-            emit Log("Process "+QString::number(m_send_counter)+" of "+QString::number(m_read_counter));
-        }
-    }
-
     if(s.indexOf("request")!=-1 && m_database->m_G_Code_State == 1){
         //emit Log("get request");
         int start = s.indexOf("request ")+7;
         int end = s.length();
         int requests = s.mid(start,end-start).toFloat();
-        QString newLine;
+        QByteArray newBA;
         if(requests > 1){
             for(int i = 0;i < 1; i++){
-                newLine = m_auto->GC_getNextLine();
+                newBA = m_auto->GC_getNextLine();
                 //emit Log("1 newLine: "+newLine);
-                emit serial_send(newLine+" ");
+                emit serial_send(newBA);
             }
         }
-    }
-
-    if(s.indexOf("errorFileOpen")!=-1)
-    {
-        m_ComandLines.clear();
-        emit Log("create file failed");
     }
 
     if(s.indexOf("M114 X")!=-1)

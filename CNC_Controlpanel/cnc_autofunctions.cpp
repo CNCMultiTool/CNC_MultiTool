@@ -27,9 +27,10 @@ void cnc_autofunctions::GC_open(QString fileName)
     m_lineCount = 0;
     emit show_state(m_lineCount);
 }
-QString cnc_autofunctions::GC_getNextLine()
+
+QByteArray cnc_autofunctions::GC_getNextLine()
 {
-    QString newLine = "";
+    QByteArray newLine;
     //if line is commend read next line
     if(m_LineBuffer.length() == 0){
         //emit Log("read new line");
@@ -58,10 +59,13 @@ void cnc_autofunctions::GC_readNextLine(){
     QRegExp rx;
     rx.setPattern(";");
     if(true){//m_inputFile.isOpen()){
+
+        //read new lines until it not starts with ; (is a commend)
         do{
             newLine = m_in.readLine();
         }while(rx.indexIn(newLine)==0);
 
+        //cut new line at ; (after is commend)
         if(rx.indexIn(newLine)!=-1)
         {
             newLine = newLine.mid(0,rx.indexIn(newLine));
@@ -92,8 +96,11 @@ void cnc_autofunctions::GC_close()
 void cnc_autofunctions::G_Code_Parser(QString newLine)
 {
     QRegExp rx;
+    QByteArray lineInByteArray;
 
-            rx.setPattern(";");
+    emit Log("G_Code_Parser: "+newLine);
+
+        rx.setPattern(";");
         if(rx.indexIn(newLine)==0)
         {
             //emit Log("Comment: "+newLine);
@@ -104,78 +111,115 @@ void cnc_autofunctions::G_Code_Parser(QString newLine)
             //emit Log("emty line");
 
         }
-//        getValue("X",newLine,&m_X);
-//        getValue("Y",newLine,&m_Y);
-//        getValue("Z",newLine,&m_Z);
-//        getValue("E",newLine,&m_W);
-//        getValue("S",newLine,&m_S);
-//        getValue("F",newLine,&m_F);
+
 
         if(isCommand("G0",newLine))//fast move
         {
-            m_LineBuffer.append(newLine);
+            lineInByteArray.append(10);//add command
+            lineInByteArray.append(createValueArray(newLine));//add values
+            lineInByteArray.append(createValueArray(QString("F%1").arg(m_database->m_max_speed)));//add values
         }
         if(isCommand("G1",newLine))//normal move
         {
-            m_LineBuffer.append(newLine);
+            lineInByteArray.append(10);//add command
+            lineInByteArray.append(createValueArray(newLine));//add values
         }
-        if(isCommand("G21",newLine))//use mm
+        if(isCommand("G9",newLine))//STOP
         {
-
-        }
-        if(isCommand("G28",newLine))//move home
-        {
-            m_LineBuffer.append("M114 ");
-            m_LineBuffer.append("Q12 X1");//switch on motor
-            m_LineBuffer.append("Q11 X1");//switch on endswitch
-            m_LineBuffer.append("G1 Z9999");
-            m_LineBuffer.append("G1 X-9999 Y-9999");
-            m_LineBuffer.append(QString("G92 X%1 Y%2 Z%3 E0")
-                                .arg(m_database->m_X_inHome)
-                                .arg(m_database->m_Y_inHome)
-                                .arg(m_database->m_Z_inHome));
-            m_LineBuffer.append("Q11 X0");//switch of endswitch
-            m_LineBuffer.append("M114 ");
+            lineInByteArray.append(11);//add command
         }
         if(isCommand("G31",newLine))//move untile endswitch
         {
-
-        }
-        if(isCommand("G90",newLine))//absolute referenz
-        {
-
-        }
-        if(isCommand("G91",newLine))//incrementel movement
-        {
-
+            return;
         }
         if(isCommand("G92",newLine))//set position
         {
-            m_LineBuffer.append(newLine);
+            lineInByteArray.append(12);//add command
+            lineInByteArray.append(createValueArray(newLine));//add values
         }
         if(isCommand("M104",newLine))//set temperatur
         {
-            m_LineBuffer.append(newLine);
+            lineInByteArray.append(13);//add command
+            lineInByteArray.append(createValueArray(newLine));//add values
         }
-        if(isCommand("M106",newLine))
+        if(isCommand("M109",newLine))//set Bed Temperatur
         {
-
+            lineInByteArray.append(14);//add command
+            lineInByteArray.append(createValueArray(newLine));//add values
         }
-        if(isCommand("M107",newLine))
+        if(isCommand("M140",newLine))//wait for reaching temperatur
         {
-
-        }
-        if(isCommand("M109",newLine))//wait for reaching temperatur
-        {
-            m_LineBuffer.append(newLine);
+            lineInByteArray.append(15);//add command
+            lineInByteArray.append(createValueArray(newLine));//add values
         }
         if(isCommand("M190",newLine))//set Bed Temperatur
         {
-            m_LineBuffer.append(newLine);
+            lineInByteArray.append(16);//add command
+            lineInByteArray.append(createValueArray(newLine));//add values
         }
-        if(isCommand("M140",newLine))//set Bed Temperatur
+        if(isCommand("Q11",newLine))//turn on/off ES
         {
-            m_LineBuffer.append(newLine);
+            lineInByteArray.append(18);//add command
+            lineInByteArray.append(createValueArray(newLine));//add values
+        }
+        if(isCommand("Q12",newLine))//turn on/off motor
+        {
+            lineInByteArray.append(19);//add command
+            lineInByteArray.append(createValueArray(newLine));//add values
+        }
+        if(isCommand("Q13",newLine))//reset wait for heat
+        {
+            lineInByteArray.append(20);//add command
+        }
+        if(isCommand("Q20",newLine))//reset wait for heat
+        {
+            lineInByteArray.append(21);//add command
+            lineInByteArray.append(createValueArray(newLine));//add values
+        }
+        if(isCommand("Q21",newLine))//reset wait for heat
+        {
+            lineInByteArray.append(22);//add command
+            lineInByteArray.append(createValueArray(newLine));//add values
+        }
+        if(isCommand("Q30",newLine))//reset wait for heat
+        {
+            lineInByteArray.append(23);//add command
+            lineInByteArray.append(createValueArray(newLine));//add values
+        }
+        if(isCommand("M114",newLine))//reset wait for heat
+        {
+            lineInByteArray.append(24);//add command
+        }
+        if(isCommand("XXX",newLine))//this is just for testing stufff
+        {
+            lineInByteArray.append(100);//add command
+        }
+
+        if(isCommand("G28",newLine))//move home
+        {
+            G_Code_Parser("M114 ");
+            G_Code_Parser("Q12 X1");//switch on motor
+            G_Code_Parser("Q11 X1");//switch on endswitch
+            G_Code_Parser("G1 Z9999");
+            G_Code_Parser("G1 X-9999 Y-9999");
+            G_Code_Parser(QString("G92 X%1 Y%2 Z%3 E0")
+                                .arg(m_database->m_X_inHome)
+                                .arg(m_database->m_Y_inHome)
+                                .arg(m_database->m_Z_inHome));
+            G_Code_Parser("Q11 X0");//switch of endswitch
+            G_Code_Parser("M114 ");
+        }
+        if(lineInByteArray.isEmpty())
+        {
+            emit errorLog("no valid command find in G_Code_Parser");
+        }else{
+            m_LineBuffer.append(lineInByteArray);// add createt bytearray to the buffer
+        }
+
+        if(m_database->m_G_Code_State == 0)
+        {
+            QByteArray newBA = GC_getNextLine();
+            emit serial_send(newBA);
         }
 }
 
@@ -191,7 +235,13 @@ bool cnc_autofunctions::isCommand(const QString indent,const QString line)
     return(false);
 }
 
-void cnc_autofunctions::getValue(const QString indent,const QString line,float *target)
+/**
+ * @brief cnc_autofunctions::getValue
+ * @param indent Char (XYZESF) to find the right number
+ * @param line String in with to search for the number
+ * @param target pointer to float
+ */
+bool cnc_autofunctions::getValue(const QString indent,const QString line,float *target)
 {
     QRegExp rx;
     QString resultStr;
@@ -204,5 +254,38 @@ void cnc_autofunctions::getValue(const QString indent,const QString line,float *
         resultStr = rx.cap(0);
         resultStr.remove(0, 1);
         *target = resultStr.toFloat();
+        return true;
     }
+    return false;
+}
+
+QByteArray cnc_autofunctions::createValueArray(QString line)
+{
+    float newFloat;
+    QByteArray ba;
+    if(getValue("X",line,&newFloat)){
+        ba.append(char(1));
+        ba.append(reinterpret_cast<const char *>(&newFloat), sizeof (newFloat));
+    }
+    if(getValue("Y",line,&newFloat)){
+        ba.append(char(2));
+        ba.append(reinterpret_cast<const char *>(&newFloat), sizeof (newFloat));
+    }
+    if(getValue("Z",line,&newFloat)){
+        ba.append(char(3));
+        ba.append(reinterpret_cast<const char *>(&newFloat), sizeof (newFloat));
+    }
+    if(getValue("E",line,&newFloat)){
+        ba.append(char(4));
+        ba.append(reinterpret_cast<const char *>(&newFloat), sizeof (newFloat));
+    }
+    if(getValue("S",line,&newFloat)){
+        ba.append(char(5));
+        ba.append(reinterpret_cast<const char *>(&newFloat), sizeof (newFloat));
+    }
+    if(getValue("F",line,&newFloat)){
+        ba.append(char(6));
+        ba.append(reinterpret_cast<const char *>(&newFloat), sizeof (newFloat));
+    }
+    return ba;
 }

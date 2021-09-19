@@ -95,12 +95,10 @@ void Serial::serial_read()
 
 
 /**
- * holt das nächste kommando aus der queue
- * check ob das command valide ist
- * verpackt es in ein bytearray mit startcodon und checsumm
+ * verpackt es mittels COBS
  * sendet es mittels serielem port
  */
-void Serial::serial_send(QString mes)
+void Serial::serial_send(QByteArray mes)
 {
     if(!m_serial.isOpen())
     {
@@ -108,10 +106,73 @@ void Serial::serial_send(QString mes)
         emit show_serial(false);
         return;
     }
-    emit Log("send: "+mes);
+    emit Log("send: "+mes.toHex());
     m_lastsend = mes;
-    mes += QString(" \n").toUtf8();
-    m_serial.write(mes.toUtf8());
+    addChecksum(&mes);
+    emit Log("send checksum: "+mes.toHex());
+    QByteArray encodedData;
+    CobsEncode(mes, encodedData);
+    emit Log("send enc: "+encodedData.toHex());
+    m_serial.write(encodedData);
     m_serial.waitForBytesWritten(m_send_timeout);
     sendAnswerTimeout->start(m_send_reciveTimeout);
+}
+
+void Serial::addChecksum(QByteArray *mes)
+{
+    char checksum = 0;
+    for(int i=0;i< mes->length();i++)
+        checksum += mes->at(i);
+    mes->append(checksum);
+    mes->prepend(mes->length()+1);
+}
+
+void Serial::CobsEncode(const QByteArray &rawData, QByteArray &encodedData)
+{
+    int startOfCurrBlock = 0;
+    uint8_t numElementsInCurrBlock = 0;
+
+    auto it = rawData.begin();
+
+    // Create space for first (this will be
+    // overwritten once count to next 0x00 is known)
+    encodedData.append('\0');
+
+    while (it != rawData.end()) {
+        if (*it == 0x00) {
+            // Save the number of elements before the next 0x00 into
+            // the output
+            encodedData[startOfCurrBlock] = (uint8_t)(numElementsInCurrBlock + 1);
+
+            // Add placeholder at start of next block
+            encodedData.append('\0');
+
+            startOfCurrBlock = encodedData.size() - 1;
+
+            // Reset count of num. elements in current block
+            numElementsInCurrBlock = 0;
+
+        } else {
+            encodedData.push_back(*it);
+            numElementsInCurrBlock++;
+
+            if (numElementsInCurrBlock == 254) {
+                encodedData[startOfCurrBlock] = (uint8_t)(numElementsInCurrBlock + 1);
+
+                // Add placeholder at start of next block
+                encodedData.append('\0');
+
+                startOfCurrBlock = encodedData.size() - 1;
+
+                // Reset count of num. elements in current block
+                numElementsInCurrBlock = 0;
+            }
+        }
+        it++;
+    }
+
+    // Finish the last block
+    // Insert pointer to the terminating 0x00 character
+    encodedData[startOfCurrBlock] = numElementsInCurrBlock + 1;
+    encodedData.append('\0');
 }
