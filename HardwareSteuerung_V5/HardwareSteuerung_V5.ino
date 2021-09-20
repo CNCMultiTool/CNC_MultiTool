@@ -15,7 +15,6 @@
 //i dont know why to init this funktion here
 void startTimer(int precscalar);
 
-
 enum eGCodeState {
   GCodeStart,     //0
   GCodeRun,       //1
@@ -65,7 +64,7 @@ struct sComand {
   char cName[6];
 };
 typedef struct comParam {//decoded comand line
-  eComandName com;
+  char com;
   double X = 0;
   bool useX = false;
   double Y = 0;
@@ -976,22 +975,24 @@ int checkSerial() {
 
     //pass all checks send package acknolage
     Serial.println("rec");//answer to stop the timeout
-    Serial.println("successfully");
-    return 0;
-    //setMotorsENA(false);
-    comParam recCom = getCommandFromLine(reciveBuf);
+    //Serial.println("successfully");
+
+    //read command
+    //read values
+    comParam recCom = parseValuesFromBinar(recLen,buffer);
     memset(&reciveBuf[0], 0, sizeof(reciveBuf));
 
-    //sofot comands
-    if(recCom.com == G9){
+    //sofort comands list
+    if(recCom.com == 11){//G9
+      Serial.println("find and process G9");
       processComandLine(recCom,false);
       return 0;
     }
-    if(recCom.com == Q13){
+    if(recCom.com == 20){//Q13
       setWaitForHeat(false);
       return 0;
     }
-    if(recCom.com == Q14){
+    if(recCom.com == 25){//Q14
       cb_clear(&cbCommands);
       StopMove();
       sendDeviceStatus();
@@ -1003,8 +1004,52 @@ int checkSerial() {
       if(cbCommands.count < 10){
         requestNextCommands();
       }
+    }else{
+      Serial.println("error: buffer overrun");
     }
   }
+}
+comParam parseValuesFromBinar(int bufLen,char* buffer){
+  comParam newParam;
+  float f;
+  newParam.useX = false;
+  newParam.useY = false;
+  newParam.useZ = false;
+  newParam.useE = false;
+  newParam.useF = false;
+  newParam.useS = false;
+  newParam.com = buffer[2];
+  for(int i = 2;i+4 < bufLen-2;i+=5){
+    char b[] = {buffer[i+1], buffer[i+2], buffer[i+3], buffer[i+4]};
+    memcpy(&f, &b, sizeof(f));
+    switch (buffer[i]) {
+      case 1://'X':
+        newParam.X = f;
+        newParam.useX = true;
+        break;
+      case 2://'Y':
+        newParam.Y = f;
+        newParam.useY = true;
+        break;
+      case 3://'Z':
+        newParam.Z = f;
+        newParam.useZ = true;
+        break;
+      case 4://'E':
+        newParam.E = f;
+        newParam.useE = true;
+        break;
+      case 5://'S':
+        newParam.S = f;
+        newParam.useS = true;
+        break;
+      case 6://'F':
+        newParam.F = f;
+        newParam.useF = true;
+        break;
+    }
+  }
+  return newParam;
 }
 /** COBS encode data to buffer
 	@param data Pointer to input data to encode
