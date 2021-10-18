@@ -126,7 +126,7 @@ void cnc_autofunctions::G_Code_Parser(QString newLine)
         }
         if(isCommand("G9",newLine))//STOP
         {
-            lineInByteArray.append(11);//add command
+            lineInByteArray.append(50);//add command
         }
         if(isCommand("G31",newLine))//move untile endswitch
         {
@@ -157,6 +157,11 @@ void cnc_autofunctions::G_Code_Parser(QString newLine)
             lineInByteArray.append(16);//add command
             lineInByteArray.append(createValueArray(newLine));//add values
         }
+        if(isCommand("Q10",newLine))//turn on/off ES
+        {
+            lineInByteArray.append(17);//add command
+            lineInByteArray.append(createValueArray(newLine));//add values
+        }
         if(isCommand("Q11",newLine))//turn on/off ES
         {
             lineInByteArray.append(18);//add command
@@ -169,7 +174,7 @@ void cnc_autofunctions::G_Code_Parser(QString newLine)
         }
         if(isCommand("Q13",newLine))//reset wait for heat
         {
-            lineInByteArray.append(20);//add command
+            lineInByteArray.append(51);//add command
         }
         if(isCommand("Q20",newLine))//reset wait for heat
         {
@@ -190,9 +195,13 @@ void cnc_autofunctions::G_Code_Parser(QString newLine)
         {
             lineInByteArray.append(24);//add command
         }
+        if(isCommand("Q14",newLine))//reset wait for heat
+        {
+            lineInByteArray.append(52);//add command
+        }
         if(isCommand("XXX",newLine))//this is just for testing stufff
         {
-            lineInByteArray.append(100);//add command
+            lineInByteArray.append(60);//add command
         }
 
         if(isCommand("G28",newLine))//move home
@@ -206,8 +215,8 @@ void cnc_autofunctions::G_Code_Parser(QString newLine)
                                 .arg(m_database->m_X_inHome)
                                 .arg(m_database->m_Y_inHome)
                                 .arg(m_database->m_Z_inHome));
-            G_Code_Parser("Q11 X0");//switch of endswitch
-            G_Code_Parser("M114 ");
+            //G_Code_Parser("Q11 X0");//switch of endswitch
+            //G_Code_Parser("M114 ");
         }
         if(lineInByteArray.isEmpty())
         {
@@ -225,9 +234,9 @@ void cnc_autofunctions::G_Code_Parser(QString newLine)
 
 bool cnc_autofunctions::isCommand(const QString indent,const QString line)
 {
-    QRegExp rx;
-    rx.setPattern(indent);
-    if(rx.indexIn(line)!=-1)
+//    QRegExp rx;
+//    rx.setPattern(indent);
+    if(line.contains(indent+" ")||line.compare(indent)==0)
     {
         //emit Log(indent+" X"+QString::number(m_X)+" Y"+QString::number(m_Y)+" Z"+QString::number(m_Z)+" W"+QString::number(m_W)+" S"+QString::number(m_S)+" F"+QString::number(m_F));
         return(true);

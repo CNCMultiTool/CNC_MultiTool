@@ -15,37 +15,7 @@
 //i dont know why to init this funktion here
 void startTimer(int precscalar);
 
-enum eGCodeState {
-  GCodeStart,     //0
-  GCodeRun,       //1
-  GCodePause,     //2
-  GCodeStop,      //3
-  GCodeCreate,    //4
-  GCodeStartHome, //5
-  GCodeRunHome,   //6
-  GCodeStopHome   //7
-};
 enum eAchse {X, Y, Z, E, C}; //alles achsen und C für spezial comand
-enum eComandName {
-  FAIL,
-  XXX,
-  G1,//move
-  G9,//stop
-  G92,//set position to
-  M104,//set hotend temperature
-  M114,//get position
-  M140,//set bed temperatur
-  M109,//set hotend temperature
-  M190,//set bed temperatur
-  Q10,//max Accelaration//acc- max- min- speed
-  Q11,//set endswitch use
-  Q12,//set motor ENA
-  Q13,//reset wait for heat
-  Q14,//empty movebuffer buffer
-  Q20,//max speed//bitwertNTC widerstandNTC widerstand1   for hotend
-  Q21,//min speed//P I D ON for hotend
-  Q30,//min speed//bitwertNTC widerstandNTC widerstand1   for bed
-};
 typedef struct StepMotorBig {
   //Settings
   eAchse achse;
@@ -59,10 +29,6 @@ typedef struct StepMotorBig {
   int steps_pmm;//steps pro mm (constant für x y z)
   long act_step = 0;//actueller position der achse in step
 } StepMotorBig;
-struct sComand {
-  eComandName eIndent;
-  char cName[6];
-};
 typedef struct comParam {//decoded comand line
   char com;
   double X = 0;
@@ -123,33 +89,9 @@ StepMotorBig Xachse;
 StepMotorBig Yachse;
 StepMotorBig Zachse;
 StepMotorBig Eachse;
-sComand lComandList[26] = {
-  {XXX, "XXX"},
-  {G1, "G1"},//move
-  {G9, "G9"},//stop
-  {G92, "G92"},//set pos
-  {M104, "M104"},//set hotend temp
-  {M114, "M114"},//get pos
-  {M140, "M140"},//set bed temp
-  {M109, "M109"},//set and wait hotend temp
-  {M190, "M190"},//set and wait bed temp
-  {Q10, "Q10"},//move params
-  {Q11, "Q11"},//switch endswitch on off
-  {Q12, "Q12"},// switch motors on off
-  {Q13, "Q13"},//set wait for heat off
-  {Q14, "Q14"},//empty command buffer
-  {Q20, "Q20"},//thermo fühler NTC hotend
-  {Q21, "Q21"},//regler hotend
-  {Q30, "Q30"},//thermo fühler NTC bed
-};
 
 circular_buffer cbSteps;
 circular_buffer cbCommands;
-
-eGCodeState state;//current state of the machine
-
-File GFile;
-File HomeFile;
 
 comParam nextMove;
 
@@ -209,8 +151,49 @@ bool waitForHeat = false;
 unsigned long TlastX;
 unsigned long TlastY;
 
+void G1(comParam c);
+void G92(comParam c);
+void M104(comParam c);
+void M109(comParam c);
+void M140(comParam c);
+void M190(comParam c);
+void Q10(comParam c);
+void Q11(comParam c);
+void Q12(comParam c);
+void Q20(comParam c);
+void Q21(comParam c);
+void Q30(comParam c);
+void M114(comParam c);
+void G9(comParam c);
+void Q13(comParam c);
+void Q14(comParam c);
+void FAIL(comParam c);
+
+void (*p[61]) (comParam c);
+
+
 
 void setup() {
+  for(int i=0;i<61;i++){
+    p[i] = FAIL;
+  }
+  p[10] = G1;
+  p[12] = G92;
+  p[13] = M104;
+  p[14] = M109;
+  p[15] = M140;
+  p[16] = M190;
+  p[17] = Q10;
+  p[18] = Q11;
+  p[19] = Q12;
+  p[21] = Q20;
+  p[22] = Q21;
+  p[23] = Q30;
+  p[24] = M114;
+  p[50] = G9;
+  p[51] = Q13;
+  p[52] = Q14;
+
   soll_T_Bed = 0;
   soll_T = 0;
 
@@ -308,7 +291,6 @@ void setup() {
   //cb_init(&cbRawCommands, 3, sizeof(comParam));
   cb_init(&cbCommands, 15, sizeof(comParam));
   
-  setState(GCodeStop);
   Serial.println("RESTART Arduino compleated");
 
   setMotorsENA(true);
@@ -631,18 +613,6 @@ void usToTimer(stepParam* myStep, double us) {
   //  Serial.print(" ticks:");
   //  Serial.println(myStep->ticks);
 }
-comParam getCommandFromLine(char* newLine){
-  comParam newCommand;
-  newCommand.com = ComandParser(newLine);
-  if (newCommand.com == G9) {
-    Serial.println("find G9 ");
-  } else {
-    LineParser(newLine, &newCommand);
-    //Serial.print("values: ");
-    //Serial.println(newLine);
-  }
-  return newCommand;
-}
 int calcPreRunPointer() {
   char *newLine;
   comParam nextCommand;
@@ -661,7 +631,7 @@ int calcPreRunPointer() {
   if(cbCommands.count < 10){
     requestNextCommands();
   }
-  processComandLine(newCommand,false);
+  processComandLine(newCommand);
   return 0;
 }
 void calcNextPos(comParam *newCommand){
@@ -670,90 +640,120 @@ void calcNextPos(comParam *newCommand){
   calcSpeedForAches(gesDif,&prePos, &nextPrePos);
   //calcAccForAches(gesDif,&prePos, &nextPrePos);
 }
-void processComandLine(comParam newCommand,bool doNow) {
-  if (newCommand.com == G1) {
-    if (newCommand.useF) {
-      if (Vmax < newCommand.F)newCommand.F = Vmax;
-      if (Vmin > newCommand.F)newCommand.F = Vmin;
-    }
-    if (newCommand.useF && newCommand.F != nextPrePos.Speed) {
-      Serial.print("G1 F");
-      Serial.println(newCommand.F);
-    }
-    calcNextPos(&newCommand);
-  } else if (newCommand.com == G9) { //stop movement
-    Serial.println("G9");
-    StopMove();
-    sendDeviceStatus();
-  } else if (newCommand.com == G92) { //set pos
-    //Serial.println("G92");
-    setPrePos(&newCommand);
-    setNextPrePos(&newCommand);
-    addCommand(&newCommand,doNow);
-    sendDeviceStatus();
-  } else if (newCommand.com == M104 || //set temperature
-             newCommand.com == M140) {
-    Serial.println("M144");
-    addCommand(&newCommand,doNow);
-  } else if (newCommand.com == M114) {
-    Serial.println("M114");
-    sendDeviceStatus();
-  } else if (newCommand.com == M109 || //set temperature
-             newCommand.com == M190) {
-    Serial.println("M199");
-    addCommand(&newCommand,doNow);
-  } else if (newCommand.com == Q10) { //max Accelaration//acc- max- min- speed
-    Serial.println("Q10");
-    double help;
-    double fila = -1;
-    applayValues(&newCommand, &BmMax, &Vmin, &Vmax, &help, &fila, &help);
-    if (fila != -1)Eachse.steps_pmm = fila;
-    
-    //send endswitch status (may a get seperat command)
-    Xachse.ESstate = 0;//trigger send of all endswitches
-    Yachse.ESstate = 0;
-    Zachse.ESstate = 0;
-    setUseES(true);
-    checkEndswitches();
-    setUseES(false);
-
-    Serial.print("Q10 X");
-    Serial.print(BmMax);
-    Serial.print(" Y");
-    Serial.print(Vmin);
-    Serial.print(" Z");
-    Serial.print(Vmax);
-    Serial.print(" E");
-    Serial.print(-1);
-    Serial.print(" S");
-    Serial.println(Eachse.steps_pmm);
-  } else if (newCommand.com == Q11) {
-    setUseES(newCommand.X);
-  } else if (newCommand.com == Q12) {
-    setMotorsENA(newCommand.X);
-  } else if (newCommand.com == Q20) { //max speed//bitwertNTC widerstandNTC widerstand1   for hotend
-    Serial.println("Q20");
-    bitwertNTC = newCommand.X;
-    widerstandNTC = newCommand.Y;
-    widerstand1 = newCommand.Z;
-  } else if (newCommand.com == Q21) { //min speed//P I D ON for hotend
-    Serial.println("Q21");
-    KP = newCommand.X;
-    KI = newCommand.Y;
-    KD = newCommand.Z;
-    if (newCommand.E < 0.5) {
-      myPID.SetTunings(KP, KI, KD, P_ON_E);
-    } else {
-      myPID.SetTunings(KP, KI, KD, P_ON_M);
-    }
-  } else if (newCommand.com == Q30) { //min speed//bitwertNTC widerstandNTC widerstand1   for bed
-    Serial.println("Q30");
-    bitwertNTC_Bed = newCommand.X;
-    widerstandNTC_Bed = newCommand.Y;
-    widerstand1_Bed = newCommand.Z;
-  } else {
-    Serial.println("ERROR: unknown GCode");
+void FAIL(comParam c){
+  Serial.println("ERROR: unknown gCode FAIL");
+}
+void G1(comParam c){
+  //Serial.println("G1");
+  if (c.useF) {
+    if (Vmax < c.F)c.F = Vmax;
+    if (Vmin > c.F)c.F = Vmin;
   }
+  if (c.useF && c.F != nextPrePos.Speed) {
+    Serial.print("G1 F");
+    Serial.println(c.F);
+  }
+  calcNextPos(&c);
+}
+void G92(comParam c){
+  Serial.println("G92");
+  setPrePos(&c);
+  setNextPrePos(&c);
+  addCommand(&c);
+  sendDeviceStatus();
+}
+void M104(comParam c){
+  //Serial.println("M104");
+  addCommand(&c);
+}
+void M109(comParam c){
+  //Serial.println("M109");
+  addCommand(&c);
+}
+void M140(comParam c){
+  //Serial.println("M140");
+  addCommand(&c);
+}
+void M190(comParam c){
+  //Serial.println("M190");
+  addCommand(&c);
+}
+void Q10(comParam c){
+  //Serial.println("Q10");
+  double help;
+  double fila = -1;
+  applayValues(&c, &BmMax, &Vmin, &Vmax, &help, &fila, &help);
+  if (fila != -1)Eachse.steps_pmm = fila;
+   
+  //send endswitch status (may a get seperat command)
+  Xachse.ESstate = 0;//trigger send of all endswitches
+  Yachse.ESstate = 0;
+  Zachse.ESstate = 0;
+  setUseES(true);
+  checkEndswitches();
+  setUseES(false);
+
+  Serial.print("Q10 X");
+  Serial.print(BmMax);
+  Serial.print(" Y");
+  Serial.print(Vmin);
+  Serial.print(" Z");
+  Serial.print(Vmax);
+  Serial.print(" E");
+  Serial.print(-1);
+  Serial.print(" S");
+  Serial.println(Eachse.steps_pmm);
+}
+void Q11(comParam c){
+  setUseES(c.X);
+}
+void Q12(comParam c){
+  setMotorsENA(c.X);
+}
+void Q20(comParam c){
+  //Serial.println("Q20");
+  bitwertNTC = c.X;
+  widerstandNTC = c.Y;
+  widerstand1 = c.Z;
+}
+void Q21(comParam c){
+  //Serial.println("Q21");
+  KP = c.X;
+  KI = c.Y;
+  KD = c.Z;
+  if (c.E < 0.5) {
+    myPID.SetTunings(KP, KI, KD, P_ON_E);
+  } else {
+    myPID.SetTunings(KP, KI, KD, P_ON_M);
+  }
+}
+void Q30(comParam c){
+  //Serial.println("Q30");
+  bitwertNTC_Bed = c.X;
+  widerstandNTC_Bed = c.Y;
+  widerstand1_Bed = c.Z;
+}
+void M114(comParam c){
+  //Serial.println("M114");
+  sendDeviceStatus();
+}
+void G9(comParam c){
+  Serial.println("G9");
+  StopMove();
+  sendDeviceStatus();
+}
+void Q13(comParam c){
+  Serial.println("not implamented");
+}
+void Q14(comParam c){
+  Serial.println("not implamented");
+}
+void processComandLine(comParam c) {
+  if(c.com >= 10 && c.com <= 60){
+    (p[c.com])(c);
+    return;
+  }
+  Serial.println("ERROR: fail wrong comand range");
 }
 void setUseES(bool newES){
     useES = newES;
@@ -912,14 +912,6 @@ comParam getRealPos(){
   newPos.E = float(Eachse.act_step) / float(Eachse.steps_pmm);
   return newPos;
 }
-void setState(eGCodeState newState) {
-  state = newState;
-  Serial.print("newState ");
-  Serial.println(state);
-}
-eGCodeState getState() {
-  return state;
-}
 void checkEndswitches() {
   if (useES) {
     //Serial.println("check es");
@@ -948,108 +940,6 @@ void handleES(StepMotorBig* mot, char* msg) {
     Serial.print(msg);
     Serial.println(mot->ESstate);
   }
-}
-int checkSerial() {
-  if(SR_CheckForLine() != 0) {
-    char buffer[128];
-    size_t recLen = cobsDecode(reciveBuf,reciveWindex, buffer);
-    reciveWindex = 0;
-
-    //check the length of the pac
-    if(recLen-1 != int(buffer[0])){
-      //error handling
-      Serial.println("resend");
-      return 0;
-    }
-
-    //check the checksumm of the package
-    char checksumm = 0;
-    for(int i = 1;i<recLen-2;i++){
-      checksumm += buffer[i];
-    }
-    if(checksumm != buffer[recLen-2]){
-      //error handling
-      Serial.println("resend");
-      return 0;
-    }
-
-    //pass all checks send package acknolage
-    Serial.println("rec");//answer to stop the timeout
-    //Serial.println("successfully");
-
-    //read command
-    //read values
-    comParam recCom = parseValuesFromBinar(recLen,buffer);
-    memset(&reciveBuf[0], 0, sizeof(reciveBuf));
-
-    //sofort comands list
-    if(recCom.com == 11){//G9
-      Serial.println("find and process G9");
-      processComandLine(recCom,false);
-      return 0;
-    }
-    if(recCom.com == 20){//Q13
-      setWaitForHeat(false);
-      return 0;
-    }
-    if(recCom.com == 25){//Q14
-      cb_clear(&cbCommands);
-      StopMove();
-      sendDeviceStatus();
-      return 0;
-    }
-
-    if(cbCommands.count < cbCommands.capacity){
-      cb_push_back(&cbCommands,&recCom);
-      if(cbCommands.count < 10){
-        requestNextCommands();
-      }
-    }else{
-      Serial.println("error: buffer overrun");
-    }
-  }
-}
-comParam parseValuesFromBinar(int bufLen,char* buffer){
-  comParam newParam;
-  float f;
-  newParam.useX = false;
-  newParam.useY = false;
-  newParam.useZ = false;
-  newParam.useE = false;
-  newParam.useF = false;
-  newParam.useS = false;
-  newParam.com = buffer[2];
-  for(int i = 2;i+4 < bufLen-2;i+=5){
-    char b[] = {buffer[i+1], buffer[i+2], buffer[i+3], buffer[i+4]};
-    memcpy(&f, &b, sizeof(f));
-    switch (buffer[i]) {
-      case 1://'X':
-        newParam.X = f;
-        newParam.useX = true;
-        break;
-      case 2://'Y':
-        newParam.Y = f;
-        newParam.useY = true;
-        break;
-      case 3://'Z':
-        newParam.Z = f;
-        newParam.useZ = true;
-        break;
-      case 4://'E':
-        newParam.E = f;
-        newParam.useE = true;
-        break;
-      case 5://'S':
-        newParam.S = f;
-        newParam.useS = true;
-        break;
-      case 6://'F':
-        newParam.F = f;
-        newParam.useF = true;
-        break;
-    }
-  }
-  return newParam;
 }
 /** COBS encode data to buffer
 	@param data Pointer to input data to encode
@@ -1112,6 +1002,114 @@ size_t cobsDecode(const uint8_t *buffer, size_t length, void *data)
 
 	return (size_t)(decode - (uint8_t *)data);
 }
+int checkSerial() {
+  if(SR_CheckForLine() != 0) {
+    char buffer[128];
+    size_t recLen = cobsDecode(reciveBuf,reciveWindex, buffer);
+    reciveWindex = 0;
+
+    //check the length of the pac
+    if(recLen-1 != int(buffer[0])){
+      //error handling
+      Serial.println("resend");
+      return 0;
+    }
+
+    //check the checksumm of the package
+    char checksumm = 0;
+    for(int i = 1;i<recLen-2;i++){
+      checksumm += buffer[i];
+    }
+    if(checksumm != buffer[recLen-2]){
+      //error handling
+      Serial.println("resend");
+      return 0;
+    }
+
+    //pass all checks send package acknolage
+    Serial.println("rec");//answer to stop the timeout
+    //Serial.println("successfully");
+
+    //read command
+    //read values
+    comParam recCom = parseValuesFromBinar(recLen,buffer);
+    memset(&reciveBuf[0], 0, sizeof(reciveBuf));
+
+    //Serial.print("com:");//answer to stop the timeout
+    //Serial.println(int(recCom.com));
+
+    //sofort comands list
+    if(recCom.com == 50){//G9
+      Serial.println("find and process G9");
+      StopMove();
+      sendDeviceStatus();
+      return 0;
+    }
+    if(recCom.com == 51){//Q13
+      setWaitForHeat(false);
+      return 0;
+    }
+    if(recCom.com == 52){//Q14
+      cb_clear(&cbCommands);
+      StopMove();
+      sendDeviceStatus();
+      return 0;
+    }
+
+    if(cbCommands.count < cbCommands.capacity){
+      cb_push_back(&cbCommands,&recCom);
+      if(cbCommands.count < 10){
+        requestNextCommands();
+      }
+    }else{
+      Serial.println("error: buffer overrun");
+    }
+  }
+}
+comParam parseValuesFromBinar(int bufLen,char* buffer){
+  comParam newParam;
+  float f;
+  newParam.useX = false;
+  newParam.useY = false;
+  newParam.useZ = false;
+  newParam.useE = false;
+  newParam.useF = false;
+  newParam.useS = false;
+  newParam.com = buffer[1];
+  //Serial.print("Com:");
+  //Serial.println(int(newParam.com));
+  for(int i = 2;i+4 < bufLen-2;i+=5){
+    char b[] = {buffer[i+1], buffer[i+2], buffer[i+3], buffer[i+4]};
+    memcpy(&f, &b, sizeof(f));
+    switch (buffer[i]) {
+      case 1://'X':
+        newParam.X = f;
+        newParam.useX = true;
+        break;
+      case 2://'Y':
+        newParam.Y = f;
+        newParam.useY = true;
+        break;
+      case 3://'Z':
+        newParam.Z = f;
+        newParam.useZ = true;
+        break;
+      case 4://'E':
+        newParam.E = f;
+        newParam.useE = true;
+        break;
+      case 5://'S':
+        newParam.S = f;
+        newParam.useS = true;
+        break;
+      case 6://'F':
+        newParam.F = f;
+        newParam.useF = true;
+        break;
+    }
+  }
+  return newParam;
+}
 void requestNextCommands(){
   Serial.print("request ");
   Serial.println(10 - cbCommands.count);
@@ -1131,10 +1129,10 @@ int SR_CheckForLine() {
   return 0;
 }
 ISR (TIMER5_OVF_vect) { // Timer1 ISR
+  cli();
   stepParam nextStep;
   comParam nextCommand;
   if (cb_pop_front(&cbSteps, &nextStep) == -1) {
-    if(!waitForHeat && getState()==GCodeRun)Serial.println("Buffer was empty");
     startTimer(0);    
   } else {
     if(nextStep.achse == X) {
@@ -1166,27 +1164,24 @@ ISR (TIMER5_OVF_vect) { // Timer1 ISR
       TCNT5 = nextStep.ticks + (16.0 / (double)nextStep.preScale) * 40;
     }
   }
+  sei();
 }
-void addCommand(comParam* newCommand,bool doNow) {
-  if(doNow){
-    performCommand(newCommand);
-  }else{
-    stepParam newStep;
-    comParam* newCom = malloc(sizeof(comParam));
-    memcpy(newCom, newCommand, sizeof(comParam));
-    newStep.com = newCom;
-    newStep.achse = C;
-    newStep.preScale = 1;
-    cb_push_back(&cbSteps, &newStep);
-  }
+void addCommand(comParam* newCommand) {
+  stepParam newStep;
+  void* newCom = malloc(sizeof(comParam));
+  memcpy(newCom, newCommand, sizeof(comParam));
+  newStep.com = (comParam*)newCom;
+  newStep.achse = C;
+  newStep.preScale = 1;
+  cb_push_back(&cbSteps, &newStep);
 }
 void performStep(StepMotorBig *mot, bool dir, eAchse achse) {
-  if (dir && useES && mot->pinPlus != 0) {
+  if ( dir && mot->pinPlus != 0) {
     if (digitalRead(mot->pinPlus) == HIGH) {
       StopAchse(achse);
       return;
     }
-  } else if (!dir && useES && mot->pinNull != 0) {
+  } else if (useES && !dir && mot->pinNull != 0) {
     if (digitalRead(mot->pinNull) == HIGH) {
       StopAchse(achse);
       return;
@@ -1206,30 +1201,30 @@ void performStep(StepMotorBig *mot, bool dir, eAchse achse) {
 }
 void performCommand(comParam* newCommand) {
   switch (newCommand->com) {
-    case G92:
+    case 12://G92
       setRealPose(newCommand);
       //sendDeviceStatus();
       break;
-    case M104:
+    case 13:
       soll_T = newCommand->S;
       Serial.print("M104 S");
       Serial.println(soll_T);
       sendTemperature();
       break;
-    case M140:
+    case 15:
       soll_T_Bed = newCommand->S;
       Serial.print("M140 S");
       Serial.println(soll_T_Bed);
       sendTemperature();
       break;
-    case M109:
+    case 14:
       soll_T = newCommand->S;
       Serial.print("M109 S");
       Serial.println(soll_T);
       setWaitForHeat(true);
       sendTemperature();
       break;
-    case M190:
+    case 16:
       soll_T_Bed = newCommand->S;
       Serial.print("M190 S");
       Serial.println(soll_T_Bed);
@@ -1281,99 +1276,6 @@ void startTimer(int prescale) {
       break;
   }
   setBit(&TIMSK5, (1 << TOIE5));
-}
-eComandName ComandParser(char* command_line) {
-  //look for a G-Code Comand in Line
-  char wort[10];
-  int command_length;
-  char* command_end = strchr(command_line, ' ');
-  if (command_end == 0 && sizeof(command_line) != 0)
-    command_length = sizeof(command_line)+1;
-  else
-    command_length = command_end - command_line;
-  strncpy(wort, command_line, command_length);
-  wort[command_length] = '\0';
-  //Serial.println(wort);
-  for (int i = 0; i < sizeof(lComandList) / sizeof(lComandList[0]); i++)
-  {
-    if (strcmp(lComandList[i].cName, wort) == 0)
-    {
-      //Serial.print("ComandParser: find ");
-      //Serial.println(lComandList[i].cName);
-      return lComandList[i].eIndent;
-    }
-  }
-  //Serial.println("ComandParser: find no comand");
-  return FAIL;
-}
-int LineParser(char* command_line, comParam *newParam) {
-  //cheack for values in the G-Code Line
-  char trennzeichen[] = " ";
-  char *wort;
-  char worker[128];
-
-  strcpy(worker, command_line);
-  newParam->useX = false;
-  newParam->useY = false;
-  newParam->useZ = false;
-  newParam->useE = false;
-  newParam->useF = false;
-  newParam->useS = false;
-
-  wort = strtok(worker, trennzeichen);
-  while (wort != NULL) {
-    switch (wort[0]) {
-      case 'X':
-        wort++;
-        newParam->X = atof(wort);
-        newParam->useX = true;
-        //Xachse.ESstate = 0;
-        break;
-      case 'Y':
-        wort++;
-        newParam->Y = atof(wort);
-        newParam->useY = true;
-        //Yachse.ESstate = 0;
-        break;
-      case 'Z':
-        wort++;
-        newParam->Z = atof(wort);
-        newParam->useZ = true;
-        //Zachse.ESstate = 0;
-        break;
-      case 'E':
-        wort++;
-        newParam->E = atof(wort);
-        newParam->useE = true;
-        break;
-      case 'S':
-        wort++;
-        newParam->S = atof(wort);
-        newParam->useS = true;
-        break;
-      case 'F':
-        wort++;
-        newParam->F = atof(wort) / 60;
-        newParam->useF = true;
-        break;
-    }
-    wort = strtok(NULL, trennzeichen);
-  }
-  return 0;
-}
-char* getName(char* command_line) {
-  char trennzeichen[] = " ";
-  char *wort;
-  wort = strtok(command_line, trennzeichen);
-  //Serial.println(wort);
-  wort = strtok(NULL, trennzeichen);
-  //Serial.println(wort);
-  if (wort != NULL) {
-    //Serial.print("getName ");
-    //Serial.println(wort);
-    return wort;
-  }
-  return NULL;
 }
 void cb_init(circular_buffer *cb, size_t capacity, size_t sz) {
   cb->buffer = malloc(capacity * sz);

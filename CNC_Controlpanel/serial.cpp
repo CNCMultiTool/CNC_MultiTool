@@ -106,13 +106,13 @@ void Serial::serial_send(QByteArray mes)
         emit show_serial(false);
         return;
     }
-    emit Log("send: "+mes.toHex());
+    //emit Log("send: "+mes.toHex());
     m_lastsend = mes;
     addChecksum(&mes);
-    emit Log("send checksum: "+mes.toHex());
+    //emit Log("send checksum: "+mes.toHex());
     QByteArray encodedData;
     CobsEncode(mes, encodedData);
-    emit Log("send enc: "+encodedData.toHex());
+    //emit Log("send enc: "+encodedData.toHex());
     m_serial.write(encodedData);
     m_serial.waitForBytesWritten(m_send_timeout);
     sendAnswerTimeout->start(m_send_reciveTimeout);
