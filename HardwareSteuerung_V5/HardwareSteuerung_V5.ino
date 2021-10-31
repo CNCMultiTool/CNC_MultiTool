@@ -1382,7 +1382,6 @@ void sendValue(char* name,float value){
   sendByteArray(toSend,strlen(name)+5);
 }
 void sendCommand(char com,float* x,float* y,float* z,float* e,float* s,float* f){
-  Serial.println("sendCommand");
   char toSend[64];
   toSend[0] = com;
   int wrtIdx = 1;
@@ -1440,7 +1439,6 @@ void sendByteArray(char* toSend,int len){
     buffer[i+1] = toSend[i];
   }
   len++;//add length byte to length
-  Serial.println(checksumm);
   buffer[len] = checksumm;//add checksumm to the end
   len++;
   size_t recLen = cobsEncode(buffer,len, encBuffer);

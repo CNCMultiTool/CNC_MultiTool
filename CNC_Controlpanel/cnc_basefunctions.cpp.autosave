@@ -305,8 +305,8 @@ void  cnc_basefunctions::processLine(const QString &s)
 }
 
 void cnc_basefunctions::processBytes(const QByteArray &in){
-    emit Log("length "+QString::number(in[0])+" "+QString::number(in.length()));
-    char length = in[0];
+    //emit Log("length "+QString::number(in[0])+" "+QString::number(in.length()));
+    //char length = in[0];
     char command = in[1];
 //    for(int i=0;i< in.length();i++) {
 //        emit Log("get:"+QString::number(i)+":"+QString::number(in.at(i))+":"+QString(in.at(i)));
