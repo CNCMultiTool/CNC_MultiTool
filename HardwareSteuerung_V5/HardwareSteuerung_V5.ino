@@ -275,7 +275,7 @@ void setup() {
   cb_init(&cbSteps, 100, sizeof(stepParam));
   cb_init(&cbCommands, 15, sizeof(comParam));
   
-  Serial.println("RESTART Arduino compleated");
+  sendDText("RESTART Arduino compleated");
 
   setMotorsENA(true);
   setUseES(true);
@@ -289,17 +289,21 @@ void loop() {
   }
 }
 void setMotorsENA(bool b) {
-  Serial.print("motorState ");
-  Serial.println(b);
+  //Serial.print("motorState ");
+  //Serial.println(b);
   digitalWrite(Xachse.pinENA, !b);
   digitalWrite(Yachse.pinENA, !b);
   digitalWrite(Zachse.pinENA, !b);
   digitalWrite(Eachse.pinENA, !b);
+  float bF = b;
+  sendCommand(19,&bF,nullptr,nullptr,nullptr,nullptr,nullptr);
 }
 void setUseES(bool newES){
     useES = newES;
-    Serial.print("useES ");
-    Serial.println(useES);
+    float es = useES;
+    sendCommand(18,&es,nullptr,nullptr,nullptr,nullptr,nullptr);
+    //Serial.print("useES ");
+    //Serial.println(useES);
 }
 void calculateSteps() {
   //get travel dist
@@ -403,6 +407,8 @@ void calculateSteps() {
           EmakeStep = true;
         }
       }else{
+        sendEText("ERROR: get falls step to plan calculateSteps");
+        /*
         Serial.println("ERROR: get falls step to plan calculateSteps");
         Serial.print(" X ");
         Serial.print(nextPrePos.Xs);
@@ -420,6 +426,7 @@ void calculateSteps() {
         Serial.print(nextPrePos.Es);
         Serial.print(" -> ");
         Serial.print(prePos.Es);
+        */
       }
   }
   if(XmakeStep)prePos.Xp = float(prePos.Xs) / float(Xachse.steps_pmm);
@@ -490,7 +497,8 @@ unsigned long getSmalestValue(unsigned long x, unsigned long y, unsigned long z,
       smalest =  e;
       break;
     default:
-      Serial.println("ERROR: getSmalestValue no match");
+      //Serial.println("ERROR: getSmalestValue no match");
+      sendEText("ERROR: getSmalestValue no match");
       return -1; 
   }  
   return smalest;
@@ -524,7 +532,7 @@ bool prePointerOnPos() {
 void createStep(eAchse achse, long *sollStep, long *istStep, double us) {
   stepParam newStep;
   newStep.achse = achse;
-  if(us<0)Serial.println("ERROR: in createStep us < 0");
+  if(us<0)sendEText("ERROR: in createStep us < 0");
   usToTimer(&newStep, abs(us));
   if (*sollStep > *istStep) {
     newStep.dir = 1;
@@ -535,7 +543,7 @@ void createStep(eAchse achse, long *sollStep, long *istStep, double us) {
     cb_push_back(&cbSteps, &newStep);
     *istStep -= 1;
   }else{
-    Serial.println("ERROR: steps equal soll:");
+    sendEText("ERROR: steps equal soll:");
   }
 }
 float getTravelDist(MovePos* pPos, MovePos* nPrePos) {
@@ -577,7 +585,7 @@ void usToTimer(stepParam* myStep, double us) {
   if (us < 0) {
     myStep->ticks = T_MAX;
     myStep->preScale = 1;//4096us
-    Serial.println("ERROR: us smaler 0");
+    sendEText("ERROR: us smaler 0");
   } else if (us < 4095) {
     myStep->ticks =  T_MAX - (usF / 1.0) * us;
     myStep->preScale = 1;//4096us
@@ -633,7 +641,7 @@ void calcNextPos(comParam *newCommand){
   //calcAccForAches(gesDif,&prePos, &nextPrePos);
 }
 void FAIL(comParam c){
-  Serial.println("ERROR: unknown gCode FAIL");
+  sendEText("ERROR: unknown gCode FAIL");
 }
 void G1(comParam c){
   //Serial.println("G1");
@@ -642,13 +650,14 @@ void G1(comParam c){
     if (Vmin > c.F)c.F = Vmin;
   }
   if (c.useF && c.F != nextPrePos.Speed) {
-    Serial.print("G1 F");
-    Serial.println(c.F);
+    //Serial.print("G1 F");
+    //Serial.println(c.F);
+    sendDeviceStatus();
   }
   calcNextPos(&c);
 }
 void G92(comParam c){
-  Serial.println("G92");
+  sendDText("G92");
   setPrePos(&c);
   setNextPrePos(&c);
   addCommand(&c);
@@ -684,7 +693,12 @@ void Q10(comParam c){
   setUseES(true);
   checkEndswitches();
   setUseES(false);
-
+  float bMax = BmMax;
+  float vMin = Vmin;
+  float vMax = Vmax;
+  float e = Eachse.steps_pmm;
+  sendCommand(17,&bMax,&vMin,&vMax,nullptr,&e,nullptr);
+  /*
   Serial.print("Q10 X");
   Serial.print(BmMax);
   Serial.print(" Y");
@@ -695,6 +709,7 @@ void Q10(comParam c){
   Serial.print(-1);
   Serial.print(" S");
   Serial.println(Eachse.steps_pmm);
+  */
 }
 void Q11(comParam c){
   setUseES(c.X);
@@ -730,24 +745,32 @@ void M114(comParam c){
   sendDeviceStatus();
 }
 void G9(comParam c){
-  Serial.println("G9");
+  sendDText("G9");
   StopMove();
   sendDeviceStatus();
 }
 void Q13(comParam c){
-  Serial.println("not implamented");
+  sendDText("not implamented");
 }
 void Q14(comParam c){
-  Serial.println("not implamented");
+  sendDText("not implamented");
 }
 void processComandLine(comParam c) {
   if(c.com >= 10 && c.com <= 60){
     (p[c.com])(c);
     return;
   }
-  Serial.println("ERROR: fail wrong comand range");
+  sendEText("ERROR: fail wrong comand range");
 }
 void sendDeviceStatus() {
+  float x,y,z,e,s;
+  x = Xachse.act_step / double(Xachse.steps_pmm);
+  y = Yachse.act_step / double(Yachse.steps_pmm);
+  z = Zachse.act_step / double(Zachse.steps_pmm);
+  e = Eachse.act_step / double(Eachse.steps_pmm);
+  s = prePos.Speed;
+  sendCommand(24,&x,&y,&z,&e,&s,nullptr);
+  /*
   Serial.print("M114 X");
   Serial.print(Xachse.act_step / double(Xachse.steps_pmm));
   Serial.print(" Y");
@@ -790,7 +813,7 @@ void sendDeviceStatus() {
   Serial.print(nextPrePos.Ep);
   Serial.print(" , ");
   Serial.println(nextPrePos.Es / double(Eachse.steps_pmm));
-  
+  */
 }
 void StopMove() {
   StopAchse(X);
@@ -908,24 +931,30 @@ void checkEndswitches() {
   }
 }
 void handleES(StepMotorBig* mot, char* msg) {
+  float xes = Xachse.ESstate;
+  float yes = Yachse.ESstate;
+  float zes = Zachse.ESstate;
   if (digitalRead(mot->pinNull) == HIGH && mot->ESstate != -1){
     mot->ESstate = -1;
+    sendCommand(12,&xes,&yes,&zes,nullptr,nullptr,nullptr);
     //StopAchse(mot->achse);
-    Serial.print("ES ");
-    Serial.print(msg);
-    Serial.println(mot->ESstate);
+    //Serial.print("ES ");
+    //Serial.print(msg);
+    //Serial.println(mot->ESstate);
   }else if(digitalRead(mot->pinPlus) == HIGH && mot->ESstate != 1){
     mot->ESstate = 1;
+    sendCommand(12,&xes,&yes,&zes,nullptr,nullptr,nullptr);
     //StopAchse(mot->achse);
-    Serial.print("ES ");
-    Serial.print(msg);
-    Serial.println(mot->ESstate);
+    //Serial.print("ES ");
+    //Serial.print(msg);
+    //Serial.println(mot->ESstate);
   }
   if (digitalRead(mot->pinNull) == LOW && digitalRead(mot->pinPlus) == LOW && mot->ESstate != 0){
     mot->ESstate = 0;
-    Serial.print("ES ");
-    Serial.print(msg);
-    Serial.println(mot->ESstate);
+    sendCommand(12,&xes,&yes,&zes,nullptr,nullptr,nullptr);
+    //Serial.print("ES ");
+    //Serial.print(msg);
+    //Serial.println(mot->ESstate);
   }
 }
 int checkSerial() {
@@ -937,7 +966,8 @@ int checkSerial() {
     //check the length of the pac
     if(recLen-1 != int(buffer[0])){
       //error handling
-      Serial.println("resend");
+      sendCommand(31,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr);
+      //Serial.println("resend");
       return 0;
     }
 
@@ -948,12 +978,14 @@ int checkSerial() {
     }
     if(checksumm != buffer[recLen-2]){
       //error handling
-      Serial.println("resend");
+      sendCommand(31,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr);
+      //Serial.println("resend");
       return 0;
     }
 
     //pass all checks send package acknolage
-    Serial.println("rec");//answer to stop the timeout
+    sendCommand(32,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr);
+    //Serial.println("rec");//answer to stop the timeout
     //Serial.println("successfully");
 
     //read command
@@ -966,18 +998,9 @@ int checkSerial() {
 
     //sofort comands list
     if(recCom.com == 50){//G9
-      Serial.println("find and process G9");
-      float a = 12.34;
-      float b = 12.45;
-      float c = 67.34;
-      float d = 12.89;
-      float e = 26.34;
-      float f = 12.04;
-      sendCommand(24,&a,&b,&c,&d,&e,&f);
-      //sendValue("valueName",123.456);
-      //sendString("test 123");
-      //StopMove();
-      //sendDeviceStatus();
+      sendDText("find and process G9");
+      StopMove();
+      sendDeviceStatus();
       return 0;
     }
     if(recCom.com == 51){//Q13
@@ -997,7 +1020,7 @@ int checkSerial() {
         requestNextCommands();
       }
     }else{
-      Serial.println("error: buffer overrun");
+      sendEText("error: buffer overrun");
     }
   }
 }
@@ -1046,8 +1069,10 @@ comParam parseValuesFromBinar(int bufLen,char* buffer){
   return newParam;
 }
 void requestNextCommands(){
-  Serial.print("request ");
-  Serial.println(10 - cbCommands.count);
+  float rec = 10 - cbCommands.count;
+  sendCommand(30,&rec,nullptr,nullptr,nullptr,nullptr,nullptr);
+  //Serial.print("request ");
+  //Serial.println(10 - cbCommands.count);
 }
 int SR_CheckForLine() {
   char caLine[1];
@@ -1082,12 +1107,15 @@ ISR (TIMER5_OVF_vect) { // Timer1 ISR
         performCommand(nextStep.com);
         delete nextStep.com;
     }else{
+      sendEText("ERROR: unknown step achse:");
+      /*
       Serial.print("ERROR: unknown step achse:");
       Serial.print(nextStep.achse);
       Serial.print(" ticks:");
       Serial.print(nextStep.ticks);
       Serial.print(" preScale:");
       Serial.print(nextStep.preScale);
+      */
     }
 
     startTimer(nextStep.preScale);
@@ -1142,32 +1170,24 @@ void performCommand(comParam* newCommand) {
       break;
     case 13:
       soll_T = newCommand->S;
-      Serial.print("M104 S");
-      Serial.println(soll_T);
       sendTemperature();
       break;
     case 15:
       soll_T_Bed = newCommand->S;
-      Serial.print("M140 S");
-      Serial.println(soll_T_Bed);
       sendTemperature();
       break;
     case 14:
       soll_T = newCommand->S;
-      Serial.print("M109 S");
-      Serial.println(soll_T);
       setWaitForHeat(true);
       sendTemperature();
       break;
     case 16:
       soll_T_Bed = newCommand->S;
-      Serial.print("M190 S");
-      Serial.println(soll_T_Bed);
       sendTemperature();
       break;
     default:
-      Serial.print("ERROR: unknown Command ");
-      Serial.println(newCommand->com);
+      sendEValue("ERROR: unknown Command ",float(newCommand->com));
+      //Serial.println(newCommand->com);
   }
 }
 void startTimer(int prescale) {
@@ -1203,8 +1223,8 @@ void startTimer(int prescale) {
       setBit(&TCCR5B, (1 << CS12));
       break;
     default:
-      Serial.print("ERROR: unknown prescalar:");
-      Serial.println(prescale);
+      sendEValue("ERROR: unknown prescalar:",float(prescale));
+      //Serial.println(prescale);
       setBit(&TCCR5B, (1 << CS10));
       resetBit(&TCCR5B, (1 << CS11));
       resetBit(&TCCR5B, (1 << CS12));
@@ -1231,7 +1251,7 @@ void cb_clear(circular_buffer *cb) {
   cb->count = 0;
   cb->head = cb->buffer;
   cb->tail = cb->buffer;
-  Serial.println("WARNING deleting buffer");
+  sendDText("WARNING deleting buffer");
 }
 int cb_push_back(circular_buffer *cb, const void *item) {
   while (cb->count == cb->capacity) {
@@ -1280,8 +1300,10 @@ void doStdTasks() {
 }
 void setWaitForHeat(bool h) {
   waitForHeat = h;
-  Serial.print("waitForHeat ");
-  Serial.println(waitForHeat);
+  float heat = h;
+  //Serial.print("waitForHeat ");
+  //Serial.println(waitForHeat);
+  sendCommand(20,&heat,nullptr,nullptr,nullptr,nullptr,nullptr);
 }
 void TempControle() {
   if (myPID.Compute())
@@ -1321,6 +1343,7 @@ void TempControle() {
     }
 }
 void sendTemperature(){
+  /*
   Serial.print("Temp THsoll");
   Serial.print(soll_T);
   Serial.print(" THist");
@@ -1329,6 +1352,13 @@ void sendTemperature(){
   Serial.print(soll_T_Bed);
   Serial.print(" TBist");
   Serial.println(T_Bed);
+  */
+  float x,y,z,e,s;
+  x = soll_T;
+  y = T;
+  z = soll_T_Bed;
+  e = T_Bed;
+  sendCommand(11,&x,&y,&z,&e,nullptr,nullptr);
 }
 void setBit(volatile uint8_t* B, unsigned char b) {
   //set a bit in a Byte
@@ -1355,17 +1385,43 @@ void applayValues(comParam* newValue, double *X, double *Y, double *Z, double *E
   if (newValue->useS)
     *S = newValue->S;
 }
-void sendString(char* text){
+void sendDText(char* text){
   char toSend[64];
-  toSend[0] = 50;
+  toSend[0] = 61;
   for(int i=0;i<strlen(text);i++){
     toSend[i+1] = text[i];
   }
   sendByteArray(toSend,strlen(toSend));
 }
-void sendValue(char* name,float value){
+void sendDValue(char* name,float value){
   char toSend[64];
-  toSend[0] = 51;
+  toSend[0] = 62;
+  for(int i=0;i<strlen(name);i++){
+    toSend[i+1] = name[i];
+  }
+  union FB{
+    float f;
+    char b[4];
+  }u;
+  u.f = value;
+  int len = strlen(name)+1;
+  toSend[len] = u.b[0];
+  toSend[len+1] = u.b[1];
+  toSend[len+2] = u.b[2];
+  toSend[len+3] = u.b[3];
+  sendByteArray(toSend,strlen(name)+5);
+}
+void sendEText(char* text){
+  char toSend[64];
+  toSend[0] = 63;
+  for(int i=0;i<strlen(text);i++){
+    toSend[i+1] = text[i];
+  }
+  sendByteArray(toSend,strlen(toSend));
+}
+void sendEValue(char* name,float value){
+  char toSend[64];
+  toSend[0] = 64;
   for(int i=0;i<strlen(name);i++){
     toSend[i+1] = name[i];
   }

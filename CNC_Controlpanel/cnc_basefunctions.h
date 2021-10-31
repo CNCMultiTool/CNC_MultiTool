@@ -62,7 +62,7 @@ private:
     void getBedSoll(const QByteArray &in);
     void getBedIst(const QByteArray &in);
     void getMoveParams(const QByteArray &in);
-    void getEsState(const QByteArray &in);
+    void getEsUse(const QByteArray &in);
     void getMotorState(const QByteArray &in);
     void getHeaterState(const QByteArray &in);
 signals:
