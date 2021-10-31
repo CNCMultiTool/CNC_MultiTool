@@ -77,23 +77,24 @@ void Serial::serial_read()
             if(command_end>0){
                 emit Log("find 0 in recive stuff at "+QString::number(command_end));
                 QByteArray helper = m_recivedBytes;
-                QByteArray mes = helper.remove(command_end+1,helper.length());
+                QByteArray mes;
+                CobsDecode(helper.remove(command_end+1,helper.length()), mes);
                 m_recivedBytes.remove(0,command_end+1);
 
-//                for(int i=0;i< mes.length();i++) {
-//                    emit Log("get:"+QString::number(i)+":"+QString::number(mes.at(i))+":"+QString(mes.at(i)));
-//                }
+                for(int i=0;i< mes.length();i++) {
+                    emit Log("get:"+QString::number(i)+":"+QString::number(mes.at(i))+":"+QString(mes.at(i)));
+                }
 
                 unsigned char checksum = 0;
-                for(int i=1;i< mes.length()-2;i++) {
+                for(int i=0;i< mes.length()-1;i++) {
                     checksum += mes.at(i);
                 }
 
-                unsigned char new_cs = mes.at(mes.length()-2);
+                unsigned char new_cs = mes.at(mes.length()-1);
                 if(checksum == new_cs)
                 {
                     emit Log("chesumm ok cs "+QString::number(checksum)+" rec "+QString::number(new_cs));
-                    QByteArray data = mes.remove(0,2).remove(mes.length()-2,2);
+                    QByteArray data = mes.remove(mes.length()-1,1);
                     emit Log("data:"+QString(data)+":");
                     emit recBytes(data);
                 }
