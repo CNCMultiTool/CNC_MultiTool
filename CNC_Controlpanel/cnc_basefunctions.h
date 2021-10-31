@@ -56,6 +56,15 @@ private:
     void requestNextLine(const QByteArray &in);
     void getCurrentPos(const QByteArray &in);
     void getEndswitches(const QByteArray &in);
+    void getTemperaturs(const QByteArray &in);
+    void getHotendSoll(const QByteArray &in);
+    void getHotendIst(const QByteArray &in);
+    void getBedSoll(const QByteArray &in);
+    void getBedIst(const QByteArray &in);
+    void getMoveParams(const QByteArray &in);
+    void getEsState(const QByteArray &in);
+    void getMotorState(const QByteArray &in);
+    void getHeaterState(const QByteArray &in);
 signals:
     void Log(const QString &s);
     void errorLog(const QString &s);

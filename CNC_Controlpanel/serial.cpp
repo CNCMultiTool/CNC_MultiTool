@@ -80,7 +80,6 @@ void Serial::serial_read()
                 QByteArray mes;
                 CobsDecode(helper.remove(command_end+1,helper.length()), mes);
                 m_recivedBytes.remove(0,command_end+1);
-
 //                for(int i=0;i< mes.length();i++) {
 //                    emit Log("get:"+QString::number(i)+":"+QString::number(mes.at(i))+":"+QString(mes.at(i)));
 //                }

@@ -187,7 +187,6 @@ void  cnc_basefunctions::processLine(const QString &s)
             }
         }
     }
-
     if(s.indexOf("M114 X")!=-1)
     {
         int start = s.indexOf("M114 X")+6;
@@ -301,7 +300,6 @@ void  cnc_basefunctions::processLine(const QString &s)
         int end = s.length();
         emit show_waitForHeat(s.mid(start,end-start).toFloat());
     }
-
 }
 
 void cnc_basefunctions::requestNextLine(const QByteArray &in){
@@ -335,8 +333,29 @@ void cnc_basefunctions::getCurrentPos(const QByteArray &in){
         if(in[i] == 4){
             m_database->m_act_E = BtoF(in.mid(i+1,4));
         }
+        if(in[i] == 5){
+            m_database->m_act_speed = BtoF(in.mid(i+1,4));
+        }
     }
+    emit show_speed();
     emit show_position();
+}
+void cnc_basefunctions::getTemperaturs(const QByteArray &in){
+    for(int i=2;i<in.length();i+=5){
+        if(in[i] == 1){
+            m_database->m_soll_temperatur = BtoF(in.mid(i+1,4));
+        }
+        if(in[i] == 2){
+            m_database->m_act_temperatur = BtoF(in.mid(i+1,4));
+        }
+        if(in[i] == 3){
+            m_database->m_soll_bedTemp = BtoF(in.mid(i+1,4));
+        }
+        if(in[i] == 4){
+            m_database->m_act_bedTemp = BtoF(in.mid(i+1,4));
+        }
+    }
+    emit show_temp();
 }
 void cnc_basefunctions::getEndswitches(const QByteArray &in){
     for(int i=2;i<in.length();i+=5){
@@ -352,34 +371,147 @@ void cnc_basefunctions::getEndswitches(const QByteArray &in){
     }
     emit show_endswitch();
 }
+void cnc_basefunctions::getHotendSoll(const QByteArray &in){
+    for(int i=2;i<in.length();i+=5){
+        if(in[i] == 5){
+            m_database->m_soll_temperatur = BtoF(in.mid(i+1,4));
+        }
+    }
+    emit show_act_temp();
+}
+void cnc_basefunctions::getHotendIst(const QByteArray &in){
+    for(int i=2;i<in.length();i+=5){
+        if(in[i] == 5){
+            m_database->m_act_temperatur = BtoF(in.mid(i+1,4));
+        }
+    }
+    emit show_act_temp();
+}
+void cnc_basefunctions::getBedSoll(const QByteArray &in){
+    for(int i=2;i<in.length();i+=5){
+        if(in[i] == 5){
+            m_database->m_soll_bedTemp = BtoF(in.mid(i+1,4));
+        }
+    }
+    emit show_act_temp();
+}
+void cnc_basefunctions::getBedIst(const QByteArray &in){
+    for(int i=2;i<in.length();i+=5){
+        if(in[i] == 5){
+            m_database->m_act_bedTemp = BtoF(in.mid(i+1,4));
+        }
+    }
+    emit show_act_temp();
+}
+void cnc_basefunctions::getMoveParams(const QByteArray &in){
+    for(int i=2;i<in.length();i+=5){
+        if(in[i] == 1){
+            m_database->m_max_acc = BtoF(in.mid(i+1,4));
+        }
+        if(in[i] == 2){
+            m_database->m_min_speed = BtoF(in.mid(i+1,4));
+        }
+        if(in[i] == 3){
+            m_database->m_max_speed = BtoF(in.mid(i+1,4));
+        }
+        if(in[i] == 4){
+            m_database->m_threshAngle = BtoF(in.mid(i+1,4));
+        }
+        if(in[i] == 5){
+            m_database->m_act_filament = BtoF(in.mid(i+1,4));
+        }
+    }
+    emit show_acc_speed_fila();
+}
+void cnc_basefunctions::getEsState(const QByteArray &in){
+    for(int i=2;i<in.length();i+=5){
+        if(in[i] == 1){
+            m_database->setUseEs(BtoF(in.mid(i+1,4)));
+        }
+    }
+}
+void cnc_basefunctions::getMotorState(const QByteArray &in){
+    for(int i=2;i<in.length();i+=5){
+        if(in[i] == 1){
+            m_database->setMotorUse(BtoF(in.mid(i+1,4)));
+        }
+    }
+}
+void cnc_basefunctions::getHeaterState(const QByteArray &in){
+    for(int i=2;i<in.length();i+=5){
+        if(in[i] == 1){
+            emit show_waitForHeat(BtoF(in.mid(i+1,4)));
+        }
+    }
+}
 void cnc_basefunctions::processBytes(const QByteArray &in){
     //emit Log("length "+QString::number(in[0])+" "+QString::number(in.length()));
     //char length = in[0];
     //    for(int i=0;i< in.length();i++) {
     //        emit Log("get:"+QString::number(i)+":"+QString::number(in.at(i))+":"+QString(in.at(i)));
     //    }
+    union FB{
+        float f;
+        char b[4];
+    }u;
     char command = in[1];
 
     switch(command){
     case 10:
         requestNextLine(in);
         break;
+    case 11:
+        getTemperaturs(in);
+        break;
+    case 12:
+        getEndswitches(in);
+        break;
+    case 13://M104
+        getHotendSoll(in);
+        break;
+    case 14://M109 wait to reach temp
+        getHotendIst(in);
+        break;
+    case 15://M140
+        getBedSoll(in);
+        break;
+    case 16://M190 wait to reach temp
+        getBedIst(in);
+        break;
+    case 17://Q10 move params
+        getMoveParams(in);
+        break;
+    case 18:
+        getEsState(in);
+        break;
+    case 19:
+        getMotorState(in);
+        break;
+    case 20:
+        getHeaterState(in);
+        break;
     case 24:
         getCurrentPos(in);
         break;
-    case 50:
+    case 61://debug text
         emit Log("DebugMSG:"+in.mid(2));
         break;
-    case 51:
-        union FB{
-          float f;
-          char b[4];
-        }u;
+    case 62://debug value
         u.b[0] = in[in.length()-4];
         u.b[1] = in[in.length()-3];
         u.b[2] = in[in.length()-2];
         u.b[3] = in[in.length()-1];
         emit Log("Value:"+in.mid(2,in.length()-6)+" = "+QString::number(u.f));
+        break;
+    case 63://error text
+        emit errorLog("DebugMSG:"+in.mid(2));
+        break;
+    case 64://error value
+        u.b[0] = in[in.length()-4];
+        u.b[1] = in[in.length()-3];
+        u.b[2] = in[in.length()-2];
+        u.b[3] = in[in.length()-1];
+        emit errorLog("Value:"+in.mid(2,in.length()-6)+" = "+QString::number(u.f));
         break;
     case 25:
         emit Log("get com pos");
@@ -412,7 +544,11 @@ void cnc_basefunctions::processBytes(const QByteArray &in){
         }
         emit show_position();
         break;
+    default:
+        emit errorLog("Find no matching command");
     }
+
+
 
 }
 
