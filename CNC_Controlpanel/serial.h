@@ -42,11 +42,13 @@ private:
     QByteArray m_lastsend = "";
 
     void CobsEncode(const QByteArray &rawData, QByteArray &encodedData);
+    void CobsDecode(const QByteArray &encodedData, QByteArray &decodedData);
 signals:
     void Log(const QString &s);
     void errorLog(const QString &s);
     void show_serial(bool b);
     void recLine(const QString &s);
+    void recBytes(const QByteArray &data);
 
 public slots:
     void serial_send(QByteArray mes);

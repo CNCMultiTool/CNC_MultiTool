@@ -304,4 +304,14 @@ void  cnc_basefunctions::processLine(const QString &s)
 
 }
 
+void cnc_basefunctions::processBytes(const QByteArray &s){
+    emit Log("in function "+QString(s));
+    emit Log("length "+QString::number(s[0])+" "+s[0]);
+    emit Log("command "+QString::number(s[1])+" "+s[1]);
+    emit Log("2 stelle "+QString::number(s[2])+" "+s[2]);
+    emit Log("3 stelle "+QString::number(s[3])+" "+s[3]);
+    emit Log("4 stelle "+QString::number(s[4])+" "+s[4]);
+    emit Log("5 stelle "+QString::number(s[5])+" "+s[5]);
+}
+
 

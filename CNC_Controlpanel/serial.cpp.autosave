@@ -70,36 +70,34 @@ void Serial::serial_read()
     {
         m_recivedBytes += m_serial.readAll();
         m_serial.waitForReadyRead(m_recive_timeout);
+        
+        int command_end = m_recivedBytes.indexOf(char(0x00));
+        if(command_end>0){
+            emit Log("find 0 in recive stuff at "+QString::number(command_end));
+            QByteArray helper = m_recivedBytes;
+            QByteArray mes = helper.remove(command_end+1,helper.length());
+            m_recivedBytes.remove(0,command_end+1);
 
+            unsigned char checksum = 0;
+            for(int i=2;i< mes.length()-2;i++) {
+               checksum += mes.at(i);
+            }
 
-            command_end = m_recivedBytes.indexOf(char(0x00));
-            if(command_end>0){
-                emit Log("find 0 in recive stuff at "+QString::number(command_end));
-                QByteArray helper = m_recivedBytes;
-                QByteArray mes = helper.remove(command_end+1,helper.length());
-                m_recivedBytes.remove(0,command_end+1);
-
-
-                unsigned char checksum = 0;
-                for(int i=2;i< mes.length()-2;i++) {
-                    checksum += mes.at(i);
-                }
-
-                unsigned char new_cs = mes.at(mes.length()-2);
-                if(checksum == new_cs)
-                {
-                    emit Log("chesumm ok cs "+QString::number(checksum)+" rec "+QString::number(new_cs));
-                    QByteArray data = mes.remove(0,2).remove(mes.length()-2,2);
-                    emit Log("data:"+QString(data)+":");
-                    emit recBytes(data);
-                }
-                else
-                {
-                    emit Log("chesumm fail cs "+QString::number(checksum)+" rec "+QString::number(new_cs));
-                }
-
+            unsigned char new_cs = mes.at(mes.length()-2);
+            if(checksum == new_cs)
+            {
+               emit Log("chesumm ok cs "+QString::number(checksum)+" rec "+QString::number(new_cs));
+               QByteArray data = mes.remove(0,2).remove(mes.length()-2,2);
+               emit Log("data:"+QString(data)+":");
+               emit recBytes(data);
+            }
+            else
+            {
+               emit Log("chesumm fail cs "+QString::number(checksum)+" rec "+QString::number(new_cs));
+            }
+            return;
         }
-        int command_end = m_recivedBytes.indexOf("\n");
+        command_end = m_recivedBytes.indexOf("\n");
         if(command_end>0){
             QByteArray helper = m_recivedBytes;
             QString Line = QString(helper.remove(command_end+1,helper.length()));

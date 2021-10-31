@@ -93,14 +93,11 @@ StepMotorBig Eachse;
 circular_buffer cbSteps;
 circular_buffer cbCommands;
 
-comParam nextMove;
-
 MovePos prePos;
 MovePos nextPrePos;
 
 char reciveBuf[128];
 unsigned int reciveWindex = 0;
-char GCodeFileName[32];
 
 //temp controle
 unsigned long time_now = micros();
@@ -148,9 +145,6 @@ double Vmin = 10;
 double Vmax = 20;
 bool waitForHeat = false;
 
-unsigned long TlastX;
-unsigned long TlastY;
-
 void G1(comParam c);
 void G92(comParam c);
 void M104(comParam c);
@@ -170,8 +164,6 @@ void Q14(comParam c);
 void FAIL(comParam c);
 
 void (*p[61]) (comParam c);
-
-
 
 void setup() {
   for(int i=0;i<61;i++){
@@ -252,10 +244,16 @@ void setup() {
   pinMode(Eachse.pinDIR, OUTPUT);
   pinMode(Eachse.pinPUL, OUTPUT);
 
+  /*
   pinMode(22, OUTPUT);
   pinMode(24, OUTPUT);
   pinMode(26, OUTPUT);
   pinMode(28, OUTPUT);
+  digitalWrite(22, LOW);
+  digitalWrite(24, LOW);
+  digitalWrite(26, LOW);
+  digitalWrite(28, LOW);
+  */
 
   pinMode(temprelai, OUTPUT);
   pinMode(temprelai_Bed, OUTPUT);
@@ -265,20 +263,7 @@ void setup() {
   myPID.SetSampleTime(WindowSize);
   myPID.SetMode(AUTOMATIC);
 
-  digitalWrite(22, LOW);
-  digitalWrite(24, LOW);
-  digitalWrite(26, LOW);
-  digitalWrite(28, LOW);
-
   Serial.begin(115200);
-
-  //  for(int i =0;i<5;i++){
-  //  if(SD.begin(53))break;
-  //  Serial.println("ERROR: SD initialization failed!");
-  //  delay(1000);
-  //}
-
-  //Serial.println("SD initializ");
 
   //init the timer5
   TCNT5 = 0;
@@ -288,12 +273,12 @@ void setup() {
   setBit(&TIMSK5, (1 << TOIE5));//enable timer overflow
 
   cb_init(&cbSteps, 100, sizeof(stepParam));
-  //cb_init(&cbRawCommands, 3, sizeof(comParam));
   cb_init(&cbCommands, 15, sizeof(comParam));
   
   Serial.println("RESTART Arduino compleated");
 
   setMotorsENA(true);
+  setUseES(true);
 }
 void loop() {
   //startTimer(1);//start intterrupt timer
@@ -301,7 +286,6 @@ void loop() {
     time_now = micros();
     doStdTasks();
     calcPreRunPointer();
-    calculateSteps();
   }
 }
 void setMotorsENA(bool b) {
@@ -311,6 +295,11 @@ void setMotorsENA(bool b) {
   digitalWrite(Yachse.pinENA, !b);
   digitalWrite(Zachse.pinENA, !b);
   digitalWrite(Eachse.pinENA, !b);
+}
+void setUseES(bool newES){
+    useES = newES;
+    Serial.print("useES ");
+    Serial.println(useES);
 }
 void calculateSteps() {
   //get travel dist
@@ -631,7 +620,10 @@ int calcPreRunPointer() {
   if(cbCommands.count < 10){
     requestNextCommands();
   }
+
   processComandLine(newCommand);
+
+  calculateSteps();
   return 0;
 }
 void calcNextPos(comParam *newCommand){
@@ -754,11 +746,6 @@ void processComandLine(comParam c) {
     return;
   }
   Serial.println("ERROR: fail wrong comand range");
-}
-void setUseES(bool newES){
-    useES = newES;
-    Serial.print("useES ");
-    Serial.println(useES);
 }
 void sendDeviceStatus() {
   Serial.print("M114 X");
@@ -941,67 +928,6 @@ void handleES(StepMotorBig* mot, char* msg) {
     Serial.println(mot->ESstate);
   }
 }
-/** COBS encode data to buffer
-	@param data Pointer to input data to encode
-	@param length Number of bytes to encode
-	@param buffer Pointer to encoded output buffer
-	@return Encoded buffer length in bytes
-	@note Does not output delimiter byte
-*/
-size_t cobsEncode(const void *data, size_t length, uint8_t *buffer)
-{
-	assert(data && buffer);
-
-	uint8_t *encode = buffer; // Encoded byte pointer
-	uint8_t *codep = encode++; // Output code pointer
-	uint8_t code = 1; // Code value
-
-	for (const uint8_t *byte = (const uint8_t *)data; length--; ++byte)
-	{
-		if (*byte) // Byte not zero, write it
-			*encode++ = *byte, ++code;
-
-		if (!*byte || code == 0xff) // Input is zero or block completed, restart
-		{
-			*codep = code, code = 1, codep = encode;
-			if (!*byte || length)
-				++encode;
-		}
-	}
-	*codep = code; // Write final code value
-
-	return (size_t)(encode - buffer);
-}
-/** COBS decode data from buffer
-	@param buffer Pointer to encoded input bytes
-	@param length Number of bytes to decode
-	@param data Pointer to decoded output data
-	@return Number of bytes successfully decoded
-	@note Stops decoding if delimiter byte is found
-*/
-size_t cobsDecode(const uint8_t *buffer, size_t length, void *data)
-{
-	assert(buffer && data);
-
-	const uint8_t *byte = buffer; // Encoded input byte pointer
-	uint8_t *decode = (uint8_t *)data; // Decoded output byte pointer
-
-	for (uint8_t code = 0xff, block = 0; byte < buffer + length; --block)
-	{
-		if (block) // Decode block byte
-			*decode++ = *byte++;
-		else
-		{
-			if (code != 0xff) // Encoded zero, write it
-				*decode++ = 0;
-			block = code = *byte++; // Next block length
-			if (!code) // Delimiter code found
-				break;
-		}
-	}
-
-	return (size_t)(decode - (uint8_t *)data);
-}
 int checkSerial() {
   if(SR_CheckForLine() != 0) {
     char buffer[128];
@@ -1041,8 +967,10 @@ int checkSerial() {
     //sofort comands list
     if(recCom.com == 50){//G9
       Serial.println("find and process G9");
-      StopMove();
-      sendDeviceStatus();
+      //sendValue("valueName",123.456);
+      sendString("test 123");
+      //StopMove();
+      //sendDeviceStatus();
       return 0;
     }
     if(recCom.com == 51){//Q13
@@ -1419,4 +1347,103 @@ void applayValues(comParam* newValue, double *X, double *Y, double *Z, double *E
     *F = newValue->F;
   if (newValue->useS)
     *S = newValue->S;
+}
+void sendString(char* text){
+  char* toSend;
+  //toSend[0] = char(0x50);
+  //for(int i=0;i<strlen(text);i++){
+  //  toSend[i] = text[i];
+  //}
+  sendByteArray(text,strlen(text));
+}
+void sendValue(char* name,float value){
+  char* toSend;
+  //toSend[0] = char(0x51);
+  for(int i=0;i<strlen(name);i++){
+    toSend[i] = name[i];
+  }
+  union FB{
+    float f;
+    char b[4];
+  }u;
+  u.f = value;
+  int len = strlen(toSend);
+  toSend[len] = u.b[0];
+  toSend[len+1] = u.b[1];
+  toSend[len+2] = u.b[2];
+  toSend[len+3] = u.b[3];
+  sendByteArray(toSend,strlen(toSend));
+}
+void sendByteArray(char* toSend,int len){
+  char buffer[128];
+  unsigned char checksumm = 0;
+  for(int i = 0;i<len;i++){
+    checksumm += toSend[i];
+    buffer[i+2] = toSend[i];
+  }
+  buffer[1] = len; //bytes to send +checksumm and length
+  buffer[len+2] = checksumm;
+  buffer[len+3] = 0x00;
+  size_t recLen = cobsEncode(reciveBuf,reciveWindex, buffer);
+
+  Serial.write(buffer,len+4);
+}
+/** COBS encode data to buffer
+	@param data Pointer to input data to encode
+	@param length Number of bytes to encode
+	@param buffer Pointer to encoded output buffer
+	@return Encoded buffer length in bytes
+	@note Does not output delimiter byte
+*/
+size_t cobsEncode(const void *data, size_t length, uint8_t *buffer){
+	assert(data && buffer);
+
+	uint8_t *encode = buffer; // Encoded byte pointer
+	uint8_t *codep = encode++; // Output code pointer
+	uint8_t code = 1; // Code value
+
+	for (const uint8_t *byte = (const uint8_t *)data; length--; ++byte)
+	{
+		if (*byte) // Byte not zero, write it
+			*encode++ = *byte, ++code;
+
+		if (!*byte || code == 0xff) // Input is zero or block completed, restart
+		{
+			*codep = code, code = 1, codep = encode;
+			if (!*byte || length)
+				++encode;
+		}
+	}
+	*codep = code; // Write final code value
+
+	return (size_t)(encode - buffer);
+}
+/** COBS decode data from buffer
+	@param buffer Pointer to encoded input bytes
+	@param length Number of bytes to decode
+	@param data Pointer to decoded output data
+	@return Number of bytes successfully decoded
+	@note Stops decoding if delimiter byte is found
+*/
+size_t cobsDecode(const uint8_t *buffer, size_t length, void *data){
+	assert(buffer && data);
+
+	const uint8_t *byte = buffer; // Encoded input byte pointer
+	uint8_t *decode = (uint8_t *)data; // Decoded output byte pointer
+
+	for (uint8_t code = 0xff, block = 0; byte < buffer + length; --block)
+	{
+		if (block) // Decode block byte
+			*decode++ = *byte++;
+		else
+		{
+			if (code != 0xff) // Encoded zero, write it
+				*decode++ = 0;
+			block = code = *byte++; // Next block length
+			if (!code) // Delimiter code found
+				break;
+		}
+	}
+
+	return (size_t)(decode - (uint8_t *)data);
 }

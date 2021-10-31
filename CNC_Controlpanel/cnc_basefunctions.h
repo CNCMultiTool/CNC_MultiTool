@@ -67,6 +67,7 @@ signals:
 
 private slots:
     void processLine(const QString &s);
+    void processBytes(const QByteArray &s);
 
 
 };

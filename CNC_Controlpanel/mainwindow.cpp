@@ -57,6 +57,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_serial,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
     connect(m_serial,SIGNAL(show_serial(bool)),this,SLOT(show_serial(bool)));
     connect(m_serial,SIGNAL(recLine(QString)),m_basefunctions,SLOT(processLine(QString)));
+    connect(m_serial,SIGNAL(recBytes(QByteArray)),m_basefunctions,SLOT(processBytes(QByteArray)));
 
     connect(ui->actionValues,SIGNAL(triggered()),this,SLOT(calibratenValueBox()));
     connect(ui->actionPID,SIGNAL(triggered()),this,SLOT(PID_ValueBox()));
@@ -220,12 +221,15 @@ void MainWindow::on_pushButtonSerialConnect_clicked()
         Log("open serial");
         m_database->m_SerialPortName = ui->comboBoxComPortName->currentText();
         m_serial->serial_open();
+        //m_basefunctions->send_stop();
+        //on_pushButtonInit_clicked();
+        //m_basefunctions->send_stop();
     }
 }
 
 void MainWindow::on_pushButtonInit_clicked()
 {
-    m_basefunctions->send_stop();
+
     m_basefunctions->send_NTC_values_bed(&m_database->m_bValue_Bed,&m_database->m_R_nen_Bed,&m_database->m_R_vor_Bed);
     m_basefunctions->send_NTC_values(&m_database->m_bValue,&m_database->m_R_nen,&m_database->m_R_vor);
     m_basefunctions->send_PID_values(&m_database->m_KP,&m_database->m_KI,&m_database->m_KD,&m_database->m_POn);
@@ -233,10 +237,6 @@ void MainWindow::on_pushButtonInit_clicked()
     m_basefunctions->send_Speed(m_database->m_soll_speed);
     m_basefunctions->send_BedTemp(0);
     m_basefunctions->send_HotendTemp(0);
-    m_basefunctions->send_setESuse(1);
-    m_basefunctions->send_setMotorUse(1);
-    m_basefunctions->send_stop();
-
 }
 
 void MainWindow::on_pushButtonMoveXPos_pressed()
