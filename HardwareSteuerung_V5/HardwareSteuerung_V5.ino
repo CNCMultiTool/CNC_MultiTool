@@ -1349,7 +1349,7 @@ void applayValues(comParam* newValue, double *X, double *Y, double *Z, double *E
     *S = newValue->S;
 }
 void sendString(char* text){
-  char* toSend;
+  //char* toSend;
   //toSend[0] = char(0x50);
   //for(int i=0;i<strlen(text);i++){
   //  toSend[i] = text[i];
@@ -1375,18 +1375,22 @@ void sendValue(char* name,float value){
   sendByteArray(toSend,strlen(toSend));
 }
 void sendByteArray(char* toSend,int len){
-  char buffer[128];
-  unsigned char checksumm = 0;
+  char buffer[64];
+  char encBuffer[64];
+  
+  unsigned char checksumm = len;
+  buffer[0] = len; //bytes to send +checksumm and length
   for(int i = 0;i<len;i++){
     checksumm += toSend[i];
-    buffer[i+2] = toSend[i];
+    buffer[i+1] = toSend[i];
   }
-  buffer[1] = len; //bytes to send +checksumm and length
-  buffer[len+2] = checksumm;
-  buffer[len+3] = 0x00;
-  size_t recLen = cobsEncode(reciveBuf,reciveWindex, buffer);
-
-  Serial.write(buffer,len+4);
+  len++;//add length byte to length
+  Serial.println(checksumm);
+  buffer[len] = checksumm;//add checksumm to the end
+  len++;
+  size_t recLen = cobsEncode(buffer,len, encBuffer);
+  encBuffer[recLen] = 0x00;
+  Serial.write(encBuffer,recLen+1);
 }
 /** COBS encode data to buffer
 	@param data Pointer to input data to encode

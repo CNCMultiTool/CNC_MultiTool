@@ -70,8 +70,9 @@ void Serial::serial_read()
     {
         m_recivedBytes += m_serial.readAll();
         m_serial.waitForReadyRead(m_recive_timeout);
-
-
+        int command_end = m_recivedBytes.indexOf("\n");
+        if(command_end == -1)
+        {
             command_end = m_recivedBytes.indexOf(char(0x00));
             if(command_end>0){
                 emit Log("find 0 in recive stuff at "+QString::number(command_end));
@@ -79,9 +80,12 @@ void Serial::serial_read()
                 QByteArray mes = helper.remove(command_end+1,helper.length());
                 m_recivedBytes.remove(0,command_end+1);
 
+//                for(int i=0;i< mes.length();i++) {
+//                    emit Log("get:"+QString::number(i)+":"+QString::number(mes.at(i))+":"+QString(mes.at(i)));
+//                }
 
                 unsigned char checksum = 0;
-                for(int i=2;i< mes.length()-2;i++) {
+                for(int i=1;i< mes.length()-2;i++) {
                     checksum += mes.at(i);
                 }
 
@@ -97,9 +101,9 @@ void Serial::serial_read()
                 {
                     emit Log("chesumm fail cs "+QString::number(checksum)+" rec "+QString::number(new_cs));
                 }
-
+                command_end = -1;
+            }
         }
-        int command_end = m_recivedBytes.indexOf("\n");
         if(command_end>0){
             QByteArray helper = m_recivedBytes;
             QString Line = QString(helper.remove(command_end+1,helper.length()));
