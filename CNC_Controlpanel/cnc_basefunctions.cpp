@@ -304,14 +304,69 @@ void  cnc_basefunctions::processLine(const QString &s)
 
 }
 
+void cnc_basefunctions::requestNextLine(const QByteArray &in){
+    if(m_database->m_G_Code_State == 1){
+        int requests;
+        QByteArray newBA;
+        for(int i=2;i<in.length();i+=5){
+            if(in[i] == 1){
+                requests = BtoF(in.mid(i+1,4));
+            }
+        }
+        if(requests > 1){
+            for(int i = 0;i < 1; i++){
+                newBA = m_auto->GC_getNextLine();
+                emit serial_send(newBA);
+            }
+        }
+    }
+}
+void cnc_basefunctions::getCurrentPos(const QByteArray &in){
+    for(int i=2;i<in.length();i+=5){
+        if(in[i] == 1){
+            m_database->m_act_X = BtoF(in.mid(i+1,4));
+        }
+        if(in[i] == 2){
+            m_database->m_act_Y = BtoF(in.mid(i+1,4));
+        }
+        if(in[i] == 3){
+            m_database->m_act_Z = BtoF(in.mid(i+1,4));
+        }
+        if(in[i] == 4){
+            m_database->m_act_E = BtoF(in.mid(i+1,4));
+        }
+    }
+    emit show_position();
+}
+void cnc_basefunctions::getEndswitches(const QByteArray &in){
+    for(int i=2;i<in.length();i+=5){
+        if(in[i] == 1){
+            m_database->m_endswitch_X = BtoF(in.mid(i+1,4));
+        }
+        if(in[i] == 2){
+            m_database->m_endswitch_Y = BtoF(in.mid(i+1,4));
+        }
+        if(in[i] == 3){
+            m_database->m_endswitch_Z = BtoF(in.mid(i+1,4));
+        }
+    }
+    emit show_endswitch();
+}
 void cnc_basefunctions::processBytes(const QByteArray &in){
-    emit Log("length "+QString::number(in[0])+" "+QString::number(in.length()));
-    char length = in[0];
+    //emit Log("length "+QString::number(in[0])+" "+QString::number(in.length()));
+    //char length = in[0];
+    //    for(int i=0;i< in.length();i++) {
+    //        emit Log("get:"+QString::number(i)+":"+QString::number(in.at(i))+":"+QString(in.at(i)));
+    //    }
     char command = in[1];
-//    for(int i=0;i< in.length();i++) {
-//        emit Log("get:"+QString::number(i)+":"+QString::number(in.at(i))+":"+QString(in.at(i)));
-//    }
+
     switch(command){
+    case 10:
+        requestNextLine(in);
+        break;
+    case 24:
+        getCurrentPos(in);
+        break;
     case 50:
         emit Log("DebugMSG:"+in.mid(2));
         break;
@@ -326,24 +381,24 @@ void cnc_basefunctions::processBytes(const QByteArray &in){
         u.b[3] = in[in.length()-1];
         emit Log("Value:"+in.mid(2,in.length()-6)+" = "+QString::number(u.f));
         break;
-    case 24:
+    case 25:
         emit Log("get com pos");
         float x,y,z,e,s,f;
         for(int i=2;i<in.length();i+=5){
             if(in[i] == 1){
-                x = BtoF(in.mid(i+1,4));
+                m_database->m_act_X = BtoF(in.mid(i+1,4));
                 emit Log("X:"+QString::number(x));
             }
             if(in[i] == 2){
-                y = BtoF(in.mid(i+1,4));
+                m_database->m_act_Y = BtoF(in.mid(i+1,4));
                 emit Log("Y:"+QString::number(y));
             }
             if(in[i] == 3){
-                z = BtoF(in.mid(i+1,4));
+                m_database->m_act_Z = BtoF(in.mid(i+1,4));
                 emit Log("Z:"+QString::number(z));
             }
             if(in[i] == 4){
-                e = BtoF(in.mid(i+1,4));
+                m_database->m_act_E = BtoF(in.mid(i+1,4));
                 emit Log("E:"+QString::number(e));
             }
             if(in[i] == 5){
@@ -355,7 +410,7 @@ void cnc_basefunctions::processBytes(const QByteArray &in){
                 emit Log("F:"+QString::number(f));
             }
         }
-
+        emit show_position();
         break;
     }
 

@@ -53,6 +53,9 @@ private:
     //int m_read_counter;
 
     float BtoF(QByteArray a);
+    void requestNextLine(const QByteArray &in);
+    void getCurrentPos(const QByteArray &in);
+    void getEndswitches(const QByteArray &in);
 signals:
     void Log(const QString &s);
     void errorLog(const QString &s);
