@@ -304,30 +304,76 @@ void  cnc_basefunctions::processLine(const QString &s)
 
 }
 
-void cnc_basefunctions::processBytes(const QByteArray &s){
+void cnc_basefunctions::processBytes(const QByteArray &in){
 //    emit Log("in function "+QString(s));
-//    emit Log("length "+QString::number(s[0])+" "+s[0]);
+    emit Log("length "+QString::number(in[0])+" "+QString::number(in.length()));
 //    emit Log("command "+QString::number(s[1])+" "+s[1]);
-    char command = s[1];
-    for(int i=0;i< s.length();i++) {
-        emit Log("get:"+QString::number(i)+":"+QString::number(s.at(i))+":"+QString(s.at(i)));
+    char length = in[0];
+    char command = in[1];
+    for(int i=0;i< in.length();i++) {
+        emit Log("get:"+QString::number(i)+":"+QString::number(in.at(i))+":"+QString(in.at(i)));
     }
     switch(command){
     case 50:
-        emit Log("DebugMSG:"+s.mid(2));
+        emit Log("DebugMSG:"+in.mid(2));
         break;
     case 51:
         union FB{
           float f;
           char b[4];
         }u;
-        u.b[0] = s[s.length()-4];
-        u.b[1] = s[s.length()-3];
-        u.b[2] = s[s.length()-2];
-        u.b[3] = s[s.length()-1];
-        emit Log("Value:"+s.mid(2,s.length()-6)+" = "+QString::number(u.f));
+        u.b[0] = in[in.length()-4];
+        u.b[1] = in[in.length()-3];
+        u.b[2] = in[in.length()-2];
+        u.b[3] = in[in.length()-1];
+        emit Log("Value:"+in.mid(2,in.length()-6)+" = "+QString::number(u.f));
+        break;
+    case 24:
+        emit Log("get com pos");
+        float x,y,z,e,s,f;
+        for(int i=2;i<in.length();i+=5){
+            if(in[i] == 1){
+                x = BtoF(in.mid(i+1,4));
+                emit Log("X:"+QString::number(x));
+            }
+            if(in[i] == 2){
+                y = BtoF(in.mid(i+1,4));
+                emit Log("Y:"+QString::number(y));
+            }
+            if(in[i] == 3){
+                z = BtoF(in.mid(i+1,4));
+                emit Log("Z:"+QString::number(z));
+            }
+            if(in[i] == 4){
+                e = BtoF(in.mid(i+1,4));
+                emit Log("E:"+QString::number(e));
+            }
+            if(in[i] == 5){
+                s = BtoF(in.mid(i+1,4));
+                emit Log("S:"+QString::number(s));
+            }
+            if(in[i] == 6){
+                f = BtoF(in.mid(i+1,4));
+                emit Log("F:"+QString::number(f));
+            }
+        }
+
         break;
     }
+
 }
+
+float cnc_basefunctions::BtoF(QByteArray a){
+    union FB{
+      float f;
+      char b[4];
+    }u;
+    u.b[0] = a[0];
+    u.b[1] = a[1];
+    u.b[2] = a[2];
+    u.b[3] = a[3];
+    return u.f;
+}
+
 
 

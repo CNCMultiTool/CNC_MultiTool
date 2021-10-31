@@ -967,8 +967,15 @@ int checkSerial() {
     //sofort comands list
     if(recCom.com == 50){//G9
       Serial.println("find and process G9");
-      sendValue("valueName",123.456);
-      sendString("test 123");
+      float a = 12.34;
+      float b = 12.45;
+      float c = 67.34;
+      float d = 12.89;
+      float e = 26.34;
+      float f = 12.04;
+      sendCommand(24,&a,&b,&c,&d,&e,&f);
+      //sendValue("valueName",123.456);
+      //sendString("test 123");
       //StopMove();
       //sendDeviceStatus();
       return 0;
@@ -1373,6 +1380,54 @@ void sendValue(char* name,float value){
   toSend[len+2] = u.b[2];
   toSend[len+3] = u.b[3];
   sendByteArray(toSend,strlen(name)+5);
+}
+void sendCommand(char com,float* x,float* y,float* z,float* e,float* s,float* f){
+  Serial.println("sendCommand");
+  char toSend[64];
+  toSend[0] = com;
+  int wrtIdx = 1;
+  if(x != nullptr){
+    toSend[wrtIdx] = 1;//X
+    FtoA(x, wrtIdx+1, toSend);
+    wrtIdx += 5;
+  }
+  if(y != nullptr){
+    toSend[wrtIdx] = 2;//X
+    FtoA(y, wrtIdx+1, toSend);
+    wrtIdx += 5;
+  }
+  if(z != nullptr){
+    toSend[wrtIdx] = 3;//X
+    FtoA(z, wrtIdx+1, toSend);
+    wrtIdx += 5;
+  }
+  if(e != nullptr){
+    toSend[wrtIdx] = 4;//X
+    FtoA(e, wrtIdx+1, toSend);
+    wrtIdx += 5;
+  }
+  if(s != nullptr){
+    toSend[wrtIdx] = 5;//X
+    FtoA(s, wrtIdx+1, toSend);
+    wrtIdx += 5;
+  }
+  if(f != nullptr){
+    toSend[wrtIdx] = 6;//X
+    FtoA(f, wrtIdx+1, toSend);
+    wrtIdx += 5;
+  }
+  sendByteArray(toSend,wrtIdx);
+}
+void FtoA(float *value, int wrtIdx, char* buf){
+  union FB{
+    float f;
+    char b[4];
+  }u;
+  u.f = *value;
+  buf[wrtIdx] = u.b[0];
+  buf[wrtIdx+1] = u.b[1];
+  buf[wrtIdx+2] = u.b[2];
+  buf[wrtIdx+3] = u.b[3];
 }
 void sendByteArray(char* toSend,int len){
   char buffer[64];

@@ -52,6 +52,7 @@ private:
     //int m_send_counter;
     //int m_read_counter;
 
+    float BtoF(QByteArray a);
 signals:
     void Log(const QString &s);
     void errorLog(const QString &s);
