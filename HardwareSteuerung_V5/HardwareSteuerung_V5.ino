@@ -967,7 +967,7 @@ int checkSerial() {
     //sofort comands list
     if(recCom.com == 50){//G9
       Serial.println("find and process G9");
-      //sendValue("valueName",123.456);
+      sendValue("valueName",123.456);
       sendString("test 123");
       //StopMove();
       //sendDeviceStatus();
@@ -1349,30 +1349,30 @@ void applayValues(comParam* newValue, double *X, double *Y, double *Z, double *E
     *S = newValue->S;
 }
 void sendString(char* text){
-  //char* toSend;
-  //toSend[0] = char(0x50);
-  //for(int i=0;i<strlen(text);i++){
-  //  toSend[i] = text[i];
-  //}
-  sendByteArray(text,strlen(text));
+  char toSend[64];
+  toSend[0] = 50;
+  for(int i=0;i<strlen(text);i++){
+    toSend[i+1] = text[i];
+  }
+  sendByteArray(toSend,strlen(toSend));
 }
 void sendValue(char* name,float value){
-  char* toSend;
-  //toSend[0] = char(0x51);
+  char toSend[64];
+  toSend[0] = 51;
   for(int i=0;i<strlen(name);i++){
-    toSend[i] = name[i];
+    toSend[i+1] = name[i];
   }
   union FB{
     float f;
     char b[4];
   }u;
   u.f = value;
-  int len = strlen(toSend);
+  int len = strlen(name)+1;
   toSend[len] = u.b[0];
   toSend[len+1] = u.b[1];
   toSend[len+2] = u.b[2];
   toSend[len+3] = u.b[3];
-  sendByteArray(toSend,strlen(toSend));
+  sendByteArray(toSend,strlen(name)+5);
 }
 void sendByteArray(char* toSend,int len){
   char buffer[64];

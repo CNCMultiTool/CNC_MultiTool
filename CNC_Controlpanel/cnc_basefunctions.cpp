@@ -305,11 +305,28 @@ void  cnc_basefunctions::processLine(const QString &s)
 }
 
 void cnc_basefunctions::processBytes(const QByteArray &s){
-    emit Log("in function "+QString(s));
-    emit Log("length "+QString::number(s[0])+" "+s[0]);
-    emit Log("command "+QString::number(s[1])+" "+s[1]);
+//    emit Log("in function "+QString(s));
+//    emit Log("length "+QString::number(s[0])+" "+s[0]);
+//    emit Log("command "+QString::number(s[1])+" "+s[1]);
+    char command = s[1];
     for(int i=0;i< s.length();i++) {
         emit Log("get:"+QString::number(i)+":"+QString::number(s.at(i))+":"+QString(s.at(i)));
+    }
+    switch(command){
+    case 50:
+        emit Log("DebugMSG:"+s.mid(2));
+        break;
+    case 51:
+        union FB{
+          float f;
+          char b[4];
+        }u;
+        u.b[0] = s[s.length()-4];
+        u.b[1] = s[s.length()-3];
+        u.b[2] = s[s.length()-2];
+        u.b[3] = s[s.length()-1];
+        emit Log("Value:"+s.mid(2,s.length()-6)+" = "+QString::number(u.f));
+        break;
     }
 }
 
