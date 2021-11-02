@@ -121,6 +121,7 @@ void cnc_autofunctions::G_Code_Parser(QString newLine)
         }
         if(isCommand("G1",newLine))//normal move
         {
+            emit Log("Comment: "+newLine);
             lineInByteArray.append(10);//add command
             lineInByteArray.append(createValueArray(newLine));//add values
         }
@@ -293,6 +294,7 @@ QByteArray cnc_autofunctions::createValueArray(QString line)
         ba.append(reinterpret_cast<const char *>(&newFloat), sizeof (newFloat));
     }
     if(getValue("F",line,&newFloat)){
+        newFloat = newFloat/60;
         ba.append(char(6));
         ba.append(reinterpret_cast<const char *>(&newFloat), sizeof (newFloat));
     }

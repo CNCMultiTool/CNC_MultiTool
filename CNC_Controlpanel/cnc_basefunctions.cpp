@@ -337,7 +337,6 @@ void cnc_basefunctions::getCurrentPos(const QByteArray &in){
         }
         if(in[i] == 5){
             m_database->m_act_speed = BtoF(in.mid(i+1,4));
-            emit Log("m_act_speed:"+QString::number(m_database->m_act_speed));
         }
     }
     emit show_speed();
@@ -435,10 +434,10 @@ void cnc_basefunctions::getMoveParams(const QByteArray &in){
     emit show_acc_speed_fila();
 }
 void cnc_basefunctions::getEsUse(const QByteArray &in){
-    emit Log("getEsUse");
     for(int i=2;i<in.length();i+=5){
         if(in[i] == 1){
             m_database->setUseEs(BtoF(in.mid(i+1,4)));
+            emit Log("getEsUse:"+QString::number(BtoF(in.mid(i+1,4))));
         }
     }
 }

@@ -329,8 +329,8 @@ void MainWindow::on_pushButtonMaxSpeed_clicked()
 
 void MainWindow::on_pushButtonSpeed_clicked()
 {
-    float S = ui->doubleSpinBoxSpeed->value();
-    m_basefunctions->send_move(nullptr,nullptr,nullptr,nullptr,&S);
+    float F = ui->doubleSpinBoxSpeed->value();
+    m_basefunctions->send_move(nullptr,nullptr,nullptr,nullptr,&F);
 }
 
 void MainWindow::on_pushButtonMaxAcc_clicked()

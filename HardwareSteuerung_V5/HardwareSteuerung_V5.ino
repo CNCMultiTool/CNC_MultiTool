@@ -437,6 +437,7 @@ void calculateSteps() {
 void calcSpeedForAches(double gesDif,MovePos *startPos,MovePos *goalPos){
   if (Vmax < goalPos->Speed)goalPos->Speed = Vmax;
   if (Vmin > goalPos->Speed)goalPos->Speed = Vmin;
+  startPos->Speed = goalPos->Speed;
 
   if(startPos->Xs == goalPos->Xs)
     goalPos->Xv = 0;
@@ -649,12 +650,14 @@ void G1(comParam c){
     if (Vmax < c.F)c.F = Vmax;
     if (Vmin > c.F)c.F = Vmin;
   }
+  bool changeSpeed = false;
   if (c.useF && c.F != nextPrePos.Speed) {
-    //Serial.print("G1 F");
-    //Serial.println(c.F);
-    sendDeviceStatus();
+    changeSpeed = true;
   }
   calcNextPos(&c);
+  if(changeSpeed){
+    sendDeviceStatus();
+  }
 }
 void G92(comParam c){
   sendDText("G92");
@@ -877,8 +880,9 @@ void setNextPrePos(comParam* newPos) {
     nextPrePos.Es = nextPrePos.Ep * float(Eachse.steps_pmm);
     nextPrePos.useE = true;
   }
-  if (newPos->useF)
+  if (newPos->useF){
     nextPrePos.Speed = newPos->F;
+  }
 }
 void setPrePos(comParam* newPos) {
   if (newPos->useX){
@@ -897,8 +901,10 @@ void setPrePos(comParam* newPos) {
     prePos.Ep = newPos->E;
     prePos.Es = prePos.Ep * float(Eachse.steps_pmm);
   }
-  if (newPos->useF)
+  if (newPos->useF){
     prePos.Speed = newPos->F;
+  }
+    
 }
 void setRealPose(comParam* newPos) {
   if (newPos->useX)
@@ -992,9 +998,8 @@ int checkSerial() {
     //read values
     comParam recCom = parseValuesFromBinar(recLen,buffer);
     memset(&reciveBuf[0], 0, sizeof(reciveBuf));
-
-    //Serial.print("com:");//answer to stop the timeout
-    //Serial.println(int(recCom.com));
+    //sendDValue("com:",float(recCom.com));
+    //sendDValue("F:",float(recCom.F));
 
     //sofort comands list
     if(recCom.com == 50){//G9

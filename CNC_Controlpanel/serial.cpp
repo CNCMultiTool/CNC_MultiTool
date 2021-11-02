@@ -102,7 +102,7 @@ void Serial::serial_read()
                             serial_send(m_lastsend);
                         return;
                     }
-                    emit Log("chesumm ok cs "+QString::number(checksum)+" rec "+QString::number(new_cs));
+                    //emit Log("chesumm ok cs "+QString::number(checksum)+" rec "+QString::number(new_cs));
                     //cut off checksumm
                     QByteArray data = mes.remove(mes.length()-1,1);
                     //emit Log("data:"+QString(data)+":");
@@ -110,7 +110,7 @@ void Serial::serial_read()
                 }
                 else
                 {
-                    emit Log("chesumm fail cs "+QString::number(checksum)+" rec "+QString::number(new_cs));
+                    emit errorLog("chesumm fail cs "+QString::number(checksum)+" rec "+QString::number(new_cs));
                 }
                 command_end = -1;
             }
