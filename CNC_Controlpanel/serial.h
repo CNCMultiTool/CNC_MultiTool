@@ -29,7 +29,7 @@ public:
 
 private:
     int m_send_timeout = 10;
-    int m_send_reciveTimeout = 50;
+    int m_send_reciveTimeout = 100;
     int m_recive_timeout = 10;
 
     QSerialPort m_serial;

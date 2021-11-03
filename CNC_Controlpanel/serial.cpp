@@ -20,6 +20,7 @@ bool Serial::serial_open()
     m_serial.setDataBits(QSerialPort::Data8);
     m_serial.setStopBits(QSerialPort::TwoStop);
     m_serial.setBaudRate(QSerialPort::Baud115200);
+    m_serial.clear();
     if (!m_serial.open(QIODevice::ReadWrite)) {
         emit errorLog("can`t start Serial");
         emit show_serial(false);
@@ -53,7 +54,7 @@ void Serial::serial_close()
 
 void Serial::serial_sendTimeout()
 {
-    emit errorLog("error: no recive");
+    emit errorLog("error: Timeout do to no recive");
     serial_close();
 
     serial_open();
@@ -68,6 +69,7 @@ void Serial::serial_read()
 {
     if(m_serial.isOpen())
     {
+        QByteArray ab;
         m_recivedBytes += m_serial.readAll();
         m_serial.waitForReadyRead(m_recive_timeout);
         int  command_end = m_recivedBytes.indexOf(char(0x00));
@@ -86,12 +88,18 @@ void Serial::serial_read()
         unsigned char new_cs = mes.at(mes.length()-1);
         if(checksum != new_cs)
         {
+            //request resend last
+            ab.append(31);
+            serial_send(ab);
             emit errorLog("PC chesumm fail cs "+QString::number(checksum)+" rec "+QString::number(new_cs));
             emit errorLog("data "+mes);
             return;
         }
         if(mes.at(0) != mes.length()-2)
         {
+            //request resend last
+            ab.append(31);
+            serial_send(ab);
             emit errorLog("PC length fail len "+QString::number(mes.length()-2)+" rec "+QString::number(mes.at(0)));
             emit errorLog("data "+mes);
             return;
@@ -110,6 +118,10 @@ void Serial::serial_read()
                 return;
             }
         }
+        //send rec acknolage
+        ab.append(32);
+        serial_send(ab);
+        //process data
         QByteArray data = mes.remove(mes.length()-1,1);
         emit recBytes(data);
     }
@@ -137,16 +149,23 @@ void Serial::serial_send(QByteArray mes)
     //emit Log("send enc: "+encodedData.toHex());
     m_serial.write(encodedData);
     m_serial.waitForBytesWritten(m_send_timeout);
-    sendAnswerTimeout->start(m_send_reciveTimeout);
+    if(!(m_lastsend.length()==1 && m_lastsend.at(0)==32)){
+        sendAnswerTimeout->start(m_send_reciveTimeout);
+    }
 }
 
 void Serial::addChecksum(QByteArray *mes)
 {
     char checksum = 0;
-    for(int i=0;i< mes->length();i++)
+    //emit Log("length "+QString::number(mes->length()));
+    unsigned char len = mes->length();
+    mes->prepend(len);
+    for(int i=0;i< mes->length();i++){
         checksum += mes->at(i);
+    }
+    //emit Log("cs "+QString::number(checksum));
     mes->append(checksum);
-    mes->prepend(mes->length()+1);
+
 }
 
 void Serial::CobsEncode(const QByteArray &rawData, QByteArray &encodedData)

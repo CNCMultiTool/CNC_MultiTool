@@ -96,8 +96,10 @@ circular_buffer cbCommands;
 MovePos prePos;
 MovePos nextPrePos;
 
-char reciveBuf[128];
+unsigned char reciveBuf[64];
 unsigned int reciveWindex = 0;
+unsigned char lastSend[64];
+int lastSendLen = 0;
 
 //temp controle
 unsigned long time_now = micros();
@@ -965,22 +967,28 @@ void handleES(StepMotorBig* mot, char* msg) {
 }
 int checkSerial() {
   if(SR_CheckForLine() != 0) {
-    char buffer[128];
-    size_t recLen = cobsDecode(reciveBuf,reciveWindex, buffer);
+    unsigned char buffer[64];
+    unsigned char recLen = cobsDecode(reciveBuf,reciveWindex, buffer);
     reciveWindex = 0;
 
+    int idx = 0;
+    while(reciveBuf[idx] != 0){
+      idx++;
+    }
+
     //check the length of the pac
-    if(recLen-1 != int(buffer[0])){
+    unsigned char len = buffer[0];
+    if(idx-3 != len){
       //error handling
       sendCommand(31,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr);
-      sendEValue("ardu err len is:",recLen-1);
-      sendEValue("ardu err len soll:",int(buffer[0]));
+      sendEValue("ardu err len is:",idx-2);
+      sendEValue("ardu err len soll:",len);
       return 0;
     }
 
     //check the checksumm of the package
     char checksumm = 0;
-    for(int i = 1;i<recLen-2;i++){
+    for(int i = 0;i<recLen-2;i++){
       checksumm += buffer[i];
     }
     if(checksumm != buffer[recLen-2]){
@@ -991,13 +999,27 @@ int checkSerial() {
       return 0;
     }
 
+    comParam recCom = parseValuesFromBinar(recLen,buffer);
+    if(recCom.com == 32){
+      //recive acknolage of last command
+      lastSendLen = 0;
+      return 0;
+    }
+    if(recCom.com == 31){//resend last
+      if(lastSendLen !=0 ){
+        sendByteArray(lastSend,lastSendLen);
+      }else{
+        sendEText("last send is empty");
+      }
+      return 0;
+    }
+
     //pass all checks send package acknolage
     sendCommand(32,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr);
 
     //read command
     //read values
-    comParam recCom = parseValuesFromBinar(recLen,buffer);
-    memset(&reciveBuf[0], 0, sizeof(reciveBuf));
+    //memset(&reciveBuf[0], 0, sizeof(reciveBuf));
     //sofort comands list
     if(recCom.com == 50){//G9
       sendDText("find and process G9");
@@ -1073,7 +1095,7 @@ void requestNextCommands(){
   //Serial.println(10 - cbCommands.count);
 }
 int SR_CheckForLine() {
-  char caLine[1];
+  unsigned char caLine[1];
   comParam newCommand;
   while (Serial.available()) {
     Serial.readBytes(caLine, 1);
@@ -1483,6 +1505,8 @@ void FtoA(float *value, int wrtIdx, char* buf){
   buf[wrtIdx+3] = u.b[3];
 }
 void sendByteArray(char* toSend,int len){
+  memcpy(lastSend,toSend,len);
+  lastSendLen = len;
   char buffer[64];
   char encBuffer[64];
   
