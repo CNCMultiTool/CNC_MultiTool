@@ -70,71 +70,49 @@ void Serial::serial_read()
     {
         m_recivedBytes += m_serial.readAll();
         m_serial.waitForReadyRead(m_recive_timeout);
-//        int command_end = m_recivedBytes.indexOf("\n");
-//        if(command_end == -1)
-//        {
-           int  command_end = m_recivedBytes.indexOf(char(0x00));
-            if(command_end>0){
-                //emit Log("find 0 in recive stuff at "+QString::number(command_end));
-                QByteArray helper = m_recivedBytes;
-                QByteArray mes;
-                CobsDecode(helper.remove(command_end+1,helper.length()), mes);
-                m_recivedBytes.remove(0,command_end+1);
-//                for(int i=0;i< mes.length();i++) {
-//                    emit Log("get:"+QString::number(i)+":"+QString::number(mes.at(i))+":"+QString(mes.at(i)));
-//                }
-                unsigned char checksum = 0;
-                for(int i=0;i< mes.length()-1;i++) {
-                    checksum += mes.at(i);
-                }
+        int  command_end = m_recivedBytes.indexOf(char(0x00));
+        if(command_end<0){
+            return;
+        }
+        QByteArray helper = m_recivedBytes;
+        QByteArray mes;
+        CobsDecode(helper.remove(command_end+1,helper.length()), mes);
+        m_recivedBytes.remove(0,command_end+1);
 
-                unsigned char new_cs = mes.at(mes.length()-1);
-                if(checksum == new_cs)
-                {
-                    if(mes.at(1) == 32){
-                        sendAnswerTimeout->stop();
-                        m_lastsend = "";
-                        return;
-                    }else if(mes.at(1) == 31){
-                        if(m_lastsend == "")
-                            emit errorLog("resend request but empty m_lastsend");
-                        else
-                            serial_send(m_lastsend);
-                        return;
-                    }
-                    //emit Log("chesumm ok cs "+QString::number(checksum)+" rec "+QString::number(new_cs));
-                    //cut off checksumm
-                    QByteArray data = mes.remove(mes.length()-1,1);
-                    //emit Log("data:"+QString(data)+":");
-                    emit recBytes(data);
-                }
-                else
-                {
-                    emit errorLog("chesumm fail cs "+QString::number(checksum)+" rec "+QString::number(new_cs));
-                }
-                command_end = -1;
+        unsigned char checksum = 0;
+        for(int i=0;i< mes.length()-1;i++) {
+            checksum += mes.at(i);
+        }
+        unsigned char new_cs = mes.at(mes.length()-1);
+        if(checksum != new_cs)
+        {
+            emit errorLog("PC chesumm fail cs "+QString::number(checksum)+" rec "+QString::number(new_cs));
+            emit errorLog("data "+mes);
+            return;
+        }
+        if(mes.at(0) != mes.length()-2)
+        {
+            emit errorLog("PC length fail len "+QString::number(mes.length()-2)+" rec "+QString::number(mes.at(0)));
+            emit errorLog("data "+mes);
+            return;
+        }
+
+        if(mes.at(1) == 32){
+            sendAnswerTimeout->stop();
+            m_lastsend = "";
+            return;
+        }
+        if(mes.at(1) == 31){
+            if(m_lastsend == ""){
+                emit errorLog("resend request but empty m_lastsend");
+            }else{
+                serial_send(m_lastsend);
+                return;
             }
         }
-//        if(command_end>0){
-//            QByteArray helper = m_recivedBytes;
-//            QString Line = QString(helper.remove(command_end+1,helper.length()));
-//            m_recivedBytes.remove(0,command_end+1);
-
-//            if(Line.contains("rec")){
-//                sendAnswerTimeout->stop();
-//                m_lastsend = "";
-//                return;
-//            }else if(Line.contains("resend")){
-//                if(m_lastsend == "")
-//                    emit errorLog("resend request but empty m_lastsend");
-//                else
-//                    serial_send(m_lastsend);
-//                return;
-//            }
-//            emit Log("rec: "+Line);
-//            emit recLine(Line);
-//        }
-//    }
+        QByteArray data = mes.remove(mes.length()-1,1);
+        emit recBytes(data);
+    }
 }
 
 

@@ -973,7 +973,8 @@ int checkSerial() {
     if(recLen-1 != int(buffer[0])){
       //error handling
       sendCommand(31,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr);
-      //Serial.println("resend");
+      sendEValue("ardu err len is:",recLen-1);
+      sendEValue("ardu err len soll:",int(buffer[0]));
       return 0;
     }
 
@@ -985,22 +986,18 @@ int checkSerial() {
     if(checksumm != buffer[recLen-2]){
       //error handling
       sendCommand(31,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr);
-      //Serial.println("resend");
+      sendEValue("ardu err cs callc:",checksumm);
+      sendEValue("ardu err cs rec:",buffer[recLen-2]);
       return 0;
     }
 
     //pass all checks send package acknolage
     sendCommand(32,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr);
-    //Serial.println("rec");//answer to stop the timeout
-    //Serial.println("successfully");
 
     //read command
     //read values
     comParam recCom = parseValuesFromBinar(recLen,buffer);
     memset(&reciveBuf[0], 0, sizeof(reciveBuf));
-    //sendDValue("com:",float(recCom.com));
-    //sendDValue("F:",float(recCom.F));
-
     //sofort comands list
     if(recCom.com == 50){//G9
       sendDText("find and process G9");
@@ -1019,13 +1016,9 @@ int checkSerial() {
       return 0;
     }
 
-    if(cbCommands.count < cbCommands.capacity){
-      cb_push_back(&cbCommands,&recCom);
-      if(cbCommands.count < 10){
-        requestNextCommands();
-      }
-    }else{
-      sendEText("error: buffer overrun");
+    cb_push_back(&cbCommands,&recCom);
+    if(cbCommands.count < 5){
+      requestNextCommands();
     }
   }
 }

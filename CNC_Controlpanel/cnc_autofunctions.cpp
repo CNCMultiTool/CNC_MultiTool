@@ -121,7 +121,6 @@ void cnc_autofunctions::G_Code_Parser(QString newLine)
         }
         if(isCommand("G1",newLine))//normal move
         {
-            emit Log("Comment: "+newLine);
             lineInByteArray.append(10);//add command
             lineInByteArray.append(createValueArray(newLine));//add values
         }
