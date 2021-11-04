@@ -20,7 +20,6 @@ bool Serial::serial_open()
     m_serial.setDataBits(QSerialPort::Data8);
     m_serial.setStopBits(QSerialPort::TwoStop);
     m_serial.setBaudRate(QSerialPort::Baud115200);
-    m_serial.clear();
     if (!m_serial.open(QIODevice::ReadWrite)) {
         emit errorLog("can`t start Serial");
         emit show_serial(false);
@@ -29,6 +28,7 @@ bool Serial::serial_open()
     }
     m_recivedBytes.clear();
     m_serial.clear();
+    m_serial.flush();
     connect(timer, SIGNAL(timeout()), this, SLOT(serial_read()));
     connect(sendAnswerTimeout, SIGNAL(timeout()), this, SLOT(serial_sendTimeout()));
     timer->start(1);
@@ -114,6 +114,7 @@ void Serial::serial_read()
             if(m_lastsend == ""){
                 emit errorLog("resend request but empty m_lastsend");
             }else{
+                emit errorLog("resend m_lastsend");
                 serial_send(m_lastsend);
                 return;
             }

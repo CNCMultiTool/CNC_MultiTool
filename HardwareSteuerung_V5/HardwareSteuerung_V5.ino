@@ -987,8 +987,8 @@ int checkSerial() {
     }
 
     //check the checksumm of the package
-    char checksumm = 0;
-    for(int i = 0;i<recLen-2;i++){
+    unsigned char checksumm = 0;
+    for(int i = 0;i<len+1;i++){
       checksumm += buffer[i];
     }
     if(checksumm != buffer[recLen-2]){
