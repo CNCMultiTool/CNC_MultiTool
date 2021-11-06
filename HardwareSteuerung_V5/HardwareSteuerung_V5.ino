@@ -100,6 +100,8 @@ unsigned char reciveBuf[64];
 unsigned int reciveWindex = 0;
 unsigned char lastSend[64];
 int lastSendLen = 0;
+unsigned long sendTime;
+bool waitForAck = false;
 
 //temp controle
 unsigned long time_now = micros();
@@ -246,7 +248,7 @@ void setup() {
   pinMode(Eachse.pinDIR, OUTPUT);
   pinMode(Eachse.pinPUL, OUTPUT);
 
-  /*
+  
   pinMode(22, OUTPUT);
   pinMode(24, OUTPUT);
   pinMode(26, OUTPUT);
@@ -255,7 +257,7 @@ void setup() {
   digitalWrite(24, LOW);
   digitalWrite(26, LOW);
   digitalWrite(28, LOW);
-  */
+  
 
   pinMode(temprelai, OUTPUT);
   pinMode(temprelai_Bed, OUTPUT);
@@ -966,6 +968,18 @@ void handleES(StepMotorBig* mot, char* msg) {
   }
 }
 int checkSerial() {
+  if(waitForAck){
+    if(millis() - sendTime > 100){
+      waitForAck = false;
+      digitalWrite(24,HIGH);
+      ///sendEText("timeout on arduino");
+      if(lastSendLen !=0 ){
+        sendByteArray(lastSend,lastSendLen);
+      }else{
+        sendEText("last send is empty");
+      }
+    }
+  }
   if(SR_CheckForLine() != 0) {
     unsigned char buffer[64];
     unsigned char recLen = cobsDecode(reciveBuf,reciveWindex, buffer);
@@ -1002,6 +1016,8 @@ int checkSerial() {
     comParam recCom = parseValuesFromBinar(recLen,buffer);
     if(recCom.com == 32){
       //recive acknolage of last command
+      waitForAck = false;//stop timeout
+      digitalWrite(22, LOW);
       lastSendLen = 0;
       return 0;
     }
@@ -1505,6 +1521,13 @@ void FtoA(float *value, int wrtIdx, char* buf){
   buf[wrtIdx+3] = u.b[3];
 }
 void sendByteArray(char* toSend,int len){
+  //start answer timer
+  if(toSend[0] != 32){
+    sendTime = millis();
+    waitForAck = true;
+    digitalWrite(22,HIGH);
+    digitalWrite(24,LOW);
+  }
   memcpy(lastSend,toSend,len);
   lastSendLen = len;
   char buffer[64];
