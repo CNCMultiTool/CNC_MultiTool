@@ -516,7 +516,7 @@ void cnc_basefunctions::processBytes(const QByteArray &in){
         emit Log("Value:"+in.mid(2,in.length()-6)+" = "+QString::number(u.f));
         break;
     case 63://error text
-        emit errorLog("DebugMSG:"+in.mid(2));
+        emit errorLog("ErrorMSG:"+in.mid(2));
         break;
     case 64://error value
         u.b[0] = in[in.length()-4];
@@ -526,7 +526,7 @@ void cnc_basefunctions::processBytes(const QByteArray &in){
         emit errorLog("Value:"+in.mid(2,in.length()-6)+" = "+QString::number(u.f));
         break;
     default:
-        emit errorLog("Find no matching command");
+        emit errorLog("Find no matching command: "+ QString::number(command)+" len:"+QString::number(in[0]));
     }
 
 

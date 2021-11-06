@@ -25,7 +25,7 @@ typedef struct StepMotorBig {
   int pinNull;
   int pinPlus;
   //processing
-  int ESstate = 0;
+  float ESstate = 0;
   int steps_pmm;//steps pro mm (constant für x y z)
   long act_step = 0;//actueller position der achse in step
 } StepMotorBig;
@@ -306,8 +306,12 @@ void setUseES(bool newES){
     useES = newES;
     float es = useES;
     sendCommand(18,&es,nullptr,nullptr,nullptr,nullptr,nullptr);
-    //Serial.print("useES ");
-    //Serial.println(useES);
+    if(es == 0){
+      Xachse.ESstate = 0;
+      Yachse.ESstate = 0;
+      Zachse.ESstate = 0;
+      sendCommand(12,&es,&es,&es,nullptr,nullptr,nullptr);
+    }
 }
 void calculateSteps() {
   //get travel dist
@@ -767,7 +771,7 @@ void processComandLine(comParam c) {
     (p[c.com])(c);
     return;
   }
-  sendEText("ERROR: fail wrong comand range");
+  sendEValue("ERROR: wrong comand range",c.com);
 }
 void sendDeviceStatus() {
   float x,y,z,e,s;
@@ -935,44 +939,34 @@ comParam getRealPos(){
 void checkEndswitches() {
   if (useES) {
     //Serial.println("check es");
-    handleES(&Xachse, "X");
-    handleES(&Yachse, "Y");
-    handleES(&Zachse, "Z");
+    handleES(&Xachse);
+    handleES(&Yachse);
+    handleES(&Zachse);
   }
 }
-void handleES(StepMotorBig* mot, char* msg) {
-  float xes = Xachse.ESstate;
-  float yes = Yachse.ESstate;
-  float zes = Zachse.ESstate;
-  if (digitalRead(mot->pinNull) == HIGH && mot->ESstate != -1){
-    mot->ESstate = -1;
-    sendCommand(12,&xes,&yes,&zes,nullptr,nullptr,nullptr);
-    //StopAchse(mot->achse);
-    //Serial.print("ES ");
-    //Serial.print(msg);
-    //Serial.println(mot->ESstate);
-  }else if(digitalRead(mot->pinPlus) == HIGH && mot->ESstate != 1){
-    mot->ESstate = 1;
-    sendCommand(12,&xes,&yes,&zes,nullptr,nullptr,nullptr);
-    //StopAchse(mot->achse);
-    //Serial.print("ES ");
-    //Serial.print(msg);
-    //Serial.println(mot->ESstate);
+void handleES(StepMotorBig* mot) {
+  float newState;
+  if (digitalRead(mot->pinNull) == HIGH){
+    newState = -1;
+  }else if(digitalRead(mot->pinPlus) == HIGH){
+    newState = 1;
+  }else{
+    newState = 0;
   }
-  if (digitalRead(mot->pinNull) == LOW && digitalRead(mot->pinPlus) == LOW && mot->ESstate != 0){
-    mot->ESstate = 0;
+  if(mot->ESstate != newState){
+    mot->ESstate = newState;
+    float xes = Xachse.ESstate;
+    float yes = Yachse.ESstate;
+    float zes = Zachse.ESstate;
     sendCommand(12,&xes,&yes,&zes,nullptr,nullptr,nullptr);
-    //Serial.print("ES ");
-    //Serial.print(msg);
-    //Serial.println(mot->ESstate);
   }
 }
 int checkSerial() {
   if(waitForAck){
+    //seial timeout wait for ack
     if(millis() - sendTime > 100){
       waitForAck = false;
-      digitalWrite(24,HIGH);
-      ///sendEText("timeout on arduino");
+      //digitalWrite(24,HIGH);
       if(lastSendLen !=0 ){
         sendByteArray(lastSend,lastSendLen);
       }else{
@@ -1017,7 +1011,7 @@ int checkSerial() {
     if(recCom.com == 32){
       //recive acknolage of last command
       waitForAck = false;//stop timeout
-      digitalWrite(22, LOW);
+      //digitalWrite(22, LOW);
       lastSendLen = 0;
       return 0;
     }
@@ -1038,7 +1032,7 @@ int checkSerial() {
     //memset(&reciveBuf[0], 0, sizeof(reciveBuf));
     //sofort comands list
     if(recCom.com == 50){//G9
-      sendDText("find and process G9");
+      //sendDText("find and process G9");
       StopMove();
       sendDeviceStatus();
       return 0;
@@ -1048,7 +1042,7 @@ int checkSerial() {
       return 0;
     }
     if(recCom.com == 52){//Q14
-      cb_clear(&cbCommands);
+      //cb_clear(&cbCommands);
       StopMove();
       sendDeviceStatus();
       return 0;
@@ -1186,8 +1180,6 @@ void performStep(StepMotorBig *mot, bool dir, eAchse achse) {
       return;
     }
   }
-  //Zachse.pinPlus = 36;
-  //Zachse.pinNull = 38;
   digitalWrite(mot->pinPUL, LOW);
   if (digitalRead(mot->pinDIR) != dir)
     digitalWrite(mot->pinDIR, dir);
@@ -1287,7 +1279,7 @@ void cb_clear(circular_buffer *cb) {
   cb->count = 0;
   cb->head = cb->buffer;
   cb->tail = cb->buffer;
-  sendDText("WARNING deleting buffer");
+  //sendDText("WARNING deleting buffer");
 }
 int cb_push_back(circular_buffer *cb, const void *item) {
   while (cb->count == cb->capacity) {
@@ -1525,8 +1517,8 @@ void sendByteArray(char* toSend,int len){
   if(toSend[0] != 32){
     sendTime = millis();
     waitForAck = true;
-    digitalWrite(22,HIGH);
-    digitalWrite(24,LOW);
+    //digitalWrite(22,HIGH);
+    //digitalWrite(24,LOW);
   }
   memcpy(lastSend,toSend,len);
   lastSendLen = len;
