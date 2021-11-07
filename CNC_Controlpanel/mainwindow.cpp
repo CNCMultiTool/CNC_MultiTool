@@ -237,6 +237,8 @@ void MainWindow::on_pushButtonInit_clicked()
     m_basefunctions->send_Speed(m_database->m_soll_speed);
     m_basefunctions->send_BedTemp(0);
     m_basefunctions->send_HotendTemp(0);
+    m_basefunctions->send_setESuse(1);
+    m_basefunctions->send_setMotorUse(1);
 }
 
 void MainWindow::on_pushButtonMoveXPos_pressed()
@@ -654,6 +656,7 @@ void MainWindow::on_pushButton_Test_clicked()
 void MainWindow::on_pushButton_MoveHome_clicked()
 {
     m_basefunctions->send_moveHome();
+    m_basefunctions->send_setMotorUse(0);
 }
 
 void MainWindow::on_pushButtonUseES_clicked()

@@ -710,7 +710,8 @@ void Q30(comParam c){
 }
 void M114(comParam c){
   //Serial.println("M114");
-  sendDeviceStatus();
+  addCommand(&c);
+  //sendDeviceStatus();
 }
 void G9(comParam c){
   sendDText("G9");
@@ -1204,6 +1205,9 @@ void performCommand(comParam* newCommand) {
     case 16:
       soll_T_Bed = newCommand->S;
       sendTemperature();
+      break;
+    case 24:
+      sendDeviceStatus();
       break;
     case 59://leeres comando m zeit für den ersten schrit zu überbrücken
       break;
