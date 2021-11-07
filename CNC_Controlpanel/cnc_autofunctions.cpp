@@ -216,7 +216,7 @@ void cnc_autofunctions::G_Code_Parser(QString newLine)
                                 .arg(m_database->m_Y_inHome)
                                 .arg(m_database->m_Z_inHome));
             //G_Code_Parser("Q11 X0");//switch of endswitch
-            //G_Code_Parser("M114 ");
+            G_Code_Parser("M114 ");
         }
         if(lineInByteArray.isEmpty())
         {

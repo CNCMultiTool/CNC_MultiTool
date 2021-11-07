@@ -327,120 +327,77 @@ void calculateSteps() {
   */
 
   unsigned long nextStepTime = 0;
-  unsigned long noStep = -1;
   unsigned long lastMoveTime = 0;
   unsigned long nextX,nextY,nextZ,nextE;
   if (nextPrePos.Xs != prePos.Xs){
     nextX = 1000000 / (abs(nextPrePos.Xv) * Xachse.steps_pmm);
-    nextPrePos.useX = true;
-    //Serial.print("activeX ");
-    //Serial.println(nextPrePos.Xv);
   }else{
     nextX = 4294967295;
-    nextPrePos.useX = false;
   }
   if (nextPrePos.Ys != prePos.Ys){  
     nextY = 1000000 / (abs(nextPrePos.Yv) * Yachse.steps_pmm);
-    nextPrePos.useY = true;
-    //Serial.print("activeY ");
-    //Serial.println(nextPrePos.Yv);
   }else{
     nextY = 4294967295;
-    nextPrePos.useY = false;
   }
   if (nextPrePos.Zs != prePos.Zs){
     nextZ = 1000000 / (abs(nextPrePos.Zv) * Zachse.steps_pmm);
-    nextPrePos.useZ = true;
   }else{
     nextZ = 4294967295;
-    nextPrePos.useZ = false;
   }
   if (nextPrePos.Es != prePos.Es){
     nextE = 1000000 / (abs(nextPrePos.Ev) * Eachse.steps_pmm);
-    nextPrePos.useE = true;
   }else{
     nextE = 4294967295;
-    nextPrePos.useE = false;
   }
-
-  bool XmakeStep = false;
-  bool YmakeStep = false;
-  bool ZmakeStep = false;
-  bool EmakeStep = false;
-
   eAchse nextAchse;
-  
   while (!prePointerOnPos()) {
     //if a axes get set to stop ore arrive its position it is cancelt from steps calculatioons
-    //doStdTasks();
+    doStdTasks();
     nextAchse = getSmalest(nextX, nextY, nextZ, nextE);
     if(nextAchse == X){
-        if (nextPrePos.useX == false){
-          nextX = 4294967295;
-        }else{
-          lastMoveTime = nextX;
-          nextX += 1000000 / (abs(nextPrePos.Xv) * Xachse.steps_pmm);
-          nextStepTime = getSmalestValue(nextX, nextY, nextZ, nextE);
-          createStep(X, &nextPrePos.Xs, &prePos.Xs, nextStepTime - lastMoveTime);
-          XmakeStep = true;
-        }
-      }else if(nextAchse == Y){
-        if (nextPrePos.useY == false){
-          nextY = 4294967295;
-        }else{
-          lastMoveTime = nextY;
-          nextY += 1000000 / (abs(nextPrePos.Yv) * Yachse.steps_pmm);
-          nextStepTime = getSmalestValue(nextX, nextY, nextZ, nextE);
-          createStep(Y, &nextPrePos.Ys, &prePos.Ys, nextStepTime - lastMoveTime);
-          YmakeStep = true;
-        }
-      }else if(nextAchse == Z){
-        if (nextPrePos.useZ == false){
-          nextZ = 4294967295;
-        }else{
-          lastMoveTime = nextZ;
-          nextZ += 1000000 / (abs(nextPrePos.Zv) * Zachse.steps_pmm);
-          nextStepTime = getSmalestValue(nextX, nextY, nextZ, nextE);
-          createStep(Z, &nextPrePos.Zs, &prePos.Zs, nextStepTime - lastMoveTime);
-          ZmakeStep = true;
-        }
-      }else if(nextAchse == E){
-        if (nextPrePos.useE == false){
-          nextE = 4294967295;
-        }else{
-          lastMoveTime = nextE;
-          nextE += 1000000 / (abs(nextPrePos.Ev) * Eachse.steps_pmm);
-          nextStepTime = getSmalestValue(nextX, nextY, nextZ, nextE);
-          createStep(E, &nextPrePos.Es, &prePos.Es, nextStepTime - lastMoveTime);
-          EmakeStep = true;
-        }
+      if (nextPrePos.Xs == prePos.Xs){
+        nextX = 4294967295;
       }else{
-        sendEText("ERROR: get falls step to plan calculateSteps");
-        /*
-        Serial.println("ERROR: get falls step to plan calculateSteps");
-        Serial.print(" X ");
-        Serial.print(nextPrePos.Xs);
-        Serial.print(" -> ");
-        Serial.print(prePos.Xs);
-        Serial.print(" Y ");
-        Serial.print(nextPrePos.Ys);
-        Serial.print(" -> ");
-        Serial.print(prePos.Ys);
-        Serial.print(" Z ");
-        Serial.print(nextPrePos.Zs);
-        Serial.print(" -> ");
-        Serial.print(prePos.Zs);
-        Serial.print(" E ");
-        Serial.print(nextPrePos.Es);
-        Serial.print(" -> ");
-        Serial.print(prePos.Es);
-        */
+        lastMoveTime = nextX;
+        nextX += 1000000 / (abs(nextPrePos.Xv) * Xachse.steps_pmm);
+        nextStepTime = getSmalestValue(nextX, nextY, nextZ, nextE);
+        createStep(X, &nextPrePos.Xs, &prePos.Xs, nextStepTime - lastMoveTime);
       }
+    }else if(nextAchse == Y){
+      if (nextPrePos.Ys == prePos.Ys){
+        nextY = 4294967295;
+      }else{
+        lastMoveTime = nextY;
+        nextY += 1000000 / (abs(nextPrePos.Yv) * Yachse.steps_pmm);
+        nextStepTime = getSmalestValue(nextX, nextY, nextZ, nextE);
+        createStep(Y, &nextPrePos.Ys, &prePos.Ys, nextStepTime - lastMoveTime);
+      }
+    }else if(nextAchse == Z){
+      if (nextPrePos.Zs == prePos.Zs){
+        nextZ = 4294967295;
+      }else{
+        lastMoveTime = nextZ;
+        nextZ += 1000000 / (abs(nextPrePos.Zv) * Zachse.steps_pmm);
+        nextStepTime = getSmalestValue(nextX, nextY, nextZ, nextE);
+        createStep(Z, &nextPrePos.Zs, &prePos.Zs, nextStepTime - lastMoveTime);
+      }
+    }else if(nextAchse == E){
+      if (nextPrePos.Es == prePos.Es){
+        nextE = 4294967295;
+      }else{
+        lastMoveTime = nextE;
+        nextE += 1000000 / (abs(nextPrePos.Ev) * Eachse.steps_pmm);
+        nextStepTime = getSmalestValue(nextX, nextY, nextZ, nextE);
+        createStep(E, &nextPrePos.Es, &prePos.Es, nextStepTime - lastMoveTime);
+      }
+    }else{
+      sendEText("ERROR: get falls step to plan calculateSteps");
+    }
   }
-  if(XmakeStep)prePos.Xp = float(prePos.Xs) / float(Xachse.steps_pmm);
-  if(YmakeStep)prePos.Yp = float(prePos.Ys) / float(Yachse.steps_pmm);
-  if(ZmakeStep)prePos.Zp = float(prePos.Zs) / float(Zachse.steps_pmm);
-  if(EmakeStep)prePos.Ep = float(prePos.Es) / float(Eachse.steps_pmm);
+  prePos.Xp = float(prePos.Xs) / float(Xachse.steps_pmm);
+  prePos.Yp = float(prePos.Ys) / float(Yachse.steps_pmm);
+  prePos.Zp = float(prePos.Zs) / float(Zachse.steps_pmm);
+  prePos.Ep = float(prePos.Es) / float(Eachse.steps_pmm);
 }
 void calcSpeedForAches(double gesDif,MovePos *startPos,MovePos *goalPos){
   if (Vmax < goalPos->Speed)goalPos->Speed = Vmax;
@@ -551,9 +508,10 @@ void createStep(eAchse achse, long *sollStep, long *istStep, double us) {
     newStep.dir = 0;
     cb_push_back(&cbSteps, &newStep);
     *istStep -= 1;
-  }else{
-    sendEText("ERROR: steps equal soll:");
   }
+  //else{
+  //  sendEText("ERROR: steps equal soll:");
+  //}
 }
 float getTravelDist(MovePos* pPos, MovePos* nPrePos) {
   float Xdif,Ydif,Zdif,Edif;
@@ -634,7 +592,7 @@ int calcPreRunPointer() {
   }
 
   cb_pop_front(&cbCommands,&newCommand);
-  if(cbCommands.count < 10){
+  if(cbCommands.count < 5){
     requestNextCommands();
   }
 
@@ -668,7 +626,6 @@ void G1(comParam c){
   }
 }
 void G92(comParam c){
-  sendDText("G92");
   setPrePos(&c);
   setNextPrePos(&c);
   addCommand(&c);
@@ -834,38 +791,70 @@ void StopMove() {
   cb_clear(&cbSteps);
 }
 void StopAchse(eAchse achse) {
-  //comParam newPos;
+  //dir -1 means all 0 backwart(negativ) 1 is forward(positiv)
   switch (achse) {
     case X:
-      nextPrePos.useX = false;
+      //nextPrePos.useX = false;
       nextPrePos.Xp = float(Xachse.act_step) / float(Xachse.steps_pmm);
       nextPrePos.Xs = Xachse.act_step;
       prePos.Xp = float(Xachse.act_step) / float(Xachse.steps_pmm);
       prePos.Xs = Xachse.act_step;
       break;
     case Y:
-      nextPrePos.useY = false;
+      //nextPrePos.useY = false;
       nextPrePos.Yp = float(Yachse.act_step) / float(Yachse.steps_pmm);
       nextPrePos.Ys = Yachse.act_step;
       prePos.Yp = float(Yachse.act_step) / float(Yachse.steps_pmm);
       prePos.Ys = Yachse.act_step;
       break;
     case Z:
-      nextPrePos.useZ = false;
+      //nextPrePos.useZ = false;
       nextPrePos.Zp = float(Zachse.act_step) / float(Zachse.steps_pmm);
       nextPrePos.Zs = Zachse.act_step;
       prePos.Zp = float(Zachse.act_step) / float(Zachse.steps_pmm);
       prePos.Zs = Zachse.act_step;
       break;
     case E:
-      nextPrePos.useE = false;
+      //nextPrePos.useE = false;
       nextPrePos.Ep = float(Eachse.act_step) / float(Eachse.steps_pmm);
       nextPrePos.Es = Eachse.act_step;
       prePos.Ep = float(Eachse.act_step) / float(Eachse.steps_pmm);
       prePos.Es = Eachse.act_step;
       break;
   }
-
+}
+void StopAchseDir(eAchse achse,int dir) {
+  //dir -1 means all 0 backwart(negativ) 1 is forward(positiv)
+  switch (achse) {
+    case X:
+      if(dir == 0 && nextPrePos.Xs < Xachse.act_step && prePos.Xs < Xachse.act_step){
+        StopAchse(achse);
+      }else if(dir == 1 && nextPrePos.Xs > Xachse.act_step && prePos.Xs > Xachse.act_step){
+        StopAchse(achse);
+      }
+      break;
+    case Y:
+      if(dir == 0 && nextPrePos.Ys < Yachse.act_step && prePos.Ys < Yachse.act_step){
+        StopAchse(achse);
+      }else if(dir == 1 && nextPrePos.Ys > Yachse.act_step && prePos.Ys > Yachse.act_step){
+        StopAchse(achse);
+      }
+      break;
+    case Z:
+      if(dir == 0 && nextPrePos.Zs < Zachse.act_step && prePos.Zs < Zachse.act_step){
+        StopAchse(achse);
+      }else if(dir == 1 && nextPrePos.Zs > Zachse.act_step && prePos.Zs > Zachse.act_step){
+        StopAchse(achse);
+      }
+      break;
+    case E:
+      if(dir == 0 && nextPrePos.Es < Eachse.act_step && prePos.Es < Eachse.act_step){
+        StopAchse(achse);
+      }else if(dir == 1 && nextPrePos.Es > Eachse.act_step && prePos.Es > Eachse.act_step){
+        StopAchse(achse);
+      }
+      break;
+  }
 }
 void setNextPrePos(comParam* newPos) {
   if (newPos->useX) {
@@ -1169,15 +1158,18 @@ void addCommand(comParam* newCommand) {
   cb_push_back(&cbSteps, &newStep);
 }
 void performStep(StepMotorBig *mot, bool dir, eAchse achse) {
-  if ( dir && mot->pinPlus != 0) {
-    if (digitalRead(mot->pinPlus) == HIGH) {
-      StopAchse(achse);
-      return;
+  if(useES){
+    if (dir && mot->pinPlus != 0) {
+      if (digitalRead(mot->pinPlus) == HIGH) {
+        StopAchseDir(achse,dir);
+        return;
+      }
     }
-  } else if (useES && !dir && mot->pinNull != 0) {
-    if (digitalRead(mot->pinNull) == HIGH) {
-      StopAchse(achse);
-      return;
+    if (!dir && mot->pinNull != 0) {
+      if (digitalRead(mot->pinNull) == HIGH) {
+        StopAchseDir(achse,dir);
+        return;
+      }
     }
   }
   digitalWrite(mot->pinPUL, LOW);
@@ -1212,6 +1204,8 @@ void performCommand(comParam* newCommand) {
     case 16:
       soll_T_Bed = newCommand->S;
       sendTemperature();
+      break;
+    case 59://leeres comando m zeit für den ersten schrit zu überbrücken
       break;
     default:
       sendEValue("ERROR: unknown Command ",float(newCommand->com));

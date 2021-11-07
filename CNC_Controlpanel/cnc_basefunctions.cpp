@@ -342,6 +342,48 @@ void cnc_basefunctions::getCurrentPos(const QByteArray &in){
     emit show_speed();
     emit show_position();
 }
+void cnc_basefunctions::getPrePos(const QByteArray &in){
+    float x,y,z,e,f;
+    for(int i=2;i<in.length();i+=5){
+        if(in[i] == 1){
+            x = BtoF(in.mid(i+1,4));
+        }
+        if(in[i] == 2){
+            y = BtoF(in.mid(i+1,4));
+        }
+        if(in[i] == 3){
+            z = BtoF(in.mid(i+1,4));
+        }
+        if(in[i] == 4){
+            e = BtoF(in.mid(i+1,4));
+        }
+        if(in[i] == 5){
+            f = BtoF(in.mid(i+1,4));
+        }
+    }
+    emit Log(QString("prepos x%1,y%2,z%3,e%4,f%5").arg(x).arg(y).arg(z).arg(e).arg(f));
+}
+void cnc_basefunctions::getNextPrePos(const QByteArray &in){
+    float x,y,z,e,f;
+    for(int i=2;i<in.length();i+=5){
+        if(in[i] == 1){
+            x = BtoF(in.mid(i+1,4));
+        }
+        if(in[i] == 2){
+            y = BtoF(in.mid(i+1,4));
+        }
+        if(in[i] == 3){
+            z = BtoF(in.mid(i+1,4));
+        }
+        if(in[i] == 4){
+            e = BtoF(in.mid(i+1,4));
+        }
+        if(in[i] == 5){
+            f = BtoF(in.mid(i+1,4));
+        }
+    }
+    emit Log(QString("nextprepos x%1,y%2,z%3,e%4,f%5").arg(x).arg(y).arg(z).arg(e).arg(f));
+}
 void cnc_basefunctions::getTemperaturs(const QByteArray &in){
     emit Log("get temp");
     for(int i=2;i<in.length();i+=5){
@@ -504,6 +546,12 @@ void cnc_basefunctions::processBytes(const QByteArray &in){
         break;
     case 24:
         getCurrentPos(in);
+        break;
+    case 25:
+        getPrePos(in);
+        break;
+    case 26:
+        getNextPrePos(in);
         break;
     case 61://debug text
         emit Log("DebugMSG:"+in.mid(2));

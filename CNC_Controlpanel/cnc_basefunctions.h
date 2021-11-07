@@ -65,6 +65,8 @@ private:
     void getEsUse(const QByteArray &in);
     void getMotorState(const QByteArray &in);
     void getHeaterState(const QByteArray &in);
+    void getPrePos(const QByteArray &in);
+    void getNextPrePos(const QByteArray &in);
 signals:
     void Log(const QString &s);
     void errorLog(const QString &s);
