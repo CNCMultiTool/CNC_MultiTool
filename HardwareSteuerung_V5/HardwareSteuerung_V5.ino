@@ -277,7 +277,7 @@ void setup() {
   setBit(&TIMSK5, (1 << TOIE5));//enable timer overflow
 
   cb_init(&cbSteps, 100, sizeof(stepParam));
-  cb_init(&cbCommands, 15, sizeof(comParam));
+  cb_init(&cbCommands, 20, sizeof(comParam));
   
   sendDText("RESTART Arduino compleated");
 
@@ -592,7 +592,7 @@ int calcPreRunPointer() {
   }
 
   cb_pop_front(&cbCommands,&newCommand);
-  if(cbCommands.count < 5){
+  if(cbCommands.count < 10){
     requestNextCommands();
   }
 
@@ -722,7 +722,8 @@ void Q13(comParam c){
   sendDText("not implamented");
 }
 void Q14(comParam c){
-  sendDText("not implamented");
+  cb_clear(&cbSteps);
+  cb_clear(&cbCommands);
 }
 void processComandLine(comParam c) {
   if(c.com >= 10 && c.com <= 60){
@@ -1037,9 +1038,12 @@ int checkSerial() {
       sendDeviceStatus();
       return 0;
     }
-
+    if(cbCommands.count >= cbCommands.capacity){
+      sendEText("buffer full");
+      return;
+    }
     cb_push_back(&cbCommands,&recCom);
-    if(cbCommands.count < 5){
+    if(cbCommands.count < 10){
       requestNextCommands();
     }
   }
@@ -1089,10 +1093,11 @@ comParam parseValuesFromBinar(int bufLen,char* buffer){
   return newParam;
 }
 void requestNextCommands(){
-  float rec = 10 - cbCommands.count;
+  float rec = 3;
+  if((cbCommands.capacity - cbCommands.count)<3){
+    rec = cbCommands.capacity - cbCommands.count;
+  }
   sendCommand(30,&rec,nullptr,nullptr,nullptr,nullptr,nullptr);
-  //Serial.print("request ");
-  //Serial.println(10 - cbCommands.count);
 }
 int SR_CheckForLine() {
   unsigned char caLine[1];

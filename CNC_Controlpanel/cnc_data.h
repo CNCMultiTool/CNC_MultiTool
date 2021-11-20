@@ -22,7 +22,7 @@ public:
     void SerialLog(QString value);
 
     int m_HW_status; //0 = idle, 1 = moveing, 2 = heating
-    int m_G_Code_State; //0 = idle , 1= running, 2 = pause
+    //int m_G_Code_State; //0 = idle , 1= running, 2 = pause
 
 
     //values to send

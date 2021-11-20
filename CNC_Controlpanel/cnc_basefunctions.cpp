@@ -97,7 +97,7 @@ void cnc_basefunctions::send_stop()
 void cnc_basefunctions::send_GCodeStart(QString file)
 {
     m_auto->GC_open(file);
-    m_database->m_G_Code_State = 1;//run gcode
+    //m_database->m_G_Code_State = 1;//run gcode
     QByteArray newBA = m_auto->GC_getNextLine();
     emit serial_send(newBA);
 }
@@ -173,7 +173,7 @@ void cnc_basefunctions::send_resetWaitForHeat()
 
 void  cnc_basefunctions::processLine(const QString &s)
 {
-    if(s.indexOf("request")!=-1 && m_database->m_G_Code_State == 1){
+    if(s.indexOf("request")!=-1/* && m_database->m_G_Code_State == 1*/){
         //emit Log("get request");
         int start = s.indexOf("request ")+7;
         int end = s.length();
@@ -303,8 +303,8 @@ void  cnc_basefunctions::processLine(const QString &s)
 }
 
 void cnc_basefunctions::requestNextLine(const QByteArray &in){
-    emit Log("request");
-    if(m_database->m_G_Code_State == 1){
+
+    //if(m_database->m_G_Code_State == 1){
         int requests;
         QByteArray newBA;
         for(int i=2;i<in.length();i+=5){
@@ -312,13 +312,16 @@ void cnc_basefunctions::requestNextLine(const QByteArray &in){
                 requests = BtoF(in.mid(i+1,4));
             }
         }
+        emit Log("request:"+QString::number(requests));
         if(requests > 1){
             for(int i = 0;i < 1; i++){
                 newBA = m_auto->GC_getNextLine();
-                emit serial_send(newBA);
+                if(newBA.length()>0){
+                    emit serial_send(newBA);
+                }
             }
         }
-    }
+    //}
 }
 void cnc_basefunctions::getCurrentPos(const QByteArray &in){
     emit Log("getPos");

@@ -89,6 +89,7 @@ void Serial::serial_read()
         if(checksum != new_cs)
         {
             //request resend last
+            sendAnswerTimeout->stop();
             ab.append(31);
             serial_send(ab);
             emit errorLog("PC chesumm fail cs "+QString::number(checksum)+" rec "+QString::number(new_cs));
@@ -98,10 +99,14 @@ void Serial::serial_read()
         if(mes.at(0) != mes.length()-2)
         {
             //request resend last
+            sendAnswerTimeout->stop();
             ab.append(31);
             serial_send(ab);
             emit errorLog("PC length fail len "+QString::number(mes.length()-2)+" rec "+QString::number(mes.at(0)));
-            emit errorLog("data "+mes);
+            QString s;
+            foreach(auto c,mes)
+                s.append(c);
+            emit errorLog("data "+s);
             return;
         }
 

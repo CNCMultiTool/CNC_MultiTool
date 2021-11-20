@@ -33,20 +33,16 @@ QByteArray cnc_autofunctions::GC_getNextLine()
     QByteArray newLine;
     //if line is commend read next line
     if(m_LineBuffer.length() == 0){
-        //emit Log("read new line");
         GC_readNextLine();
         if(m_LineBuffer.length() > 0){
-            //emit Log("use new line");
             newLine = m_LineBuffer.first();
             m_LineBuffer.removeFirst();
         }else{
-            emit Log("no line after read");
+            return newLine;
         }
     }
     else
     {
-        //send from linebuffer
-        //emit Log("has line in buffer");
         newLine = m_LineBuffer.first();
         m_LineBuffer.removeFirst();
     }
@@ -58,7 +54,7 @@ void cnc_autofunctions::GC_readNextLine(){
     QString newLine;
     QRegExp rx;
     rx.setPattern(";");
-    if(true){//m_inputFile.isOpen()){
+    if(m_inputFile.isOpen()){//){
 
         //read new lines until it not starts with ; (is a commend)
         do{
@@ -72,21 +68,19 @@ void cnc_autofunctions::GC_readNextLine(){
         }
 
         if(newLine.isNull()){
-            emit Log("end of gCode");
-            m_database->m_G_Code_State = 0;
+            //emit Log("end of gCode");
+            //m_database->m_G_Code_State = 0;
             GC_close();
         }else{
             G_Code_Parser(newLine);//add command to a buffer
         }
-
-
-    }else{
-        emit Log("no G File open");
     }
 }
 
 void cnc_autofunctions::GC_close()
 {
+    m_LineBuffer.clear();
+    m_in.reset();
     if(!m_inputFile.isOpen())
     {
         m_inputFile.close();
@@ -225,11 +219,11 @@ void cnc_autofunctions::G_Code_Parser(QString newLine)
             m_LineBuffer.append(lineInByteArray);// add createt bytearray to the buffer
         }
 
-        if(m_database->m_G_Code_State == 0)
-        {
+        //if(m_database->m_G_Code_State == 0)
+        //{
             QByteArray newBA = GC_getNextLine();
             emit serial_send(newBA);
-        }
+        //}
 }
 
 bool cnc_autofunctions::isCommand(const QString indent,const QString line)

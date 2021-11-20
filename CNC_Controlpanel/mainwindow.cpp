@@ -637,7 +637,7 @@ void MainWindow::on_pushButton_continueGCode_clicked()
 
 void MainWindow::on_pushButton_AboardGCode_clicked()
 {
-    m_database->m_G_Code_State = 0;
+    //m_database->m_G_Code_State = 0;
     m_autofunctions->GC_close();
     m_basefunctions->send_GCodeStop();
     m_basefunctions->send_resetWaitForHeat();
