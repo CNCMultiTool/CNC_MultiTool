@@ -70,43 +70,62 @@ void Serial::serial_read()
     if(m_serial.isOpen())
     {
         QByteArray ab;
+        //read from serial
         m_recivedBytes += m_serial.readAll();
         m_serial.waitForReadyRead(m_recive_timeout);
-        int  command_end = m_recivedBytes.indexOf(char(0x00));
-        if(command_end<0){
+
+        //chck if a startcodon is presend, remove leading nonsens bytes to the startcodon
+        int command_start = m_recivedBytes.indexOf(char(0x01));
+        if(command_start < 0)return;//return if no start codon
+        if(command_start > 0) m_recivedBytes.remove(0,command_start);
+        command_start = 0;
+
+        if(m_recivedBytes.length()<5)return;//return if minimum length is not given
+
+        int command_end = m_recivedBytes.indexOf(char(0x02));
+        if(command_end < 0)return;//return if no end codon
+        if(command_start < 0 || command_end < 0) return;
+
+        int len = m_recivedBytes.at(command_start+1);
+
+        if(len >= m_recivedBytes.length())return;//return if array is shorter then len info
+
+        if(m_recivedBytes.at(len) != char(0x02)){
+            emit Log("end codon not at expectet pos");
+            m_recivedBytes.remove(0,1);//remove first startcodon to search for new start
             return;
         }
-        QByteArray helper = m_recivedBytes;
-        QByteArray mes;
-        CobsDecode(helper.remove(command_end+1,helper.length()), mes);
+
+
+
+        command_end = len;
+        QByteArray mes = m_recivedBytes.mid(0,command_end+1);
         m_recivedBytes.remove(0,command_end+1);
 
+        emit Log("start:"+QString::number(command_start)+" end:"+QString::number(command_end));
+        emit Log("lenInfo:"+QString::number(len));
+        emit Log("lenArray:"+QString::number(m_recivedBytes.length()));
+
+        if(mes.at(1) != mes.length()-1)
+        {
+            //request resend last
+            ab.append(31);
+            serial_send(ab);
+            emit errorLog("PC length fail len "+QString::number(mes.length())+" rec "+QString::number(mes.at(1)));
+            return;
+        }
+
         unsigned char checksum = 0;
-        for(int i=0;i< mes.length()-1;i++) {
+        for(int i=1;i < mes.length()-2;i++) {
             checksum += mes.at(i);
         }
-        unsigned char new_cs = mes.at(mes.length()-1);
+        unsigned char new_cs = mes.at(mes.length()-2);
         if(checksum != new_cs)
         {
             //request resend last
-            sendAnswerTimeout->stop();
             ab.append(31);
             serial_send(ab);
             emit errorLog("PC chesumm fail cs "+QString::number(checksum)+" rec "+QString::number(new_cs));
-            emit errorLog("data "+mes);
-            return;
-        }
-        if(mes.at(0) != mes.length()-2)
-        {
-            //request resend last
-            sendAnswerTimeout->stop();
-            ab.append(31);
-            serial_send(ab);
-            emit errorLog("PC length fail len "+QString::number(mes.length()-2)+" rec "+QString::number(mes.at(0)));
-            QString s;
-            foreach(auto c,mes)
-                s.append(c);
-            emit errorLog("data "+s);
             return;
         }
 
@@ -128,7 +147,7 @@ void Serial::serial_read()
         ab.append(32);
         serial_send(ab);
         //process data
-        QByteArray data = mes.remove(mes.length()-1,1);
+        QByteArray data = mes.mid(1,mes.length()-2);
         emit recBytes(data);
     }
 }

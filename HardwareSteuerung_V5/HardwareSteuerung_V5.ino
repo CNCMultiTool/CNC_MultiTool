@@ -967,7 +967,7 @@ int checkSerial() {
   }
   if(SR_CheckForLine() != 0) {
     unsigned char buffer[64];
-    unsigned char recLen = cobsDecode(reciveBuf,reciveWindex, buffer);
+    unsigned char recLen = 0;//cobsDecode(reciveBuf,reciveWindex, buffer);
     reciveWindex = 0;
 
     int idx = 0;
@@ -979,9 +979,9 @@ int checkSerial() {
     unsigned char len = buffer[0];
     if(idx-3 != len){
       //error handling
-      sendCommand(31,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr);
-      sendEValue("ardu err len is:",idx-2);
-      sendEValue("ardu err len soll:",len);
+      //sendCommand(31,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr);
+      //sendEValue("ardu err len is:",idx-2);
+      //sendEValue("ardu err len soll:",len);
       return 0;
     }
 
@@ -992,9 +992,9 @@ int checkSerial() {
     }
     if(checksumm != buffer[recLen-2]){
       //error handling
-      sendCommand(31,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr);
-      sendEValue("ardu err cs callc:",checksumm);
-      sendEValue("ardu err cs rec:",buffer[recLen-2]);
+      //sendCommand(31,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr);
+      //sendEValue("ardu err cs callc:",checksumm);
+      //sendEValue("ardu err cs rec:",buffer[recLen-2]);
       return 0;
     }
 
@@ -1517,86 +1517,22 @@ void FtoA(float *value, int wrtIdx, char* buf){
 }
 void sendByteArray(char* toSend,int len){
   //start answer timer
-  if(toSend[0] != 32){
-    sendTime = millis();
-    waitForAck = true;
-    //digitalWrite(22,HIGH);
-    //digitalWrite(24,LOW);
-  }
+  //if(toSend[0] != 32){
+  //  sendTime = millis();
+  //  waitForAck = true;
+  //}
   memcpy(lastSend,toSend,len);
   lastSendLen = len;
   char buffer[64];
-  char encBuffer[64];
   
-  unsigned char checksumm = len;
-  buffer[0] = len; //bytes to send +checksumm and length
+  unsigned char checksumm = len + 3;
+  buffer[0] = 0x01;//startcodon
+  buffer[1] = len + 3; //bytes to send +checksumm and length
   for(int i = 0;i<len;i++){
     checksumm += toSend[i];
-    buffer[i+1] = toSend[i];
+    buffer[i+2] = toSend[i];
   }
-  len++;//add length byte to length
-  buffer[len] = checksumm;//add checksumm to the end
-  len++;
-  size_t recLen = cobsEncode(buffer,len, encBuffer);
-  encBuffer[recLen] = 0x00;
-  Serial.write(encBuffer,recLen+1);
-}
-/** COBS encode data to buffer
-	@param data Pointer to input data to encode
-	@param length Number of bytes to encode
-	@param buffer Pointer to encoded output buffer
-	@return Encoded buffer length in bytes
-	@note Does not output delimiter byte
-*/
-size_t cobsEncode(const void *data, size_t length, uint8_t *buffer){
-	assert(data && buffer);
-
-	uint8_t *encode = buffer; // Encoded byte pointer
-	uint8_t *codep = encode++; // Output code pointer
-	uint8_t code = 1; // Code value
-
-	for (const uint8_t *byte = (const uint8_t *)data; length--; ++byte)
-	{
-		if (*byte) // Byte not zero, write it
-			*encode++ = *byte, ++code;
-
-		if (!*byte || code == 0xff) // Input is zero or block completed, restart
-		{
-			*codep = code, code = 1, codep = encode;
-			if (!*byte || length)
-				++encode;
-		}
-	}
-	*codep = code; // Write final code value
-
-	return (size_t)(encode - buffer);
-}
-/** COBS decode data from buffer
-	@param buffer Pointer to encoded input bytes
-	@param length Number of bytes to decode
-	@param data Pointer to decoded output data
-	@return Number of bytes successfully decoded
-	@note Stops decoding if delimiter byte is found
-*/
-size_t cobsDecode(const uint8_t *buffer, size_t length, void *data){
-	assert(buffer && data);
-
-	const uint8_t *byte = buffer; // Encoded input byte pointer
-	uint8_t *decode = (uint8_t *)data; // Decoded output byte pointer
-
-	for (uint8_t code = 0xff, block = 0; byte < buffer + length; --block)
-	{
-		if (block) // Decode block byte
-			*decode++ = *byte++;
-		else
-		{
-			if (code != 0xff) // Encoded zero, write it
-				*decode++ = 0;
-			block = code = *byte++; // Next block length
-			if (!code) // Delimiter code found
-				break;
-		}
-	}
-
-	return (size_t)(decode - (uint8_t *)data);
+  buffer[len + 2] = checksumm;//add checksumm to the end
+  buffer[len + 3] = 0x02;//endcodon
+  Serial.write(buffer,len + 4);
 }
