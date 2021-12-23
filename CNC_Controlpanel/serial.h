@@ -36,13 +36,11 @@ private:
     cnc_data *m_database;
     QTimer *timer = new QTimer(this);
     QTimer *sendAnswerTimeout = new QTimer(this);
-    void addChecksum(QByteArray *mes);
+    void packMesage(QByteArray *mes);
 
     QByteArray m_recivedBytes;
     QByteArray m_lastsend = "";
 
-    void CobsEncode(const QByteArray &rawData, QByteArray &encodedData);
-    void CobsDecode(const QByteArray &encodedData, QByteArray &decodedData);
 signals:
     void Log(const QString &s);
     void errorLog(const QString &s);

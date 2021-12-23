@@ -102,9 +102,9 @@ void Serial::serial_read()
         QByteArray mes = m_recivedBytes.mid(0,command_end+1);
         m_recivedBytes.remove(0,command_end+1);
 
-        emit Log("start:"+QString::number(command_start)+" end:"+QString::number(command_end));
-        emit Log("lenInfo:"+QString::number(len));
-        emit Log("lenArray:"+QString::number(m_recivedBytes.length()));
+//        emit Log("start:"+QString::number(command_start)+" end:"+QString::number(command_end));
+//        emit Log("lenInfo:"+QString::number(len));
+//        emit Log("lenArray:"+QString::number(m_recivedBytes.length()));
 
         if(mes.at(1) != mes.length()-1)
         {
@@ -129,12 +129,15 @@ void Serial::serial_read()
             return;
         }
 
-        if(mes.at(1) == 32){
+        mes.chop(2);//cut checksum and endcodon
+        QByteArray data = mes.mid(2);
+
+        if(data.at(0) == 32){
             sendAnswerTimeout->stop();
             m_lastsend = "";
             return;
         }
-        if(mes.at(1) == 31){
+        if(data.at(0) == 31){
             if(m_lastsend == ""){
                 emit errorLog("resend request but empty m_lastsend");
             }else{
@@ -147,7 +150,7 @@ void Serial::serial_read()
         ab.append(32);
         serial_send(ab);
         //process data
-        QByteArray data = mes.mid(1,mes.length()-2);
+
         emit recBytes(data);
     }
 }
@@ -167,128 +170,29 @@ void Serial::serial_send(QByteArray mes)
     }
     //emit Log("send: "+mes.toHex());
     m_lastsend = mes;
-    addChecksum(&mes);
-    //emit Log("send checksum: "+mes.toHex());
-    QByteArray encodedData;
-    CobsEncode(mes, encodedData);
-    //emit Log("send enc: "+encodedData.toHex());
-    m_serial.write(encodedData);
+    packMesage(&mes);
+    //emit Log("send packet hex: "+mes.toHex());
+
+    m_serial.write(mes);
     m_serial.waitForBytesWritten(m_send_timeout);
+    //start timer
     if(!(m_lastsend.length()==1 && m_lastsend.at(0)==32)){
         sendAnswerTimeout->start(m_send_reciveTimeout);
     }
 }
 
-void Serial::addChecksum(QByteArray *mes)
+void Serial::packMesage(QByteArray *mes)
 {
     char checksum = 0;
     //emit Log("length "+QString::number(mes->length()));
-    unsigned char len = mes->length();
+    unsigned char len = mes->length() + 3;
     mes->prepend(len);
+
     for(int i=0;i< mes->length();i++){
         checksum += mes->at(i);
     }
-    //emit Log("cs "+QString::number(checksum));
+    mes->prepend(char(0x01));
     mes->append(checksum);
+    mes->append(char(0x02));
 
-}
-
-void Serial::CobsEncode(const QByteArray &rawData, QByteArray &encodedData)
-{
-    int startOfCurrBlock = 0;
-    uint8_t numElementsInCurrBlock = 0;
-
-    auto it = rawData.begin();
-
-    // Create space for first (this will be
-    // overwritten once count to next 0x00 is known)
-    encodedData.append('\0');
-
-    while (it != rawData.end()) {
-        if (*it == 0x00) {
-            // Save the number of elements before the next 0x00 into
-            // the output
-            encodedData[startOfCurrBlock] = (uint8_t)(numElementsInCurrBlock + 1);
-
-            // Add placeholder at start of next block
-            encodedData.append('\0');
-
-            startOfCurrBlock = encodedData.size() - 1;
-
-            // Reset count of num. elements in current block
-            numElementsInCurrBlock = 0;
-
-        } else {
-            encodedData.push_back(*it);
-            numElementsInCurrBlock++;
-
-            if (numElementsInCurrBlock == 254) {
-                encodedData[startOfCurrBlock] = (uint8_t)(numElementsInCurrBlock + 1);
-
-                // Add placeholder at start of next block
-                encodedData.append('\0');
-
-                startOfCurrBlock = encodedData.size() - 1;
-
-                // Reset count of num. elements in current block
-                numElementsInCurrBlock = 0;
-            }
-        }
-        it++;
-    }
-
-    // Finish the last block
-    // Insert pointer to the terminating 0x00 character
-    encodedData[startOfCurrBlock] = numElementsInCurrBlock + 1;
-    encodedData.append('\0');
-}
-
-/**
- * @brief MainWindow::CobsDecode
- * decodes incomming messages with OCBS
- * !!! need 0x00 at last byte of the bytearray !!!
- * @param encodedData
- * @param decodedData
- */
-void Serial::CobsDecode(const QByteArray &encodedData, QByteArray &decodedData)
-{
-    decodedData.clear();
-    //    Log(QString(__func__) + " decoded " + encodedData.toHex()
-    //        + " len: " + QString::number(encodedData.size()),DEBUG_LOW);
-
-    int encodedDataPos = 0;
-
-    while (encodedDataPos < encodedData.size()) {
-        int numElementsInBlock = encodedData[encodedDataPos] - 1;
-        encodedDataPos++;
-
-        // Copy across all bytes within block
-        for (int i = 0; i < numElementsInBlock; i++) {
-            uint8_t byteOfData = encodedData[encodedDataPos];
-            if (byteOfData == 0x00) {
-                //decodedData.clear();
-                //throw CobsDecodingFailed(encodedData);
-                //Log(QString(__func__) + "ERROR decoding failed",ERROR_LOW);
-                //return;
-                break;
-            }
-
-            decodedData.push_back(encodedData[encodedDataPos]);
-            encodedDataPos++;
-        }
-
-        if (encodedData[encodedDataPos] == '\0') {
-            // End of packet found!
-            break;
-        }
-
-        // We only add a 0x00 byte to the decoded data
-        // IF the num. of elements in block was less than 254.
-        // If num. elements in block is max (254), then we know that
-        // the block was created due to it reaching maximum size, not because
-        // a 0x00 was found
-        if (numElementsInBlock < 0xFE) {
-            decodedData.append('\0');
-        }
-    }
 }

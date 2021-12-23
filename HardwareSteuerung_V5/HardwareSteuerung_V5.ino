@@ -98,6 +98,7 @@ MovePos nextPrePos;
 
 unsigned char reciveBuf[64];
 unsigned int reciveWindex = 0;
+unsigned int reciveEndIndex = 0;
 unsigned char lastSend[64];
 int lastSendLen = 0;
 unsigned long sendTime;
@@ -966,46 +967,48 @@ int checkSerial() {
     }
   }
   if(SR_CheckForLine() != 0) {
-    unsigned char buffer[64];
-    unsigned char recLen = 0;//cobsDecode(reciveBuf,reciveWindex, buffer);
-    reciveWindex = 0;
+    unsigned char recIdx = reciveWindex;
+    unsigned char recEndIdx = reciveEndIndex;
 
-    int idx = 0;
-    while(reciveBuf[idx] != 0){
-      idx++;
+    reciveWindex = 0;
+    reciveEndIndex = 0;
+    
+    //check that telegram
+    if(recIdx == -1){
+      sendEText("endcodon not at expeckted pos");
+      return 0;
     }
 
     //check the length of the pac
-    unsigned char len = buffer[0];
-    if(idx-3 != len){
+    unsigned char len = reciveBuf[1];
+    if(recIdx != reciveBuf[1]){
       //error handling
-      //sendCommand(31,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr);
-      //sendEValue("ardu err len is:",idx-2);
-      //sendEValue("ardu err len soll:",len);
+      sendCommand(31,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr);
+      sendEValue("ardu err len:",recIdx - reciveBuf[1]);
       return 0;
     }
 
     //check the checksumm of the package
     unsigned char checksumm = 0;
-    for(int i = 0;i<len+1;i++){
-      checksumm += buffer[i];
+    for(int i = 1;i<=len-2;i++){
+      checksumm += reciveBuf[i];
     }
-    if(checksumm != buffer[recLen-2]){
+    if(checksumm != reciveBuf[recIdx-1]){
       //error handling
-      //sendCommand(31,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr);
-      //sendEValue("ardu err cs callc:",checksumm);
-      //sendEValue("ardu err cs rec:",buffer[recLen-2]);
+      sendCommand(31,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr);
+      sendEValue("ardu err cs mismach:",checksumm-reciveBuf[recIdx-1]);
       return 0;
     }
 
-    comParam recCom = parseValuesFromBinar(recLen,buffer);
-    if(recCom.com == 32){
+    if(reciveBuf[2] == 32){
       //recive acknolage of last command
       waitForAck = false;//stop timeout
-      //digitalWrite(22, LOW);
       lastSendLen = 0;
       return 0;
     }
+
+    comParam recCom = parseValuesFromBinar(recIdx,reciveBuf);
+
     if(recCom.com == 31){//resend last
       if(lastSendLen !=0 ){
         sendByteArray(lastSend,lastSendLen);
@@ -1042,7 +1045,9 @@ int checkSerial() {
       sendEText("buffer full");
       return;
     }
+
     cb_push_back(&cbCommands,&recCom);
+
     if(cbCommands.count < 10){
       requestNextCommands();
     }
@@ -1057,10 +1062,8 @@ comParam parseValuesFromBinar(int bufLen,char* buffer){
   newParam.useE = false;
   newParam.useF = false;
   newParam.useS = false;
-  newParam.com = buffer[1];
-  //Serial.print("Com:");
-  //Serial.println(int(newParam.com));
-  for(int i = 2;i+4 < bufLen-2;i+=5){
+  newParam.com = buffer[2];
+  for(int i = 3;i+4 < bufLen;i+=5){
     char b[] = {buffer[i+1], buffer[i+2], buffer[i+3], buffer[i+4]};
     memcpy(&f, &b, sizeof(f));
     switch (buffer[i]) {
@@ -1102,13 +1105,31 @@ void requestNextCommands(){
 int SR_CheckForLine() {
   unsigned char caLine[1];
   comParam newCommand;
-  while (Serial.available()) {
+  while (Serial.available()){
     Serial.readBytes(caLine, 1);
-    reciveBuf[reciveWindex] = caLine[0];
-    reciveWindex++;
-    if (caLine[0] == 0)
-    {
-      return reciveWindex;
+    if(reciveWindex != 0 || caLine[0] == 0x01){
+      //save index of endcodon
+      if(reciveWindex == 1){
+        reciveEndIndex = caLine[0];
+      }
+      //write recived byte to buffer
+      reciveBuf[reciveWindex] = caLine[0];
+      //check if telegram is completed
+      if (caLine[0] == 0x02 && reciveEndIndex == reciveWindex && reciveEndIndex >= 4){
+        return reciveWindex;
+      }
+      //return -1 if the endcodon is not where expecktet
+      // or length is not valide
+      if(reciveEndIndex != 0){
+        if((reciveEndIndex+1 == reciveWindex && caLine[0] != 0x02)
+        || reciveEndIndex+1 < reciveWindex
+        || reciveEndIndex < 4) {
+          reciveWindex = -1;
+          return -1;
+        }
+      }
+      //increse write index for next byte to read
+      reciveWindex++;
     }
   }
   return 0;
@@ -1517,10 +1538,10 @@ void FtoA(float *value, int wrtIdx, char* buf){
 }
 void sendByteArray(char* toSend,int len){
   //start answer timer
-  //if(toSend[0] != 32){
-  //  sendTime = millis();
-  //  waitForAck = true;
-  //}
+  if(toSend[0] != 32){
+    sendTime = millis();
+    waitForAck = true;
+  }
   memcpy(lastSend,toSend,len);
   lastSendLen = len;
   char buffer[64];
