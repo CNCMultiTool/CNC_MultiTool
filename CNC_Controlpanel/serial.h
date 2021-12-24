@@ -39,7 +39,12 @@ private:
     void packMesage(QByteArray *mes);
 
     QByteArray m_recivedBytes;
-    QByteArray m_lastsend = "";
+    QByteArray m_lastsend;
+
+    QVector<QByteArray> m_toSendBuffer;
+
+    void serial_sendNext();
+    void serial_send(QByteArray mes);
 
 signals:
     void Log(const QString &s);
@@ -49,7 +54,7 @@ signals:
     void recBytes(const QByteArray &data);
 
 public slots:
-    void serial_send(QByteArray mes);
+    void serial_addToSend(QByteArray mes);
     void serial_sendTimeout();
     void serial_read(); //changed to slot
 };

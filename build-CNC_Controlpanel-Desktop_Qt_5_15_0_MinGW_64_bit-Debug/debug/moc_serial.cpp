@@ -23,7 +23,7 @@ QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 struct qt_meta_stringdata_Serial_t {
     QByteArrayData data[14];
-    char stringdata0[106];
+    char stringdata0[111];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -42,15 +42,15 @@ QT_MOC_LITERAL(6, 35, 1), // "b"
 QT_MOC_LITERAL(7, 37, 7), // "recLine"
 QT_MOC_LITERAL(8, 45, 8), // "recBytes"
 QT_MOC_LITERAL(9, 54, 4), // "data"
-QT_MOC_LITERAL(10, 59, 11), // "serial_send"
-QT_MOC_LITERAL(11, 71, 3), // "mes"
-QT_MOC_LITERAL(12, 75, 18), // "serial_sendTimeout"
-QT_MOC_LITERAL(13, 94, 11) // "serial_read"
+QT_MOC_LITERAL(10, 59, 16), // "serial_addToSend"
+QT_MOC_LITERAL(11, 76, 3), // "mes"
+QT_MOC_LITERAL(12, 80, 18), // "serial_sendTimeout"
+QT_MOC_LITERAL(13, 99, 11) // "serial_read"
 
     },
     "Serial\0Log\0\0s\0errorLog\0show_serial\0b\0"
-    "recLine\0recBytes\0data\0serial_send\0mes\0"
-    "serial_sendTimeout\0serial_read"
+    "recLine\0recBytes\0data\0serial_addToSend\0"
+    "mes\0serial_sendTimeout\0serial_read"
 };
 #undef QT_MOC_LITERAL
 
@@ -105,7 +105,7 @@ void Serial::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void
         case 2: _t->show_serial((*reinterpret_cast< bool(*)>(_a[1]))); break;
         case 3: _t->recLine((*reinterpret_cast< const QString(*)>(_a[1]))); break;
         case 4: _t->recBytes((*reinterpret_cast< const QByteArray(*)>(_a[1]))); break;
-        case 5: _t->serial_send((*reinterpret_cast< QByteArray(*)>(_a[1]))); break;
+        case 5: _t->serial_addToSend((*reinterpret_cast< QByteArray(*)>(_a[1]))); break;
         case 6: _t->serial_sendTimeout(); break;
         case 7: _t->serial_read(); break;
         default: ;

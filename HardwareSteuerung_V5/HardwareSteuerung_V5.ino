@@ -97,8 +97,8 @@ MovePos prePos;
 MovePos nextPrePos;
 
 unsigned char reciveBuf[64];
-unsigned int reciveWindex = 0;
-unsigned int reciveEndIndex = 0;
+int reciveWindex = 0;
+int reciveEndIndex = 0;
 unsigned char lastSend[64];
 int lastSendLen = 0;
 unsigned long sendTime;
@@ -967,15 +967,16 @@ int checkSerial() {
     }
   }
   if(SR_CheckForLine() != 0) {
-    unsigned char recIdx = reciveWindex;
-    unsigned char recEndIdx = reciveEndIndex;
+    char recIdx = reciveWindex;
+    char recEndIdx = reciveEndIndex;
 
     reciveWindex = 0;
     reciveEndIndex = 0;
     
     //check that telegram
     if(recIdx == -1){
-      sendEText("endcodon not at expeckted pos");
+      sendCommand(31,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr);
+      sendEText("ardu endcodon not at expeckted pos");
       return 0;
     }
 
@@ -984,7 +985,8 @@ int checkSerial() {
     if(recIdx != reciveBuf[1]){
       //error handling
       sendCommand(31,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr);
-      sendEValue("ardu err len:",recIdx - reciveBuf[1]);
+      sendEValue("ardu err recIdx:",recIdx);
+      sendEValue("ardu err recBuf:",reciveBuf[1]);
       return 0;
     }
 
@@ -1011,6 +1013,7 @@ int checkSerial() {
 
     if(recCom.com == 31){//resend last
       if(lastSendLen !=0 ){
+        waitForAck = false;
         sendByteArray(lastSend,lastSendLen);
       }else{
         sendEText("last send is empty");
@@ -1043,7 +1046,7 @@ int checkSerial() {
     }
     if(cbCommands.count >= cbCommands.capacity){
       sendEText("buffer full");
-      return;
+      return 0;
     }
 
     cb_push_back(&cbCommands,&recCom);
@@ -1443,6 +1446,7 @@ void sendDText(char* text){
   for(int i=0;i<strlen(text);i++){
     toSend[i+1] = text[i];
   }
+  toSend[strlen(text)+1] = '\0';
   sendByteArray(toSend,strlen(toSend));
 }
 void sendDValue(char* name,float value){
@@ -1469,6 +1473,7 @@ void sendEText(char* text){
   for(int i=0;i<strlen(text);i++){
     toSend[i+1] = text[i];
   }
+  toSend[strlen(text)+1] = '\0';
   sendByteArray(toSend,strlen(toSend));
 }
 void sendEValue(char* name,float value){
@@ -1546,7 +1551,7 @@ void sendByteArray(char* toSend,int len){
   lastSendLen = len;
   char buffer[64];
   
-  unsigned char checksumm = len + 3;
+  char checksumm = len + 3;
   buffer[0] = 0x01;//startcodon
   buffer[1] = len + 3; //bytes to send +checksumm and length
   for(int i = 0;i<len;i++){

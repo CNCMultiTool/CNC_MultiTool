@@ -34,7 +34,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(m_basefunctions,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_basefunctions,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
-    connect(m_basefunctions,SIGNAL(serial_send(QByteArray)),m_serial,SLOT(serial_send(QByteArray)));
+    connect(m_basefunctions,SIGNAL(serial_send(QByteArray)),m_serial,SLOT(serial_addToSend(QByteArray)));
     connect(m_basefunctions,SIGNAL(show_position()),this,SLOT(show_position()));
     connect(m_basefunctions,SIGNAL(show_temp()),this,SLOT(addToGraph()));
     connect(m_basefunctions,SIGNAL(show_endswitch()),this,SLOT(show_endswitch()));
@@ -51,12 +51,11 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_autofunctions,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_autofunctions,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
     connect(m_autofunctions,SIGNAL(show_state(quint64)),this,SLOT(show_state(quint64)));
-    connect(m_autofunctions,SIGNAL(serial_send(QByteArray)),m_serial,SLOT(serial_send(QByteArray)));
+    connect(m_autofunctions,SIGNAL(serial_send(QByteArray)),m_serial,SLOT(serial_addToSend(QByteArray)));
 
     connect(m_serial,SIGNAL(Log(QString)),this,SLOT(Log(QString)));
     connect(m_serial,SIGNAL(errorLog(QString)),this,SLOT(errorLog(QString)));
     connect(m_serial,SIGNAL(show_serial(bool)),this,SLOT(show_serial(bool)));
-    connect(m_serial,SIGNAL(recLine(QString)),m_basefunctions,SLOT(processLine(QString)));
     connect(m_serial,SIGNAL(recBytes(QByteArray)),m_basefunctions,SLOT(processBytes(QByteArray)));
 
     connect(ui->actionValues,SIGNAL(triggered()),this,SLOT(calibratenValueBox()));

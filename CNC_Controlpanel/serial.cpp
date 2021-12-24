@@ -26,12 +26,15 @@ bool Serial::serial_open()
         serial_close();
         return false;
     }
+    m_lastsend.clear();
     m_recivedBytes.clear();
     m_serial.clear();
     m_serial.flush();
     connect(timer, SIGNAL(timeout()), this, SLOT(serial_read()));
     connect(sendAnswerTimeout, SIGNAL(timeout()), this, SLOT(serial_sendTimeout()));
     timer->start(1);
+    sendAnswerTimeout->stop();
+    m_toSendBuffer.clear();
     //connect(&m_serial,SIGNAL(readyRead()),this,SLOT(serial_read()));
     emit show_serial(true);
     m_database->m_SerialIsOpen = true;
@@ -69,6 +72,12 @@ void Serial::serial_read()
 {
     if(m_serial.isOpen())
     {
+        //check if stuff left to send
+        if(!sendAnswerTimeout->isActive()&& !m_toSendBuffer.isEmpty()){
+            serial_sendNext();
+        }
+
+
         QByteArray ab;
         //read from serial
         m_recivedBytes += m_serial.readAll();
@@ -91,7 +100,10 @@ void Serial::serial_read()
         if(len >= m_recivedBytes.length())return;//return if array is shorter then len info
 
         if(m_recivedBytes.at(len) != char(0x02)){
-            emit Log("end codon not at expectet pos");
+            emit Log("PC end codon not at expectet pos");
+            //request resend last
+            ab.append(31);
+            serial_addToSend(ab);
             m_recivedBytes.remove(0,1);//remove first startcodon to search for new start
             return;
         }
@@ -110,7 +122,7 @@ void Serial::serial_read()
         {
             //request resend last
             ab.append(31);
-            serial_send(ab);
+            serial_addToSend(ab);
             emit errorLog("PC length fail len "+QString::number(mes.length())+" rec "+QString::number(mes.at(1)));
             return;
         }
@@ -124,31 +136,36 @@ void Serial::serial_read()
         {
             //request resend last
             ab.append(31);
-            serial_send(ab);
+            serial_addToSend(ab);
             emit errorLog("PC chesumm fail cs "+QString::number(checksum)+" rec "+QString::number(new_cs));
+            emit Log("len:"+QString::number(mes.length())+" mes:"+QString(mes.toHex()));
             return;
         }
 
         mes.chop(2);//cut checksum and endcodon
         QByteArray data = mes.mid(2);
 
+        //recive an ack
         if(data.at(0) == 32){
             sendAnswerTimeout->stop();
-            m_lastsend = "";
+            m_lastsend.clear();
+            serial_sendNext();
             return;
         }
+        //recive an resend request
         if(data.at(0) == 31){
-            if(m_lastsend == ""){
+            if(m_lastsend.isEmpty()){
                 emit errorLog("resend request but empty m_lastsend");
             }else{
-                emit errorLog("resend m_lastsend");
+                sendAnswerTimeout->stop();
+                emit errorLog("resend m_lastsend:"+QString(m_lastsend.toHex()));
                 serial_send(m_lastsend);
                 return;
             }
         }
         //send rec acknolage
         ab.append(32);
-        serial_send(ab);
+        serial_addToSend(ab);
         //process data
 
         emit recBytes(data);
@@ -157,10 +174,10 @@ void Serial::serial_read()
 
 
 /**
- * verpackt es mittels COBS
+ * verpackt und
  * sendet es mittels serielem port
  */
-void Serial::serial_send(QByteArray mes)
+void Serial::serial_addToSend(QByteArray mes)
 {
     if(!m_serial.isOpen())
     {
@@ -168,6 +185,28 @@ void Serial::serial_send(QByteArray mes)
         emit show_serial(false);
         return;
     }
+
+    m_toSendBuffer.append(mes);
+    if(!sendAnswerTimeout->isActive()){
+        serial_sendNext();
+    }
+}
+
+void Serial::serial_sendNext(){
+    if(!m_toSendBuffer.isEmpty()){
+        serial_send(m_toSendBuffer.first());
+        m_toSendBuffer.pop_front();
+    }
+}
+
+void Serial::serial_send(QByteArray mes){
+    if(!m_serial.isOpen())
+    {
+        emit errorLog("Serial not open");
+        emit show_serial(false);
+        return;
+    }
+
     //emit Log("send: "+mes.toHex());
     m_lastsend = mes;
     packMesage(&mes);

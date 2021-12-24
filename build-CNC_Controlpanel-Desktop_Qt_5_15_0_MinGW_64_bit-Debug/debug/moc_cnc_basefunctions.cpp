@@ -22,8 +22,8 @@ QT_BEGIN_MOC_NAMESPACE
 QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 struct qt_meta_stringdata_cnc_basefunctions_t {
-    QByteArrayData data[16];
-    char stringdata0[176];
+    QByteArrayData data[15];
+    char stringdata0[164];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -46,15 +46,14 @@ QT_MOC_LITERAL(10, 89, 19), // "show_acc_speed_fila"
 QT_MOC_LITERAL(11, 109, 10), // "show_speed"
 QT_MOC_LITERAL(12, 120, 13), // "show_act_temp"
 QT_MOC_LITERAL(13, 134, 16), // "show_waitForHeat"
-QT_MOC_LITERAL(14, 151, 11), // "processLine"
-QT_MOC_LITERAL(15, 163, 12) // "processBytes"
+QT_MOC_LITERAL(14, 151, 12) // "processBytes"
 
     },
     "cnc_basefunctions\0Log\0\0s\0errorLog\0"
     "serial_send\0mes\0show_position\0show_temp\0"
     "show_endswitch\0show_acc_speed_fila\0"
     "show_speed\0show_act_temp\0show_waitForHeat\0"
-    "processLine\0processBytes"
+    "processBytes"
 };
 #undef QT_MOC_LITERAL
 
@@ -64,7 +63,7 @@ static const uint qt_meta_data_cnc_basefunctions[] = {
        8,       // revision
        0,       // classname
        0,    0, // classinfo
-      12,   14, // methods
+      11,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -72,20 +71,19 @@ static const uint qt_meta_data_cnc_basefunctions[] = {
       10,       // signalCount
 
  // signals: name, argc, parameters, tag, flags
-       1,    1,   74,    2, 0x06 /* Public */,
-       4,    1,   77,    2, 0x06 /* Public */,
-       5,    1,   80,    2, 0x06 /* Public */,
-       7,    0,   83,    2, 0x06 /* Public */,
-       8,    0,   84,    2, 0x06 /* Public */,
-       9,    0,   85,    2, 0x06 /* Public */,
-      10,    0,   86,    2, 0x06 /* Public */,
-      11,    0,   87,    2, 0x06 /* Public */,
-      12,    0,   88,    2, 0x06 /* Public */,
-      13,    1,   89,    2, 0x06 /* Public */,
+       1,    1,   69,    2, 0x06 /* Public */,
+       4,    1,   72,    2, 0x06 /* Public */,
+       5,    1,   75,    2, 0x06 /* Public */,
+       7,    0,   78,    2, 0x06 /* Public */,
+       8,    0,   79,    2, 0x06 /* Public */,
+       9,    0,   80,    2, 0x06 /* Public */,
+      10,    0,   81,    2, 0x06 /* Public */,
+      11,    0,   82,    2, 0x06 /* Public */,
+      12,    0,   83,    2, 0x06 /* Public */,
+      13,    1,   84,    2, 0x06 /* Public */,
 
  // slots: name, argc, parameters, tag, flags
-      14,    1,   92,    2, 0x08 /* Private */,
-      15,    1,   95,    2, 0x08 /* Private */,
+      14,    1,   87,    2, 0x08 /* Private */,
 
  // signals: parameters
     QMetaType::Void, QMetaType::QString,    3,
@@ -100,7 +98,6 @@ static const uint qt_meta_data_cnc_basefunctions[] = {
     QMetaType::Void, QMetaType::Float,    2,
 
  // slots: parameters
-    QMetaType::Void, QMetaType::QString,    3,
     QMetaType::Void, QMetaType::QByteArray,    3,
 
        0        // eod
@@ -122,8 +119,7 @@ void cnc_basefunctions::qt_static_metacall(QObject *_o, QMetaObject::Call _c, in
         case 7: _t->show_speed(); break;
         case 8: _t->show_act_temp(); break;
         case 9: _t->show_waitForHeat((*reinterpret_cast< float(*)>(_a[1]))); break;
-        case 10: _t->processLine((*reinterpret_cast< const QString(*)>(_a[1]))); break;
-        case 11: _t->processBytes((*reinterpret_cast< const QByteArray(*)>(_a[1]))); break;
+        case 10: _t->processBytes((*reinterpret_cast< const QByteArray(*)>(_a[1]))); break;
         default: ;
         }
     } else if (_c == QMetaObject::IndexOfMethod) {
@@ -230,13 +226,13 @@ int cnc_basefunctions::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 12)
+        if (_id < 11)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 12;
+        _id -= 11;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 12)
+        if (_id < 11)
             *reinterpret_cast<int*>(_a[0]) = -1;
-        _id -= 12;
+        _id -= 11;
     }
     return _id;
 }

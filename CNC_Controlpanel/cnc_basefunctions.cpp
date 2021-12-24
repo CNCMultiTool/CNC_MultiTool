@@ -171,137 +171,6 @@ void cnc_basefunctions::send_resetWaitForHeat()
     m_auto->G_Code_Parser("Q13 ");
 }
 
-void  cnc_basefunctions::processLine(const QString &s)
-{
-    if(s.indexOf("request")!=-1/* && m_database->m_G_Code_State == 1*/){
-        //emit Log("get request");
-        int start = s.indexOf("request ")+7;
-        int end = s.length();
-        int requests = s.mid(start,end-start).toFloat();
-        QByteArray newBA;
-        if(requests > 1){
-            for(int i = 0;i < 1; i++){
-                newBA = m_auto->GC_getNextLine();
-                //emit Log("1 newLine: "+newLine);
-                emit serial_send(newBA);
-            }
-        }
-    }
-    if(s.indexOf("M114 X")!=-1)
-    {
-        int start = s.indexOf("M114 X")+6;
-        int end = s.indexOf(" Y",start);
-        m_database->m_act_X = s.mid(start,end-start).toFloat();
-        start = s.indexOf(" Y",end)+2;
-        end = s.indexOf(" Z",start);
-        m_database->m_act_Y = s.mid(start,end-start).toFloat();
-        start = s.indexOf(" Z",end)+2;
-        end = s.indexOf(" E",start);
-        m_database->m_act_Z = s.mid(start,end-start).toFloat();
-        start = s.indexOf(" E",end)+2;
-        end = s.length();
-        m_database->m_act_E = s.mid(start,end-start).toFloat();
-        emit show_position();
-    }
-    if(s.indexOf("Temp THsoll")!=-1)
-    {
-        int start = s.indexOf("Temp THsoll")+11;
-        int end = s.indexOf(" THist",start);
-        m_database->m_soll_temperatur = s.mid(start,end-start).toFloat();
-        start = s.indexOf(" THist",end)+6;
-        end = s.indexOf(" TBsoll",start);
-        m_database->m_act_temperatur = s.mid(start,end-start).toFloat();
-        start = s.indexOf(" TBsoll",end)+7;
-        end = s.indexOf(" TBist",start);
-        m_database->m_soll_bedTemp = s.mid(start,end-start).toFloat();
-        start = s.indexOf(" TBist",end)+6;
-        end = s.length();
-        m_database->m_act_bedTemp = s.mid(start,end-start).toFloat();
-        emit show_temp();
-    }
-    if(s.indexOf("ES ")!=-1)
-    {
-        int start;
-        int end = end = s.length();
-        if(s.contains("X")){
-            start = s.indexOf("X")+1;
-            m_database->m_endswitch_X = s.mid(start,end-start).toFloat();
-        }else if(s.contains("Y")){
-            start = s.indexOf("Y")+1;
-            m_database->m_endswitch_Y = s.mid(start,end-start).toFloat();
-        }else if(s.contains("Z")){
-            start = s.indexOf("Z")+1;
-            m_database->m_endswitch_Z = s.mid(start,end-start).toFloat();
-        }
-        emit show_endswitch();
-    }
-    if(s.indexOf("G1 F")!=-1)
-    {
-        int start = s.indexOf("G1 F")+4;
-        int end = s.length();
-        m_database->m_act_speed = s.mid(start,end-start).toFloat();
-        emit show_speed();
-    }
-    if(s.indexOf("Q10 X")!=-1)
-    {
-        int start = s.indexOf("Q10 X")+5;
-        int end = s.indexOf(" Y",start);
-        m_database->m_max_acc = s.mid(start,end-start).toFloat();
-        start = s.indexOf(" Y",end)+2;
-        end = s.indexOf(" Z",start);
-        m_database->m_min_speed = s.mid(start,end-start).toFloat();
-        start = s.indexOf(" Z",end)+2;
-        end = s.indexOf(" E",start);
-        m_database->m_max_speed = s.mid(start,end-start).toFloat();
-        start = s.indexOf(" E",end)+2;
-        end = s.indexOf(" S",start);
-        m_database->m_threshAngle = s.mid(start,end-start).toFloat();
-        start = s.indexOf(" S",end)+2;
-        end = s.length();
-        m_database->m_act_filament = s.mid(start,end-start).toFloat();
-        emit show_acc_speed_fila();
-    }
-    if(s.indexOf("M104 S")!=-1)
-    {
-        int start = s.indexOf("M104 S")+6;
-        int end = s.length();
-        m_database->m_soll_temperatur = s.mid(start,end-start).toFloat();
-        emit show_act_temp();
-    }
-    if(s.indexOf("M109 S")!=-1)
-    {
-        int start = s.indexOf("M109 S")+6;
-        int end = s.length();
-        m_database->m_soll_temperatur = s.mid(start,end-start).toFloat();
-        emit show_act_temp();
-    }
-    if(s.indexOf("M140 S")!=-1)
-    {
-        int start = s.indexOf("M140 S")+6;
-        int end = s.length();
-        m_database->m_soll_bedTemp = s.mid(start,end-start).toFloat();
-        emit show_act_temp();
-    }
-    if(s.indexOf("useES ")!=-1)
-    {
-        int start = s.indexOf("useES ")+6;
-        int end = s.length();
-        m_database->setUseEs(s.mid(start,end-start).toFloat());
-    }
-    if(s.indexOf("motorState ")!=-1)
-    {
-        int start = s.indexOf("motorState ")+11;
-        int end = s.length();
-        m_database->setMotorUse(s.mid(start,end-start).toFloat());
-    }
-    if(s.indexOf("waitForHeat ")!=-1)
-    {
-        int start = s.indexOf("waitForHeat ")+12;
-        int end = s.length();
-        emit show_waitForHeat(s.mid(start,end-start).toFloat());
-    }
-}
-
 void cnc_basefunctions::requestNextLine(const QByteArray &in){
 
     //if(m_database->m_G_Code_State == 1){
@@ -388,7 +257,7 @@ void cnc_basefunctions::getNextPrePos(const QByteArray &in){
     emit Log(QString("nextprepos x%1,y%2,z%3,e%4,f%5").arg(x).arg(y).arg(z).arg(e).arg(f));
 }
 void cnc_basefunctions::getTemperaturs(const QByteArray &in){
-    emit Log("get temp");
+    //emit Log("get temp");
     for(int i=1;i<in.length();i+=5){
         if(in[i] == 1){
             m_database->m_soll_temperatur = BtoF(in.mid(i+1,4));
