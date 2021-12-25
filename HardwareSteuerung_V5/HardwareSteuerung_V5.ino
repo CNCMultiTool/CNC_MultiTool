@@ -735,10 +735,15 @@ void processComandLine(comParam c) {
 }
 void sendDeviceStatus() {
   float x,y,z,e,s;
-  x = Xachse.act_step / double(Xachse.steps_pmm);
-  y = Yachse.act_step / double(Yachse.steps_pmm);
-  z = Zachse.act_step / double(Zachse.steps_pmm);
-  e = Eachse.act_step / double(Eachse.steps_pmm);
+  //  x = Xachse.act_step / double(Xachse.steps_pmm);
+  //  y = Yachse.act_step / double(Yachse.steps_pmm);
+  //  z = Zachse.act_step / double(Zachse.steps_pmm);
+  //  e = Eachse.act_step / double(Eachse.steps_pmm);
+  //  s = prePos.Speed;
+  x = prePos.Xp;
+  y = prePos.Yp;
+  z = prePos.Zp;
+  e = prePos.Ep;
   s = prePos.Speed;
   sendCommand(24,&x,&y,&z,&e,&s,nullptr);
   /*
@@ -956,14 +961,15 @@ void handleES(StepMotorBig* mot) {
 int checkSerial() {
   if(waitForAck){
     //seial timeout wait for ack
-    if(millis() - sendTime > 100){
+    if(millis() - sendTime > 200){
       waitForAck = false;
-      //digitalWrite(24,HIGH);
       if(lastSendLen !=0 ){
         sendByteArray(lastSend,lastSendLen);
       }else{
-        sendEText("last send is empty");
+        sendCommand(32,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr);
       }
+      sendEText("ardu rec timeout");
+      return 0;
     }
   }
   if(SR_CheckForLine() != 0) {
@@ -1016,8 +1022,10 @@ int checkSerial() {
         waitForAck = false;
         sendByteArray(lastSend,lastSendLen);
       }else{
-        sendEText("last send is empty");
+        waitForAck = false;
+        sendCommand(32,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr);
       }
+      sendEText("ardu resend");
       return 0;
     }
 
@@ -1026,7 +1034,6 @@ int checkSerial() {
 
     //read command
     //read values
-    //memset(&reciveBuf[0], 0, sizeof(reciveBuf));
     //sofort comands list
     if(recCom.com == 50){//G9
       //sendDText("find and process G9");
@@ -1048,6 +1055,8 @@ int checkSerial() {
       sendEText("buffer full");
       return 0;
     }
+
+    
 
     cb_push_back(&cbCommands,&recCom);
 
@@ -1215,7 +1224,7 @@ void performStep(StepMotorBig *mot, bool dir, eAchse achse) {
 void performCommand(comParam* newCommand) {
   switch (newCommand->com) {
     case 12://G92
-      setRealPose(newCommand);
+      //setRealPose(newCommand);
       //sendDeviceStatus();
       break;
     case 13:

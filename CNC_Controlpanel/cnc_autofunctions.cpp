@@ -200,7 +200,7 @@ void cnc_autofunctions::G_Code_Parser(QString newLine)
 
         if(isCommand("G28",newLine))//move home
         {
-            G_Code_Parser("M114 ");
+            G_Code_Parser("M114");
             G_Code_Parser("Q12 X1");//switch on motor
             G_Code_Parser("Q11 X1");//switch on endswitch
             G_Code_Parser("G1 Z9999");
@@ -210,12 +210,13 @@ void cnc_autofunctions::G_Code_Parser(QString newLine)
                                 .arg(m_database->m_Y_inHome)
                                 .arg(m_database->m_Z_inHome));
             //G_Code_Parser("Q11 X0");//switch of endswitch
-            G_Code_Parser("M114 ");
+            G_Code_Parser("M114");
             //G_Code_Parser("Q12 X0");//switch off motor
+            return;
         }
         if(lineInByteArray.isEmpty())
         {
-            emit errorLog("no valid command find in G_Code_Parser");
+            emit errorLog("no valid command find in G_Code_Parser:"+newLine);
         }else{
             m_LineBuffer.append(lineInByteArray);// add createt bytearray to the buffer
         }
@@ -229,9 +230,11 @@ void cnc_autofunctions::G_Code_Parser(QString newLine)
 
 bool cnc_autofunctions::isCommand(const QString indent,const QString line)
 {
-//    QRegExp rx;
-//    rx.setPattern(indent);
-    if(line.contains(indent+" ")||line.compare(indent)==0)
+    QStringList list = line.split(" ");
+    if(list.isEmpty()){
+        emit errorLog("commandline cand be split:"+line);
+    }
+    if(list[0].compare(indent) == 0)
     {
         //emit Log(indent+" X"+QString::number(m_X)+" Y"+QString::number(m_Y)+" Z"+QString::number(m_Z)+" W"+QString::number(m_W)+" S"+QString::number(m_S)+" F"+QString::number(m_F));
         return(true);

@@ -1,5 +1,8 @@
 #include "serial.h"
 
+#define STARTCOD 0x01
+#define ENDCOD 0x02
+#define SPEZIALCOD 0x03
 
 Serial::Serial(cnc_data *database)
 {
@@ -57,10 +60,10 @@ void Serial::serial_close()
 
 void Serial::serial_sendTimeout()
 {
-    emit errorLog("error: Timeout do to no recive");
-    serial_close();
+    emit errorLog("Timeout do to no recive");
+    //serial_close();
 
-    serial_open();
+    //serial_open();
 }
 
 /**
@@ -84,14 +87,14 @@ void Serial::serial_read()
         m_serial.waitForReadyRead(m_recive_timeout);
 
         //chck if a startcodon is presend, remove leading nonsens bytes to the startcodon
-        int command_start = m_recivedBytes.indexOf(char(0x01));
+        int command_start = m_recivedBytes.indexOf(char(STARTCOD));
         if(command_start < 0)return;//return if no start codon
         if(command_start > 0) m_recivedBytes.remove(0,command_start);
         command_start = 0;
 
         if(m_recivedBytes.length()<5)return;//return if minimum length is not given
 
-        int command_end = m_recivedBytes.indexOf(char(0x02));
+        int command_end = m_recivedBytes.indexOf(char(ENDCOD));
         if(command_end < 0)return;//return if no end codon
         if(command_start < 0 || command_end < 0) return;
 
@@ -99,7 +102,7 @@ void Serial::serial_read()
 
         if(len >= m_recivedBytes.length())return;//return if array is shorter then len info
 
-        if(m_recivedBytes.at(len) != char(0x02)){
+        if(m_recivedBytes.at(len) != char(ENDCOD)){
             emit Log("PC end codon not at expectet pos");
             //request resend last
             ab.append(31);
@@ -156,6 +159,9 @@ void Serial::serial_read()
         if(data.at(0) == 31){
             if(m_lastsend.isEmpty()){
                 emit errorLog("resend request but empty m_lastsend");
+                ab.append(32);
+                serial_addToSend(ab);
+                return;
             }else{
                 sendAnswerTimeout->stop();
                 emit errorLog("resend m_lastsend:"+QString(m_lastsend.toHex()));
@@ -223,15 +229,22 @@ void Serial::serial_send(QByteArray mes){
 void Serial::packMesage(QByteArray *mes)
 {
     char checksum = 0;
-    //emit Log("length "+QString::number(mes->length()));
     unsigned char len = mes->length() + 3;
     mes->prepend(len);
 
     for(int i=0;i< mes->length();i++){
         checksum += mes->at(i);
     }
-    mes->prepend(char(0x01));
     mes->append(checksum);
-    mes->append(char(0x02));
+
+//    for(int i=0;i< mes->length();i++){
+//        if(mes->at(i) == STARTCOD || mes->at(i) == ENDCOD){
+//            mes[i] = mes[i] + char(SPEZIALCOD);
+//            mes->insert(i,char(SPEZIALCOD));
+//        }
+//    }
+
+    mes->prepend(char(STARTCOD));
+    mes->append(char(ENDCOD));
 
 }
